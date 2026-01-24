@@ -1,0 +1,17 @@
+[package]
+name = "urng"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["cet"]
+description = "Universal Random Number Generator"
+
+[profile.release]
+opt-level = 3
+lto = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# [build-dependencies]
+# csbindgen = "1.9.7"
