@@ -1,5 +1,5 @@
-use crate::rng::Rng32;
-use std::slice::from_raw_parts_mut;
+use crate::{rng::Rng32, wrap};
+use std::{hint::black_box, num::Wrapping, slice::from_raw_parts_mut};
 
 // --- Mt19937 ---
 
@@ -119,7 +119,7 @@ impl Rng32 for Mt19937 {
         self.randf(min, max)
     }
     #[inline]
-    fn choice<'a, T>(&'a mut self, choices: &'a [T]) -> &'a T {
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         self.choice(choices)
     }
 }
@@ -173,6 +173,146 @@ pub extern "C" fn mt19937_rand_i32s(
 #[unsafe(no_mangle)]
 pub extern "C" fn mt19937_rand_f32s(
     ptr: *mut Mt19937,
+    out: *mut f32,
+    count: usize,
+    min: f32,
+    max: f32,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randf(min, max);
+        }
+    }
+}
+
+// --- Lcg32 ---
+
+#[repr(C)]
+pub struct Lcg32 {
+    x: Wrapping<u32>,
+    a: u32,
+    b: u32,
+    m: u32,
+    r: f32,
+}
+
+impl Lcg32 {
+    pub fn new(x: u32, a: u32, b: u32, m: u32, warm: usize) -> Self {
+        // M>a, M>b, A>0, B>=0
+        let a = a | 1;
+        let mut rng = Self {
+            x: wrap!(x),
+            a,
+            b,
+            m,
+            r: 1.0 / (m as f32 + 1.0),
+        };
+
+        (0..warm).into_iter().for_each(|_| {
+            black_box(rng.nextu());
+        });
+
+        rng
+    }
+
+    #[inline]
+    pub fn nextu(&mut self) -> u32 {
+        // X(n+1) = (a * X(n) + b) % M
+        self.x = wrap!((self.a * self.x.0 + self.b) % self.m);
+        self.x.0
+    }
+
+    #[inline]
+    pub fn nextf(&mut self) -> f32 {
+        self.nextu() as f32 * self.r
+    }
+
+    #[inline]
+    pub fn randi(&mut self, min: i32, max: i32) -> i32 {
+        let range = (max as i64 - min as i64 + 1) as u64;
+        ((self.nextu() as u64 * range) >> 32) as i32 + min
+    }
+
+    #[inline]
+    pub fn randf(&mut self, min: f32, max: f32) -> f32 {
+        let range = max - min;
+        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
+        (self.nextu() as f32 * scale) + min
+    }
+
+    #[inline]
+    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        let index = self.randi(0, choices.len() as i32 - 1);
+        &choices[index as usize]
+    }
+}
+
+impl Rng32 for Lcg32 {
+    #[inline]
+    fn randi(&mut self, min: i32, max: i32) -> i32 {
+        self.randi(min, max)
+    }
+    #[inline]
+    fn randf(&mut self, min: f32, max: f32) -> f32 {
+        self.randf(min, max)
+    }
+    #[inline]
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        self.choice(choices)
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn lcg32_new(x: u32, a: u32, b: u32, m: u32, warm: usize) -> *mut Lcg32 {
+    Box::into_raw(Box::new(Lcg32::new(x, a, b, m, warm)))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn lcg32_free(ptr: *mut Lcg32) {
+    if !ptr.is_null() {
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn lcg32_next_u32s(ptr: *mut Lcg32, out: *mut u32, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextu();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn lcg32_next_f32s(ptr: *mut Lcg32, out: *mut f32, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextf();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn lcg32_rand_i32s(
+    ptr: *mut Lcg32,
+    out: *mut i32,
+    count: usize,
+    min: i32,
+    max: i32,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randi(min, max);
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn lcg32_rand_f32s(
+    ptr: *mut Lcg32,
     out: *mut f32,
     count: usize,
     min: f32,
@@ -259,7 +399,7 @@ impl Rng32 for Pcg32 {
         self.randf(min, max)
     }
     #[inline]
-    fn choice<'a, T>(&'a mut self, choices: &'a [T]) -> &'a T {
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         self.choice(choices)
     }
 }
@@ -405,7 +545,7 @@ impl Philox32 {
 
     /// Returns a random element from a slice.
     #[inline]
-    pub fn choice<'a, T>(&'a mut self, choices: &'a [T]) -> &'a T {
+    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         let index = self.randi(0, choices.len() as i32 - 1);
         &choices[index as usize]
     }
@@ -421,7 +561,7 @@ impl Rng32 for Philox32 {
         self.randf(min, max)
     }
     #[inline]
-    fn choice<'a, T>(&'a mut self, choices: &'a [T]) -> &'a T {
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         self.choice(choices)
     }
 }
@@ -533,7 +673,7 @@ pub struct Xorshift32 {
 impl Xorshift32 {
     /// Creates a new `Xorshift32` instance.
     pub fn new(seed: u32) -> Self {
-        Self { a: seed }
+        Self { a: seed | 1 }
     }
 
     /// Generates the next random `u32` value.
@@ -587,7 +727,7 @@ impl Rng32 for Xorshift32 {
         self.randf(min, max)
     }
     #[inline]
-    fn choice<'a, T>(&'a mut self, choices: &'a [T]) -> &'a T {
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         self.choice(choices)
     }
 }
@@ -757,8 +897,63 @@ impl Rng32 for TwistedGFSR {
         self.randf(min as f64, max as f64) as f32
     }
     #[inline]
-    fn choice<'a, T>(&'a mut self, choices: &'a [T]) -> &'a T {
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         self.choice(choices)
+    }
+}
+
+/// A XORWOW random number generator.
+///
+/// This generator combines a Xorshift-based algorithm with a Weyl sequence (linear counter).
+/// It has a state of 192 bits (5 x 32-bit state + 32-bit counter).
+/// This is the default generator used in NVIDIA cuRAND.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Xorwow;
+///
+/// let mut rng = Xorwow::new(12345);
+/// let val = rng.nextu();
+/// ```
+#[repr(C)]
+pub struct Xorwow {
+    x: [u32; 5],
+    c: u32,
+}
+
+impl Xorwow {
+    /// Creates a new `Xorwow` instance.
+    pub fn new(seed: u32) -> Self {
+        let seed = seed | 1;
+        Self {
+            x: [
+                seed,
+                seed.rotate_left(8),
+                seed.rotate_left(16),
+                seed.rotate_left(24),
+                seed.rotate_left(32),
+            ],
+            c: 1,
+        }
+    }
+
+    /// Generates the next random `u32` value.
+    pub fn nextu(&mut self) -> u32 {
+        let mut t = self.x[4];
+
+        let s = self.x[0];
+        self.x[4] = self.x[3];
+        self.x[3] = self.x[2];
+        self.x[2] = self.x[1];
+        self.x[1] = s;
+
+        t ^= t >> 2;
+        t ^= t << 1;
+        t ^= s ^ (s << 4);
+        self.x[0] = t;
+        self.c += 362437;
+        t + self.c
     }
 }
 
@@ -771,6 +966,13 @@ mod tests {
         let mut rng = Mt19937::new(1, 1024);
         assert_eq!(rng.nextu(), 244660247);
         assert_eq!(rng.nextf(), 0.2754702);
+    }
+
+    #[test]
+    fn lcg32_works() {
+        let mut rng = Lcg32::new(8, 13, 5, 24, 0);
+        assert_eq!(rng.nextu(), 13);
+        assert_eq!(rng.nextf(), 0.24);
     }
 
     #[test]
@@ -799,5 +1001,12 @@ mod tests {
         let mut rng = TwistedGFSR::new(TwistedGFSR::new_seed());
         assert_eq!(rng.nextu(), 868393086);
         assert_eq!(rng.nextf(), 0.33567164628766477);
+    }
+
+    #[test]
+    fn xorwow_works() {
+        let mut rng = Xorwow::new(1);
+        assert_eq!(rng.nextu(), 362456);
+        // assert_eq!(rng.nextf(), 0.015747428);
     }
 }

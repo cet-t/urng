@@ -1,6 +1,6 @@
 use crate::rng::Rng64;
 use crate::wrap;
-use std::f64::consts::{E, PI};
+use std::hint::black_box;
 use std::num::Wrapping;
 use std::slice::from_raw_parts_mut;
 
@@ -28,7 +28,8 @@ impl Mt1993764 {
     /// * `warm` - The number of initial iterations to skip (warm-up).
     pub fn new(seed: u64, warm: usize) -> Self {
         let mut mt = [0u64; N];
-        mt[0] = seed;
+        let mut seedgen = SplitMix64::new(seed);
+        mt[0] = seedgen.nextu();
         for i in 1..N {
             let prev = mt[i - 1];
             mt[i] = 6364136223846793005u64
@@ -191,6 +192,145 @@ pub extern "C" fn mt1993764_rand_f64s(
     }
 }
 
+// --- Lcg64 ---
+
+#[repr(C)]
+pub struct Lcg64 {
+    x: Wrapping<u64>,
+    a: u64,
+    b: u64,
+    m: u64,
+    r: f64,
+}
+
+impl Lcg64 {
+    pub fn new(x: u64, a: u64, b: u64, m: u64, warm: usize) -> Self {
+        let a = a | 1;
+        let mut rng = Self {
+            x: wrap!(x),
+            a,
+            b,
+            m,
+            r: 1.0 / (m as f64 + 1.0),
+        };
+
+        (0..warm).into_iter().for_each(|_| {
+            black_box(rng.nextu());
+        });
+
+        rng
+    }
+
+    #[inline]
+    pub fn nextu(&mut self) -> u64 {
+        self.x = wrap!((self.a * self.x.0 + self.b) % self.m);
+        self.x.0
+    }
+
+    #[inline]
+    pub fn nextf(&mut self) -> f64 {
+        self.nextu() as f64 * self.r
+    }
+
+    #[inline]
+    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
+        let range = (max as i128 - min as i128 + 1) as u128;
+        ((self.nextu() as u128 * range) >> 64) as i64 + min
+    }
+
+    #[inline]
+    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
+        let range = max - min;
+        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
+        (self.nextu() as f64 * scale) + min
+    }
+
+    #[inline]
+    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        let index = self.randi(0, choices.len() as i64 - 1);
+        &choices[index as usize]
+    }
+}
+
+impl Rng64 for Lcg64 {
+    #[inline]
+    fn randi(&mut self, min: i64, max: i64) -> i64 {
+        self.randi(min, max)
+    }
+    #[inline]
+    fn randf(&mut self, min: f64, max: f64) -> f64 {
+        self.randf(min, max)
+    }
+
+    #[inline]
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        self.choice(choices)
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn lcg64_new(x: u64, a: u64, b: u64, m: u64, warm: usize) -> *mut Lcg64 {
+    Box::into_raw(Box::new(Lcg64::new(x, a, b, m, warm)))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn lcg64_free(ptr: *mut Lcg64) {
+    if !ptr.is_null() {
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn lcg64_next_u64s(ptr: *mut Lcg64, out: *mut u64, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextu();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn lcg64_next_f64s(ptr: *mut Lcg64, out: *mut f64, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextf();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn lcg64_rand_i64s(
+    ptr: *mut Lcg64,
+    out: *mut i64,
+    count: usize,
+    min: i64,
+    max: i64,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randi(min, max);
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn lcg64_rand_f64s(
+    ptr: *mut Lcg64,
+    out: *mut f64,
+    count: usize,
+    min: f64,
+    max: f64,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randf(min, max);
+        }
+    }
+}
+
 // --- Philox64 ---
 
 /// A Philox 2x64 random number generator.
@@ -211,8 +351,12 @@ impl Philox64 {
     }
 
     /// Creates a new `Philox64` instance.
-    pub fn new(seed: [u64; 2]) -> Self {
-        Self { c: [1, 0], k: seed }
+    pub fn new(seed: u64) -> Self {
+        let mut seedgen = SplitMix64::new(seed);
+        Self {
+            c: [1, 0],
+            k: [seedgen.nextu(), seedgen.nextu()],
+        }
     }
 
     /// Advances the generator state by `count` steps.
@@ -295,8 +439,8 @@ impl Rng64 for Philox64 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn philox64_new(seed1: u64, seed2: u64) -> *mut Philox64 {
-    Box::into_raw(Box::new(Philox64::new([seed1, seed2])))
+pub extern "C" fn philox64_new(seed: u64) -> *mut Philox64 {
+    Box::into_raw(Box::new(Philox64::new(seed)))
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn philox64_warm(ptr: *mut Philox64, count: usize) {
@@ -403,11 +547,12 @@ pub struct Sfc64 {
 impl Sfc64 {
     /// Creates a new `Sfc64` instance.
     pub fn new(seed: u64) -> Self {
+        let mut seedgen = SplitMix64::new(seed);
         Self {
-            a: seed,
-            b: seed.wrapping_add(E.to_bits()),
-            c: seed.wrapping_add(PI.to_bits()),
-            counter: 0,
+            a: seedgen.nextu(),
+            b: seedgen.nextu(),
+            c: seedgen.nextu(),
+            counter: 1,
         }
     }
 
@@ -549,7 +694,8 @@ pub struct Xorshift64 {
 impl Xorshift64 {
     /// Creates a new `Xorshift64` instance.
     pub fn new(seed: u64) -> Self {
-        Self { a: seed }
+        let mut seedgen = SplitMix64::new(seed);
+        Self { a: seedgen.nextu() }
     }
 
     /// Generates the next random `u64` value.
@@ -680,14 +826,15 @@ pub struct Cet64 {
 
 impl Cet64 {
     pub fn new(seed: u64) -> Self {
-        let k = seed | 1;
+        let mut seedgen = SplitMix64::new(seed);
+        let k = seedgen.nextu();
         Self {
             k: wrap!(k),
             v: [
-                wrap!(seed),
-                wrap!(k),
-                wrap!(k.reverse_bits() | 1),
-                wrap!(seed.rotate_left(64)),
+                wrap!(seedgen.nextu()),
+                wrap!(seedgen.nextu()),
+                wrap!(seedgen.nextu()),
+                wrap!(seedgen.nextu()),
             ],
             c: wrap!(1327),
         }
@@ -798,36 +945,137 @@ pub extern "C" fn cet64_rand_f64s(
     }
 }
 
+/// A xoshiro256++ random number generator.
+///
+/// This is an all-purpose generator with 256-bit state.
+/// It is particularly suitable for generating floating-point numbers.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::Xoshiro256Pp;
+///
+/// let mut rng = Xoshiro256Pp::new(12345);
+/// let val = rng.nextu();
+/// ```
 #[repr(C)]
-pub struct Cet364 {
-    k: Wrapping<u64>,
-    v: [Wrapping<u64>; 3],
-    c: Wrapping<u64>,
+pub struct Xoshiro256Pp {
+    s: [Wrapping<u64>; 4],
 }
 
-impl Cet364 {
+impl Xoshiro256Pp {
+    /// Creates a new `Xoshiro256Pp` instance.
     pub fn new(seed: u64) -> Self {
-        let k = seed | 1;
+        let mut seedgen = SplitMix64::new(seed);
         Self {
-            k: wrap!(k),
-            v: [wrap!(seed), wrap!(k), wrap!(k.reverse_bits() | 1)],
-            c: wrap!(1327),
+            s: [
+                wrap!(seedgen.nextu()),
+                wrap!(seedgen.nextu()),
+                wrap!(seedgen.nextu()),
+                wrap!(seedgen.nextu()),
+            ],
         }
     }
 
-    #[inline]
+    /// Generates the next random `u64` value.
     pub fn nextu(&mut self) -> u64 {
-        let [mut a, mut b, mut c] = self.v;
+        let s = &mut self.s;
+        let res = wrap!((s[0] + s[3]).0.rotate_left(23)) + s[0];
+        let t = s[1] << 17;
 
-        a = (a + self.c) * self.k;
+        s[2] ^= s[0];
+        s[3] ^= s[1];
+        s[1] ^= s[2];
+        s[0] ^= s[3];
 
-        b ^= c.0.rotate_left(32);
-        c += 1327;
+        s[2] ^= t;
+        s[3] = wrap!(s[3].0.rotate_left(45));
 
-        self.c += 1327;
-        self.v = [a, b, c];
+        res.0
+    }
+}
 
-        a.0 ^ b.0 ^ c.0
+/// A xoshiro256** random number generator.
+///
+/// This is an all-purpose generator with 256-bit state.
+/// It is robust against linear artifacts and generally recommended for all purposes.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::Xoshiro256Ss;
+///
+/// let mut rng = Xoshiro256Ss::new(12345);
+/// let val = rng.nextu();
+/// ```
+#[repr(C)]
+pub struct Xoshiro256Ss {
+    s: [Wrapping<u64>; 4],
+}
+
+impl Xoshiro256Ss {
+    /// Creates a new `Xoshiro256Ss` instance.
+    pub fn new(seed: u64) -> Self {
+        let mut seedgen = SplitMix64::new(seed);
+        Self {
+            s: [
+                wrap!(seedgen.nextu()),
+                wrap!(seedgen.nextu()),
+                wrap!(seedgen.nextu()),
+                wrap!(seedgen.nextu()),
+            ],
+        }
+    }
+
+    /// Generates the next random `u64` value.
+    pub fn nextu(&mut self) -> u64 {
+        let s = &mut self.s;
+        let res = wrap!((s[1] * wrap!(5)).0.rotate_left(7)) * wrap!(9);
+        let t = s[1] << 17;
+
+        s[2] ^= s[0];
+        s[3] ^= s[1];
+        s[1] ^= s[2];
+        s[0] ^= s[3];
+
+        s[2] ^= t;
+        s[3] = wrap!(s[3].0.rotate_left(45));
+
+        res.0
+    }
+}
+
+/// A SplitMix64 random number generator.
+///
+/// This is a fast generator with 64-bit state, often used for initializing
+/// other generators from a single seed.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::SplitMix64;
+///
+/// let mut rng = SplitMix64::new(12345);
+/// let val = rng.nextu();
+/// ```
+#[repr(C)]
+pub struct SplitMix64 {
+    s: Wrapping<u64>,
+}
+
+impl SplitMix64 {
+    /// Creates a new `SplitMix64` instance.
+    pub fn new(seed: u64) -> Self {
+        Self { s: wrap!(seed | 1) }
+    }
+
+    /// Generates the next random `u64` value.
+    pub fn nextu(&mut self) -> u64 {
+        self.s += 0x9E3779B97F4A7C15;
+        let mut result = self.s;
+        result = (result ^ (result >> 30)) * wrap!(0xBF58476D1CE4E5B9);
+        result = (result ^ (result >> 27)) * wrap!(0x94D049BB133111EB);
+        (result ^ (result >> 31)).0
     }
 }
 
@@ -838,22 +1086,29 @@ mod tests {
     #[test]
     fn mt1993764_works() {
         let mut rng = Mt1993764::new(1, 1024);
-        assert_eq!(rng.nextu(), 4804558718269354394);
-        assert_eq!(rng.nextf(), 0.6894973013138909);
+        assert_eq!(rng.nextu(), 17135235817683363880);
+        assert_eq!(rng.nextf(), 0.5149867566929178);
+    }
+
+    #[test]
+    fn lcg64_works() {
+        let mut rng = Lcg64::new(8, 13, 5, 24, 0);
+        assert_eq!(rng.nextu(), 13);
+        assert_eq!(rng.nextf(), 0.24);
     }
 
     #[test]
     fn philox64_works() {
-        let mut rng = Philox64::new([1, 2]);
-        assert_eq!(rng.nextu(), [15183679468541472402, 0]);
-        assert_eq!(rng.nextf(), 0.6462178266116214);
+        let mut rng = Philox64::new(1);
+        assert_eq!(rng.nextu(), [3996411588887038491, 2166702704631007519]);
+        assert_eq!(rng.nextf(), 0.1488059942543676);
     }
 
     #[test]
     fn xorshift64_works() {
         let mut rng = Xorshift64::new(1);
-        assert_eq!(rng.nextu(), 1082269761);
-        assert_eq!(rng.nextf(), 0.06250387570981203);
+        assert_eq!(rng.nextu(), 8247328468710148152);
+        assert_eq!(rng.nextf(), 0.8223768786697171);
     }
 
     #[test]
@@ -861,14 +1116,32 @@ mod tests {
         let mut rng = Sfc64::new(1);
         let val1 = rng.nextu();
         let val2 = rng.nextf();
-        assert_eq!(val1, 4613303445314885483);
-        assert_eq!(val2, 0.5014639839943512);
+        assert_eq!(val1, 5761717516557699369);
+        assert_eq!(val2, 0.4850623141159338);
     }
 
     #[test]
     fn cet64_works() {
         let mut rng = Cet64::new(1);
         let val1 = rng.nextu();
-        assert_eq!(val1, 5981625010123571202);
+        assert_eq!(val1, 15169567334506313593);
+    }
+
+    #[test]
+    fn xoshiro256pp_works() {
+        let mut rng = Xoshiro256Pp::new(1);
+        assert_eq!(rng.nextu(), 14971601782005023387);
+    }
+
+    #[test]
+    fn xoshiro256ss_works() {
+        let mut rng = Xoshiro256Ss::new(1);
+        assert_eq!(rng.nextu(), 12966619160104079557);
+    }
+
+    #[test]
+    fn splitmix64_works() {
+        let mut rng = SplitMix64::new(1);
+        assert_eq!(rng.nextu(), 10451216379200822465);
     }
 }

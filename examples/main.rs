@@ -1,18 +1,30 @@
-﻿use urng::{rng32::*, rng64::*};
+﻿use anyhow::Result;
+use std::collections::HashMap;
+use urng::{choice, rng64::Mt1993764};
 
-const N: usize = 10; //i32::MAX as usize;
+fn bst_test() -> Result<()> {
+    const N: usize = 100_000;
+    let weights = [0.01, 1.0, 20.0, 80.0];
+    let items = ["SSR", "SR", "R", "N"];
+    let mut rng = Mt1993764::new(1, 256);
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("N: {}", N);
-
-    let rng = xorshift32_new(0x00000001);
-    let mut x = [0.0; N];
-    let mut y = [0.0; N];
-    xorshift32_rand_f32s(rng, x.as_mut_ptr(), N, -9.0, 0.0);
-    xorshift32_rand_f32s(rng, y.as_mut_ptr(), N, 0.0, 5.0);
-    for i in 0..N {
-        println!("{}, {}", x[i], y[i]);
+    let mut results = HashMap::<&str, i32>::from_iter(items.iter().map(|&k| (k, 0)));
+    for _ in 0..N {
+        *results
+            .entry(choice!(&mut rng, weights, &items).unwrap())
+            .or_insert(0) += 1;
     }
 
+    let mut results = results.iter().collect::<Vec<_>>();
+    results.sort_by_key(|(_, v)| -**v);
+    results.iter().for_each(|(k, v)| {
+        println!("{:<3}: {:>6.2}%", k, **v as f64 * 100.0 / N as f64);
+    });
+
+    Ok(())
+}
+
+fn main() -> Result<()> {
+    bst_test()?;
     Ok(())
 }

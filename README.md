@@ -27,7 +27,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rng_pack = "0.1.0"
+urng = "0.1.0"
 ```
 
 ## Usage Examples

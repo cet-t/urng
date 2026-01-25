@@ -14,7 +14,9 @@ pub struct Xorshift128 {
 impl Xorshift128 {
     /// Creates a new `Xorshift128` instance.
     pub fn new(seed: [u32; 4]) -> Self {
-        Self { x: seed }
+        Self {
+            x: [seed[0] | 1, seed[1] | 1, seed[2] | 1, seed[3] | 1],
+        }
     }
 
     /// Generates the next random `u32` value.
@@ -69,7 +71,7 @@ impl Rng32 for Xorshift128 {
         self.randf(min, max)
     }
     #[inline]
-    fn choice<'a, T>(&'a mut self, choices: &'a [T]) -> &'a T {
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         self.choice(choices)
     }
 }
@@ -149,7 +151,7 @@ mod tests {
     #[test]
     fn xorshift128_works() {
         let mut rng = Xorshift128::new([1, 2, 3, 4]);
-        assert_eq!(rng.nextu(), 8229);
-        assert_eq!(rng.nextf(), 3.3522956e-6);
+        assert_eq!(rng.nextu(), 10284);
+        assert_eq!(rng.nextf(), 2.8738286e-6);
     }
 }

@@ -5,7 +5,7 @@ pub trait Rng32 {
     /// Generates a random `f32` value in the range [min, max).
     fn randf(&mut self, min: f32, max: f32) -> f32;
     /// Returns a random element from a slice.
-    fn choice<'a, T>(&'a mut self, choices: &'a [T]) -> &'a T;
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T;
 }
 
 /// A trait for 64-bit random number generators.

@@ -22,7 +22,7 @@ pub fn __get_seed() -> u128 {
 ///
 /// # Examples
 /// ```
-/// use rng_pack::next;
+/// use urng::next;
 ///
 /// let val_u32 = next!(mt32u);
 /// let val_f32 = next!(xor32f);
@@ -127,73 +127,73 @@ macro_rules! next {
 ///
 /// # Examples
 /// ```
-/// use rng_pack::rand;
+/// use urng::rand;
 ///
-/// let val_i32 = rand!(xor32i 1, 100);
-/// let val_f64 = rand!(mt64f 0.5, 1.5);
+/// let val_i32 = rand!(xor32i; 1, 100);
+/// let val_f64 = rand!(mt64f; 0.5, 1.5);
 /// ```
 macro_rules! rand {
     // --- 32-bit output variants ---
-    (xor32i $min:expr, $max:expr) => {
+    (xor32i; $min:expr, $max:expr) => {
         $crate::rng32::Xorshift32::new($crate::macros::__get_seed() as u32).randi($min, $max)
     };
-    (xor32f $min:expr, $max:expr) => {
+    (xor32f; $min:expr, $max:expr) => {
         $crate::rng32::Xorshift32::new($crate::macros::__get_seed() as u32).randf($min, $max)
     };
-    (mt32i $min:expr, $max:expr) => {
+    (mt32i; $min:expr, $max:expr) => {
         $crate::rng32::Mt19937::new($crate::macros::__get_seed() as u32, 3).randi($min, $max)
     };
-    (mt32f $min:expr, $max:expr) => {
+    (mt32f; $min:expr, $max:expr) => {
         $crate::rng32::Mt19937::new($crate::macros::__get_seed() as u32, 3).randf($min, $max)
     };
-    (pcg32i $min:expr, $max:expr) => {
+    (pcg32i; $min:expr, $max:expr) => {
         $crate::rng32::Pcg32::new($crate::macros::__get_seed() as u64).randi($min, $max)
     };
-    (pcg32f $min:expr, $max:expr) => {
+    (pcg32f; $min:expr, $max:expr) => {
         $crate::rng32::Pcg32::new($crate::macros::__get_seed() as u64).randf($min, $max)
     };
-    (philox32i $min:expr, $max:expr) => {
+    (philox32i; $min:expr, $max:expr) => {
         $crate::rng32::Philox32::new([
             $crate::macros::__get_seed() as u32,
             ($crate::macros::__get_seed() >> 32) as u32,
         ])
         .randi($min, $max)
     };
-    (philox32f $min:expr, $max:expr) => {
+    (philox32f; $min:expr, $max:expr) => {
         $crate::rng32::Philox32::new([
             $crate::macros::__get_seed() as u32,
             ($crate::macros::__get_seed() >> 32) as u32,
         ])
         .randf($min, $max)
     };
-    (tgfsr32i $min:expr, $max:expr) => {
+    (tgfsr32i; $min:expr, $max:expr) => {
         $crate::rng32::TwistedGFSR::new($crate::rng32::TwistedGFSR::new_seed()).randi($min, $max)
     };
-    (tgfsr32f $min:expr, $max:expr) => {
+    (tgfsr32f; $min:expr, $max:expr) => {
         $crate::rng32::TwistedGFSR::new($crate::rng32::TwistedGFSR::new_seed()).randf($min, $max)
     };
 
     // --- 64-bit output variants ---
-    (xor64i $min:expr, $max:expr) => {
+    (xor64i; $min:expr, $max:expr) => {
         $crate::rng64::Xorshift64::new($crate::macros::__get_seed() as u64).randi($min, $max)
     };
-    (xor64f $min:expr, $max:expr) => {
+    (xor64f; $min:expr, $max:expr) => {
         $crate::rng64::Xorshift64::new($crate::macros::__get_seed() as u64).randf($min, $max)
     };
-    (mt64i $min:expr, $max:expr) => {
+    (mt64i; $min:expr, $max:expr) => {
         $crate::rng64::Mt1993764::new($crate::macros::__get_seed() as u64, 3).randi($min, $max)
     };
-    (mt64f $min:expr, $max:expr) => {
+    (mt64f; $min:expr, $max:expr) => {
         $crate::rng64::Mt1993764::new($crate::macros::__get_seed() as u64, 3).randf($min, $max)
     };
-    (philox64i $min:expr, $max:expr) => {
+    (philox64i; $min:expr, $max:expr) => {
         $crate::rng64::Philox64::new([
             $crate::macros::__get_seed() as u64,
             ($crate::macros::__get_seed() >> 64) as u64,
         ])
         .randi($min, $max)
     };
-    (philox64f $min:expr, $max:expr) => {
+    (philox64f; $min:expr, $max:expr) => {
         $crate::rng64::Philox64::new([
             $crate::macros::__get_seed() as u64,
             ($crate::macros::__get_seed() >> 64) as u64,
@@ -202,7 +202,7 @@ macro_rules! rand {
     };
 
     // --- 128-bit internal state (32-bit output) ---
-    (xor128i $min:expr, $max:expr) => {
+    (xor128i; $min:expr, $max:expr) => {
         $crate::rng128::Xorshift128::new([
             $crate::macros::__get_seed() as u32,
             ($crate::macros::__get_seed() >> 32) as u32,
@@ -211,7 +211,7 @@ macro_rules! rand {
         ])
         .randi($min, $max)
     };
-    (xor128f $min:expr, $max:expr) => {
+    (xor128f; $min:expr, $max:expr) => {
         $crate::rng128::Xorshift128::new([
             $crate::macros::__get_seed() as u32,
             ($crate::macros::__get_seed() >> 32) as u32,
@@ -223,9 +223,42 @@ macro_rules! rand {
 }
 
 #[macro_export]
+/// Wraps a value in a `Wrapping` type.
+///
+/// # Examples
+/// ```
+/// use urng::wrap;
+///
+/// let val = wrap!(1);
+/// assert_eq!(val, std::num::Wrapping(1));
+/// ```
 macro_rules! wrap {
     ($a:expr) => {
-        Wrapping($a)
+        std::num::Wrapping($a)
+    };
+}
+
+#[macro_export]
+/// Randomly selects an index based on weights using a binary search approach.
+///
+/// # Examples
+/// ```
+/// use urng::search;
+///
+/// let mut rng = urng::rng64::Mt1993764::new(1, 256);
+/// let index = search!(&mut rng, vec![1.0, 9.0]);
+/// assert!(index == Some(0) || index == Some(1));
+/// ```
+macro_rules! search {
+    ($rng:expr, $weights:expr) => {
+        $crate::bst::search($rng, $weights.to_vec())
+    };
+}
+
+#[macro_export]
+macro_rules! choice {
+    ($rng:expr, $weights:expr, $items:expr) => {
+        $crate::bst::choice($rng, $weights.to_vec(), &$items.to_vec())
     };
 }
 
@@ -239,13 +272,13 @@ mod tests {
         let _ = next!(xor64u);
         let _ = next!(xor128u);
 
-        let val = rand!(xor32i 1, 10);
+        let val = rand!(xor32i; 1, 10);
         assert!(val >= 1 && val <= 10);
 
-        let fval = rand!(xor32f 0.0, 1.0);
+        let fval = rand!(xor32f; 0.0, 1.0);
         assert!(fval >= 0.0 && fval < 1.0);
 
-        let val64 = rand!(mt64i 100, 200);
+        let val64 = rand!(mt64i; 100, 200);
         assert!(val64 >= 100 && val64 <= 200);
     }
 }
