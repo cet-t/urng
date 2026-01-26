@@ -192,8 +192,183 @@ pub extern "C" fn mt1993764_rand_f64s(
     }
 }
 
+// --- TwistedGFSR ---
+
+/// A Twisted Generalized Feedback Shift Register (TGFSR) generator.
+#[repr(C)]
+pub struct TwistedGFSR {
+    seed: [u64; N_GFSR],
+    index: usize,
+}
+
+const N_GFSR: usize = 25;
+const M_GFSR: usize = 7;
+
+impl TwistedGFSR {
+    /// Provides a default seed array.
+    pub const fn new_seed() -> [u64; N_GFSR] {
+        [
+            0x95f24dab, 0x0b685215, 0xe76ccae7, 0xaf3ec239, 0x715fad23, 0x24a590ad, 0x69e4b5ef,
+            0xbf456141, 0x96bc1b7b, 0xa7bdf825, 0xc1de75b7, 0x8858a9c9, 0x2da87693, 0xb657f9dd,
+            0xffdc8a9f, 0x8121da71, 0x8b823ecb, 0x885d05f5, 0x4e20cd47, 0x5a9ad5d9, 0x512c0c03,
+            0xea857ccd, 0x4cc1d30f, 0x8891a8a1, 0xa6b7aadb,
+        ]
+    }
+    const fn mag01() -> [u64; 2] {
+        [0x0, 0x8ebfd028]
+    }
+
+    /// Creates a new `TwistedGFSR` instance.
+    pub fn new(seed: [u64; N_GFSR]) -> Self {
+        Self {
+            seed,
+            index: N_GFSR,
+        }
+    }
+
+    fn twist(&mut self) {
+        for k in 0..(N_GFSR - M_GFSR) {
+            self.seed[k] = self.seed[k + M_GFSR]
+                ^ (self.seed[k] >> 1)
+                ^ Self::mag01()[(self.seed[k] & 1) as usize];
+        }
+        for k in (N_GFSR - M_GFSR)..N_GFSR {
+            self.seed[k] = self.seed[k + M_GFSR - N_GFSR]
+                ^ (self.seed[k] >> 1)
+                ^ Self::mag01()[(self.seed[k] & 1) as usize];
+        }
+        self.index = 0;
+    }
+
+    /// Generates the next random `u32` value.
+    #[inline]
+    pub fn nextu(&mut self) -> u64 {
+        if self.index >= N_GFSR {
+            self.twist();
+        }
+        let mut y = self.seed[self.index];
+        y ^= (y << 7) & 0x2b5b2500;
+        y ^= (y << 15) & 0xdb8b0000;
+        y &= 0xffffffff;
+        y ^= y >> 16;
+        self.index += 1;
+        y
+    }
+
+    /// Generates the next random `f64` value in the range [0, 1).
+    #[inline]
+    pub fn nextf(&mut self) -> f64 {
+        self.nextu() as f64 * (1.0 / 4294967296.0)
+    }
+
+    /// Generates a random `i64` value in the range [min, max].
+    #[inline]
+    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
+        let range = (max as i128 - min as i128 + 1) as u128;
+        let x = self.nextu();
+        ((x as u128 * range) >> 64) as i64 + min
+    }
+
+    /// Generates a random `f64` value in the range [min, max).
+    #[inline]
+    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
+        let range = max - min;
+        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
+        (self.nextu() as f64 * scale) + min
+    }
+
+    /// Returns a random element from a slice.
+    #[inline]
+    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        let index = self.randi(0, choices.len() as i64 - 1);
+        &choices[index as usize]
+    }
+}
+
+impl Rng64 for TwistedGFSR {
+    #[inline]
+    fn randi(&mut self, min: i64, max: i64) -> i64 {
+        self.randi(min, max)
+    }
+    #[inline]
+    fn randf(&mut self, min: f64, max: f64) -> f64 {
+        self.randf(min, max)
+    }
+    #[inline]
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        self.choice(choices)
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn twisted_gfsr_new(_seed: u64) -> *mut TwistedGFSR {
+    Box::into_raw(Box::new(TwistedGFSR::new(TwistedGFSR::new_seed())))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn twisted_gfsr_free(ptr: *mut TwistedGFSR) {
+    if !ptr.is_null() {
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn twisted_gfsr_next_u64s(ptr: *mut TwistedGFSR, out: *mut u64, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextu();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn twisted_gfsr_next_f64s(ptr: *mut TwistedGFSR, out: *mut f64, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextf();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn twisted_gfsr_rand_i64s(
+    ptr: *mut TwistedGFSR,
+    out: *mut i64,
+    count: usize,
+    min: i64,
+    max: i64,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randi(min, max);
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn twisted_gfsr_rand_f64s(
+    ptr: *mut TwistedGFSR,
+    out: *mut f64,
+    count: usize,
+    min: f64,
+    max: f64,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randf(min, max);
+        }
+    }
+}
+
 // --- Lcg64 ---
 
+/// A Linear Congruential Generator (LCG) for 64-bit random numbers.
+///
+/// This generator produces pseudo-random numbers using the recurrence relation:
+/// X(n+1) = (a * X(n) + b) % M
 #[repr(C)]
 pub struct Lcg64 {
     x: Wrapping<u64>,
@@ -204,6 +379,15 @@ pub struct Lcg64 {
 }
 
 impl Lcg64 {
+    /// Creates a new `Lcg64` instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `x` - The initial state (seed).
+    /// * `a` - The multiplier.
+    /// * `b` - The increment.
+    /// * `m` - The modulus.
+    /// * `warm` - The number of initial iterations to skip.
     pub fn new(x: u64, a: u64, b: u64, m: u64, warm: usize) -> Self {
         let a = a | 1;
         let mut rng = Self {
@@ -359,13 +543,6 @@ impl Philox64 {
         }
     }
 
-    /// Advances the generator state by `count` steps.
-    pub fn warm(&mut self, count: usize) {
-        for _i in 0..count {
-            let _ = self.nextu();
-        }
-    }
-
     /// Generates the next block of random numbers.
     #[inline]
     pub fn nextu(&mut self) -> [u64; 2] {
@@ -412,7 +589,9 @@ impl Philox64 {
     /// Generates a random `f64` value in the range [min, max).
     #[inline]
     pub fn randf(&mut self, min: f64, max: f64) -> f64 {
-        self.nextf() * (max - min) + min
+        let range = max - min;
+        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
+        (self.nextu()[0] as f64 * scale) + min
     }
 
     /// Returns a random element from a slice.
@@ -441,13 +620,6 @@ impl Rng64 for Philox64 {
 #[unsafe(no_mangle)]
 pub extern "C" fn philox64_new(seed: u64) -> *mut Philox64 {
     Box::into_raw(Box::new(Philox64::new(seed)))
-}
-#[unsafe(no_mangle)]
-pub extern "C" fn philox64_warm(ptr: *mut Philox64, count: usize) {
-    unsafe {
-        let rng = &mut *ptr;
-        rng.warm(count);
-    }
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn philox64_free(ptr: *mut Philox64) {
@@ -817,6 +989,10 @@ pub extern "C" fn xorshift64_rand_f64s(
     }
 }
 
+/// A 64-bit Cellular Automata-based random number generator.
+///
+/// This generator uses a 4-cell cellular automaton state and a Weyl counter.
+/// It is designed for high performance and quality.
 #[repr(C)]
 pub struct Cet64 {
     k: Wrapping<u64>,
@@ -825,6 +1001,7 @@ pub struct Cet64 {
 }
 
 impl Cet64 {
+    /// Creates a new `Cet64` instance with a given seed.
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         let k = seedgen.nextu();
@@ -879,6 +1056,21 @@ impl Cet64 {
     pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         let index = self.randi(0, choices.len() as i64 - 1);
         &choices[index as usize]
+    }
+}
+
+impl Rng64 for Cet64 {
+    #[inline]
+    fn randi(&mut self, min: i64, max: i64) -> i64 {
+        self.randi(min, max)
+    }
+    #[inline]
+    fn randf(&mut self, min: f64, max: f64) -> f64 {
+        self.randf(min, max)
+    }
+    #[inline]
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        self.choice(choices)
     }
 }
 
@@ -993,6 +1185,105 @@ impl Xoshiro256Pp {
 
         res.0
     }
+
+    pub fn nextf(&mut self) -> f64 {
+        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
+    }
+
+    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
+        let range = (max as i128 - min as i128 + 1) as u128;
+        let x = self.nextu();
+        ((x as u128 * range) >> 64) as i64 + min
+    }
+
+    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
+        let range = max - min;
+        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
+        (self.nextu() as f64 * scale) + min
+    }
+
+    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        let index = self.randi(0, choices.len() as i64 - 1);
+        &choices[index as usize]
+    }
+}
+
+impl Rng64 for Xoshiro256Pp {
+    #[inline]
+    fn randi(&mut self, min: i64, max: i64) -> i64 {
+        self.randi(min, max)
+    }
+    #[inline]
+    fn randf(&mut self, min: f64, max: f64) -> f64 {
+        self.randf(min, max)
+    }
+    #[inline]
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        self.choice(choices)
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xoshiro256pp_new(seed: u64) -> *mut Xoshiro256Pp {
+    Box::into_raw(Box::new(Xoshiro256Pp::new(seed)))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn xoshiro256pp_free(ptr: *mut Xoshiro256Pp) {
+    if !ptr.is_null() {
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn xoshiro256pp_next_u64s(ptr: *mut Xoshiro256Pp, out: *mut u64, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextu();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn xoshiro256pp_next_f64s(ptr: *mut Xoshiro256Pp, out: *mut f64, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextf();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn xoshiro256pp_rand_i64s(
+    ptr: *mut Xoshiro256Pp,
+    out: *mut i64,
+    count: usize,
+    min: i64,
+    max: i64,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randi(min, max);
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn xoshiro256pp_rand_f64s(
+    ptr: *mut Xoshiro256Pp,
+    out: *mut f64,
+    count: usize,
+    min: f64,
+    max: f64,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randf(min, max);
+        }
+    }
 }
 
 /// A xoshiro256** random number generator.
@@ -1043,6 +1334,102 @@ impl Xoshiro256Ss {
 
         res.0
     }
+
+    pub fn nextf(&mut self) -> f64 {
+        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
+    }
+
+    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
+        let range = (max as i128 - min as i128 + 1) as u128;
+        let x = self.nextu();
+        ((x as u128 * range) >> 64) as i64 + min
+    }
+
+    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
+        let range = max - min;
+        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
+        (self.nextu() as f64 * scale) + min
+    }
+
+    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        let index = self.randi(0, choices.len() as i64 - 1);
+        &choices[index as usize]
+    }
+}
+
+impl Rng64 for Xoshiro256Ss {
+    fn randi(&mut self, min: i64, max: i64) -> i64 {
+        self.randi(min, max)
+    }
+    fn randf(&mut self, min: f64, max: f64) -> f64 {
+        self.randf(min, max)
+    }
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        self.choice(choices)
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xoshiro256ss_new(seed: u64) -> *mut Xoshiro256Ss {
+    Box::into_raw(Box::new(Xoshiro256Ss::new(seed)))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn xoshiro256ss_free(ptr: *mut Xoshiro256Ss) {
+    if !ptr.is_null() {
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn xoshiro256ss_next_u64s(ptr: *mut Xoshiro256Ss, out: *mut u64, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextu();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn xoshiro256ss_next_f64s(ptr: *mut Xoshiro256Ss, out: *mut f64, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextf();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn xoshiro256ss_rand_i64s(
+    ptr: *mut Xoshiro256Ss,
+    out: *mut i64,
+    count: usize,
+    min: i64,
+    max: i64,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randi(min, max);
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn xoshiro256ss_rand_f64s(
+    ptr: *mut Xoshiro256Ss,
+    out: *mut f64,
+    count: usize,
+    min: f64,
+    max: f64,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randf(min, max);
+        }
+    }
 }
 
 /// A SplitMix64 random number generator.
@@ -1077,6 +1464,106 @@ impl SplitMix64 {
         result = (result ^ (result >> 27)) * wrap!(0x94D049BB133111EB);
         (result ^ (result >> 31)).0
     }
+
+    #[inline]
+    pub fn nextf(&mut self) -> f64 {
+        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
+    }
+
+    #[inline]
+    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
+        let range = (max as i128 - min as i128 + 1) as u128;
+        ((self.nextu() as u128 * range) >> 64) as i64 + min
+    }
+
+    #[inline]
+    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
+        let range = max - min;
+        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
+        (self.nextu() as f64 * scale) + min
+    }
+
+    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        let index = self.randi(0, choices.len() as i64 - 1);
+        &choices[index as usize]
+    }
+}
+
+impl Rng64 for SplitMix64 {
+    fn randi(&mut self, min: i64, max: i64) -> i64 {
+        self.randi(min, max)
+    }
+
+    fn randf(&mut self, min: f64, max: f64) -> f64 {
+        self.randf(min, max)
+    }
+
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        self.choice(choices)
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn splitmix64_new(seed: u64) -> *mut SplitMix64 {
+    Box::into_raw(Box::new(SplitMix64::new(seed)))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn splitmix64_free(ptr: *mut SplitMix64) {
+    if !ptr.is_null() {
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn splitmix64_next_u64s(ptr: *mut SplitMix64, out: *mut u64, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextu();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn splitmix64_next_f64s(ptr: *mut SplitMix64, out: *mut f64, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextf();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn splitmix64_rand_i64s(
+    ptr: *mut SplitMix64,
+    out: *mut i64,
+    count: usize,
+    min: i64,
+    max: i64,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randi(min, max);
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn splitmix64_rand_f64s(
+    ptr: *mut SplitMix64,
+    out: *mut f64,
+    count: usize,
+    min: f64,
+    max: f64,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randf(min, max);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1088,6 +1575,13 @@ mod tests {
         let mut rng = Mt1993764::new(1, 1024);
         assert_eq!(rng.nextu(), 17135235817683363880);
         assert_eq!(rng.nextf(), 0.5149867566929178);
+    }
+
+    #[test]
+    fn twisted_gfsr_works() {
+        let mut rng = TwistedGFSR::new(TwistedGFSR::new_seed());
+        assert_eq!(rng.nextu(), 868393086);
+        assert_eq!(rng.nextf(), 0.33567164628766477);
     }
 
     #[test]
@@ -1114,34 +1608,35 @@ mod tests {
     #[test]
     fn sfc64_works() {
         let mut rng = Sfc64::new(1);
-        let val1 = rng.nextu();
-        let val2 = rng.nextf();
-        assert_eq!(val1, 5761717516557699369);
-        assert_eq!(val2, 0.4850623141159338);
+        assert_eq!(rng.nextu(), 5761717516557699369);
+        assert_eq!(rng.nextf(), 0.4850623141159338);
     }
 
     #[test]
     fn cet64_works() {
         let mut rng = Cet64::new(1);
-        let val1 = rng.nextu();
-        assert_eq!(val1, 15169567334506313593);
+        assert_eq!(rng.nextu(), 15169567334506313593);
+        assert_eq!(rng.nextf(), 0.7143720878069354);
     }
 
     #[test]
     fn xoshiro256pp_works() {
         let mut rng = Xoshiro256Pp::new(1);
         assert_eq!(rng.nextu(), 14971601782005023387);
+        assert_eq!(rng.nextf(), 0.7471047161582187);
     }
 
     #[test]
     fn xoshiro256ss_works() {
         let mut rng = Xoshiro256Ss::new(1);
         assert_eq!(rng.nextu(), 12966619160104079557);
+        assert_eq!(rng.nextf(), 0.520436619938857)
     }
 
     #[test]
     fn splitmix64_works() {
         let mut rng = SplitMix64::new(1);
         assert_eq!(rng.nextu(), 10451216379200822465);
+        assert_eq!(rng.nextf(), 0.7457817572627012);
     }
 }

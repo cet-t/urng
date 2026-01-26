@@ -11,14 +11,15 @@ fn bst_test() -> Result<()> {
     let mut results = HashMap::<&str, i32>::from_iter(items.iter().map(|&k| (k, 0)));
     for _ in 0..N {
         *results
-            .entry(choice!(&mut rng, weights, &items).unwrap())
+            .entry(choice!(&mut rng, weights, items).unwrap())
             .or_insert(0) += 1;
     }
 
     let mut results = results.iter().collect::<Vec<_>>();
     results.sort_by_key(|(_, v)| -**v);
     results.iter().for_each(|(k, v)| {
-        println!("{:<3}: {:>6.2}%", k, **v as f64 * 100.0 / N as f64);
+        let per = **v as f64 * 100.0 / N as f64;
+        println!("{:<3}: {:>6.2}%", k, per);
     });
 
     Ok(())

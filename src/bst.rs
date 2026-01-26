@@ -9,15 +9,15 @@
 /// use urng::rng64::Sfc64;
 ///
 /// let mut rng = Sfc64::new(1);
-/// let index = search(&mut rng, vec![1.0, 9.0]);
+/// let index = search(&mut rng, &[1.0, 9.0]);
 /// assert!(index == Some(0) || index == Some(1));
 /// ```
-pub fn search<R: Rng64>(rng: &mut R, weights: Vec<f64>) -> Option<usize> {
+pub fn search<R: Rng64>(rng: &mut R, weights: &[f64]) -> Option<usize> {
     if weights.is_empty() {
         None
     } else {
         let mut total_weight: f64 = 0.0;
-        let mut accumulate_weights = Vec::new();
+        let mut accumulate_weights = Vec::with_capacity(weights.len());
         let length = weights.len();
 
         for weight in weights.iter() {
@@ -57,11 +57,11 @@ pub fn search<R: Rng64>(rng: &mut R, weights: Vec<f64>) -> Option<usize> {
 /// use urng::rng64::Sfc64;
 ///
 /// let mut rng = Sfc64::new(1);
-/// let items = vec!["a", "b"];
-/// let index = choice(&mut rng, vec![1.0, 9.0], &items);
+/// let items = ["a", "b"];
+/// let index = choice(&mut rng, &[1.0, 9.0], &items);
 /// assert!(index == Some(&"a") || index == Some(&"b"));
 /// ```
-pub fn choice<'a, R: Rng64, T>(rng: &mut R, weights: Vec<f64>, items: &'a Vec<T>) -> Option<&'a T> {
+pub fn choice<'a, R: Rng64, T>(rng: &mut R, weights: &[f64], items: &'a [T]) -> Option<&'a T> {
     if weights.is_empty() || items.is_empty() || weights.len() != items.len() {
         None
     } else {
@@ -77,17 +77,17 @@ mod tests {
     #[test]
     fn search_works() {
         let mut rng = Mt1993764::new(1, 256);
-        let weights = vec![1.0, 9.0];
-        let index = search(&mut rng, weights);
+        let weights = [1.0, 9.0];
+        let index = search(&mut rng, &weights);
         assert!(index == Some(0) || index == Some(1));
     }
 
     #[test]
     fn choice_works() {
         let mut rng = Mt1993764::new(1, 256);
-        let weights = vec![1.0, 9.0];
-        let items = vec!["a", "b"];
-        let item = choice(&mut rng, weights, &items);
+        let weights = [1.0, 9.0];
+        let items = ["a", "b"];
+        let item = choice(&mut rng, &weights, &items);
         assert!(item == Some(&"a") || item == Some(&"b"));
     }
 }

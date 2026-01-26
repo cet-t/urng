@@ -5,14 +5,24 @@
 //! This crate provides implementations of various pseudo-random number generators (PRNGs),
 //! including:
 //!
-//! * **Mersenne Twister**: [`rng32::Mt19937`] (32-bit) and [`rng64::Mt1993764`] (64-bit).
-//! * **PCG**: [`rng32::Pcg32`] (Permuted Congruential Generator).
-//! * **Philox**: [`rng32::Philox32`] (4x32) and [`rng64::Philox64`] (2x64), counter-based RNGs.
-//! * **Twisted GFSR**: [`rng32::TwistedGFSR`].
-//! * **SFC**: [`rng64::Sfc64`] (64-bit).
-//! * **Xorshift**: [`rng32::Xorshift32`], [`rng64::Xorshift64`], and [`rng128::Xorshift128`].
+//! * **Mersenne Twister**: [`rng32::Mt19937`] (32-bit), [`rng64::Mt1993764`] (64-bit).
+//! * **Permuted Congruential Generator**: [`rng32::Pcg32`] (32-bit output).
+//! * **Philox**: [`rng32::Philox32`] (4x32-bit), [`rng64::Philox64`] (2x64-bit).
+//! * **Twisted Generalized Feedback Shift Register**: [`rng64::TwistedGFSR`] (64-bit).
+//! * **Small Fast Chaotic**: [`rng64::Sfc64`] (64-bit).
+//! * **Xorshift**: [`rng32::Xorshift32`] (32-bit), [`rng64::Xorshift64`] (64-bit), [`rng128::Xorshift128`] (128-bit state).
+//! * **Xorwow**: [`rng32::Xorwow`] (32-bit).
+//! * **Xoshiro**: [`rng64::Xoshiro256Pp`], [`rng64::Xoshiro256Ss`] (64-bit).
+//! * **Linear Congruential Generator**: [`rng32::Lcg32`] (32-bit), [`rng64::Lcg64`] (64-bit).
+//! * **Cellular Automata**: [`rng64::Cet64`] (64-bit).
+//! * **SplitMix**: [`rng32::SplitMix32`] (32-bit), [`rng64::SplitMix64`] (64-bit).
 //!
-//! Each generator supports generating uniform random numbers for various types (`u32`, `u64`, `f32`, `f64`)
+//! ## Macros
+//!
+//! * **Random Generation**: [`next!`], [`rand!`]
+//! * **Utilities**: [`wrap!`], [`search!`], [`choice!`]
+//!
+//! Each generator supports generating uniform random numbers for various types (u32, u64, f32, f64)
 //! and ranges.
 //!
 //! ## C API

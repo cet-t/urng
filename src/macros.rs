@@ -36,10 +36,10 @@ macro_rules! next {
         $crate::rng32::Xorshift32::new($crate::macros::__get_seed() as u32).nextf()
     };
     (mt32u) => {
-        $crate::rng32::Mt19937::new($crate::macros::__get_seed() as u32, 3).nextu()
+        $crate::rng32::Mt19937::new($crate::macros::__get_seed() as u32).nextu()
     };
     (mt32f) => {
-        $crate::rng32::Mt19937::new($crate::macros::__get_seed() as u32, 3).nextf()
+        $crate::rng32::Mt19937::new($crate::macros::__get_seed() as u32).nextf()
     };
     (pcg32u) => {
         $crate::rng32::Pcg32::new($crate::macros::__get_seed() as u64).nextu()
@@ -225,17 +225,37 @@ macro_rules! rand {
 #[macro_export]
 /// Wraps a value in a `Wrapping` type.
 ///
+/// Can also be used to create arrays of `Wrapping` values.
+///
 /// # Examples
 /// ```
 /// use urng::wrap;
 ///
+/// // Single value
 /// let val = wrap!(1);
 /// assert_eq!(val, std::num::Wrapping(1));
+///
+/// // Array with repeated value
+/// let arr = wrap![1; 3];
+/// assert_eq!(arr, [std::num::Wrapping(1), std::num::Wrapping(1), std::num::Wrapping(1)]);
+///
+/// // Array with specific values
+/// let arr2 = wrap![1, 2, 3];
+/// assert_eq!(arr2, [std::num::Wrapping(1), std::num::Wrapping(2), std::num::Wrapping(3)]);
 /// ```
 macro_rules! wrap {
     ($a:expr) => {
-        std::num::Wrapping($a)
+        ::std::num::Wrapping($a)
     };
+
+    ($elem:expr; $n:expr) => (
+        [::std::num::Wrapping($elem); $n]
+    );
+
+    ($($x:expr),+ $(,)?) => (
+        [$(::std::num::Wrapping($x)),+]
+    );
+
 }
 
 #[macro_export]
@@ -246,19 +266,19 @@ macro_rules! wrap {
 /// use urng::search;
 ///
 /// let mut rng = urng::rng64::Mt1993764::new(1, 256);
-/// let index = search!(&mut rng, vec![1.0, 9.0]);
+/// let index = search!(&mut rng, [1.0, 9.0]);
 /// assert!(index == Some(0) || index == Some(1));
 /// ```
 macro_rules! search {
     ($rng:expr, $weights:expr) => {
-        $crate::bst::search($rng, $weights.to_vec())
+        $crate::bst::search($rng, &$weights)
     };
 }
 
 #[macro_export]
 macro_rules! choice {
     ($rng:expr, $weights:expr, $items:expr) => {
-        $crate::bst::choice($rng, $weights.to_vec(), &$items.to_vec())
+        $crate::bst::choice($rng, &$weights, &$items)
     };
 }
 
