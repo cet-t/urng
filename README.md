@@ -25,6 +25,7 @@ Output `u32` natively.
 | `Mt19937`     | Mersenne Twister | $2^{19937}-1$    | Standard reliable generator.              |
 | `Pcg32`       | PCG-XSH-RR       | $2^{64}$         | Fast, statistically good, small state.    |
 | `Philox32`    | Philox 4x32      | -                | Counter-based, suitable for parallel use. |
+| `SplitMix32`  | SplitMix32       | $2^{32}$         | Fast, used for initializing other states. |
 | `Xorwow`      | XORWOW           | $2^{192}-2^{32}$ | Used in NVIDIA cuRAND.                    |
 | `Xorshift32`  | Xorshift         | $2^{32}-1$       | Very simple and fast.                     |
 | `TwistedGFSR` | TGFSR            | $2^{800}$ approx | Generalized Feedback Shift Register.      |
