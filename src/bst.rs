@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn search_works() {
-        let mut rng = Mt1993764::new(1, 256);
+        let mut rng = Mt1993764::new(1);
         let weights = [1.0, 9.0];
         let index = search(&mut rng, &weights);
         assert!(index == Some(0) || index == Some(1));
@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn choice_works() {
-        let mut rng = Mt1993764::new(1, 256);
+        let mut rng = Mt1993764::new(1);
         let weights = [1.0, 9.0];
         let items = ["a", "b"];
         let item = choice(&mut rng, &weights, &items);

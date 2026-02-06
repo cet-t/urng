@@ -1,12 +1,13 @@
-﻿use anyhow::Result;
-use std::collections::HashMap;
+﻿use std::collections::HashMap;
 use urng::{choice, rng64::Mt1993764};
 
-fn bst_test() -> Result<()> {
+type Result = std::result::Result<(), ()>;
+
+fn bst_test() -> Result {
     const N: usize = 100_000;
     let weights = [0.01, 1.0, 20.0, 80.0];
     let items = ["SSR", "SR", "R", "N"];
-    let mut rng = Mt1993764::new(1, 256);
+    let mut rng = Mt1993764::new(1);
 
     let mut results = HashMap::<&str, i32>::from_iter(items.iter().map(|&k| (k, 0)));
     for _ in 0..N {
@@ -25,7 +26,7 @@ fn bst_test() -> Result<()> {
     Ok(())
 }
 
-fn main() -> Result<()> {
+fn main() -> Result {
     bst_test()?;
     Ok(())
 }

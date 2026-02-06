@@ -1,6 +1,6 @@
 [package]
 name = "urng"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2024"
 license = "MIT"
 authors = ["cet"]
@@ -13,8 +13,5 @@ lto = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[dependencies]
-anyhow = "1.0.100"
-
-# [build-dependencies]
-# csbindgen = "1.9.7"
+[build-dependencies]
+csbindgen = "1.9.7"

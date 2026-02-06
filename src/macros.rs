@@ -181,10 +181,10 @@ macro_rules! rand {
         $crate::rng64::Xorshift64::new($crate::macros::__get_seed() as u64).randf($min, $max)
     };
     (mt64i; $min:expr, $max:expr) => {
-        $crate::rng64::Mt1993764::new($crate::macros::__get_seed() as u64, 3).randi($min, $max)
+        $crate::rng64::Mt1993764::new($crate::macros::__get_seed() as u64).randi($min, $max)
     };
     (mt64f; $min:expr, $max:expr) => {
-        $crate::rng64::Mt1993764::new($crate::macros::__get_seed() as u64, 3).randf($min, $max)
+        $crate::rng64::Mt1993764::new($crate::macros::__get_seed() as u64).randf($min, $max)
     };
     (philox64i; $min:expr, $max:expr) => {
         $crate::rng64::Philox64::new([
@@ -265,7 +265,7 @@ macro_rules! wrap {
 /// ```
 /// use urng::search;
 ///
-/// let mut rng = urng::rng64::Mt1993764::new(1, 256);
+/// let mut rng = urng::rng64::Mt1993764::new(1);
 /// let index = search!(&mut rng, [1.0, 9.0]);
 /// assert!(index == Some(0) || index == Some(1));
 /// ```

@@ -1,3 +1,6 @@
+[<img alt="crates.io" src="https://img.shields.io/crates/v/urng.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/urng)
+[<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-urng-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/urng)
+
 # Universal RNG
 
 A collection of efficient pseudo-random number generators (PRNGs) implemented in pure Rust.
@@ -9,7 +12,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.2.0"
+urng = "0.2.4"
 ```
 
 ## Supported Generators

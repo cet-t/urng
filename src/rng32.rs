@@ -898,6 +898,7 @@ impl Rng32 for Xorwow {
     }
 }
 
+#[repr(C)]
 pub struct SplitMix32 {
     state: Wrapping<u32>,
 }
