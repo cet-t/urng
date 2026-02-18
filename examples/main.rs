@@ -1,32 +1,31 @@
-﻿use std::collections::HashMap;
-use urng::{choice, rng64::Mt1993764};
+﻿use std::hint::black_box;
+use std::time::Instant;
+use urng::rng32::{Mt19937, Sfmt19937};
 
-type Result = std::result::Result<(), ()>;
+const N: usize = 100_000_000;
 
-fn bst_test() -> Result {
-    const N: usize = 100_000;
-    let weights = [0.01, 1.0, 20.0, 80.0];
-    let items = ["SSR", "SR", "R", "N"];
-    let mut rng = Mt1993764::new(1);
+fn main() {
+    println!("Benchmarking Random Number Generators (N = {})", N);
 
-    let mut results = HashMap::<&str, i32>::from_iter(items.iter().map(|&k| (k, 0)));
+    // Benchmark Mt19937
+    let mut mt = Mt19937::new(12345);
+    let start_mt = Instant::now();
     for _ in 0..N {
-        *results
-            .entry(choice!(&mut rng, weights, items).unwrap())
-            .or_insert(0) += 1;
+        black_box(mt.nextu());
     }
+    let duration_mt = start_mt.elapsed();
+    println!("Mt19937: {:?}", duration_mt);
 
-    let mut results = results.iter().collect::<Vec<_>>();
-    results.sort_by_key(|(_, v)| -**v);
-    results.iter().for_each(|(k, v)| {
-        let per = **v as f64 * 100.0 / N as f64;
-        println!("{:<3}: {:>6.2}%", k, per);
-    });
+    // Benchmark Sfmt19937
+    let mut sfmt = Sfmt19937::new(12345);
+    let start_sfmt = Instant::now();
+    for _ in 0..N {
+        black_box(sfmt.nextu());
+    }
+    let duration_sfmt = start_sfmt.elapsed();
+    println!("Sfmt19937:  {:?}", duration_sfmt);
 
-    Ok(())
-}
-
-fn main() -> Result {
-    bst_test()?;
-    Ok(())
+    // Calculate speedup
+    let speedup = duration_mt.as_secs_f64() / duration_sfmt.as_secs_f64();
+    println!("Sfmt speedup: {:.2}x", speedup);
 }

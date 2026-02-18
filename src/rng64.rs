@@ -3,6 +3,7 @@ use crate::wrap;
 use std::hint::black_box;
 use std::num::Wrapping;
 use std::slice::from_raw_parts_mut;
+use wide::u32x4;
 
 // --- Mt1993764 ---
 
@@ -188,215 +189,270 @@ pub extern "C" fn mt1993764_rand_f64s(
     }
 }
 
-// --- SFMT ---
-
-#[repr(C)]
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
-pub struct w128 {
-    u: [Wrapping<u32>; 4],
-    u64: [Wrapping<u64>; 2],
-}
+// --- Sfmt1993764 ---
 
 /// A SIMD oriented Fast Mersenne Twister (SFMT) random number generator.
 #[repr(C)]
-pub struct Sfmt {
-    state: [w128; SFMT_N],
-    idx: Wrapping<usize>,
+#[repr(align(16))]
+pub struct Sfmt1993764 {
+    state: [u32x4; SFMT_N],
+    idx: usize,
 }
 
+const SFMT_N: usize = 156;
 const SFMT_POS1: usize = 122;
-const SFMT_N: usize = 19937 / 128 + 1;
-const SFMT_N32: usize = SFMT_N * 4;
-const SFMT_N64: usize = SFMT_N * 2;
-const SFMT_PARITY1: usize = 0x00000001;
-const SFMT_PARITY2: usize = 0x00000000;
-const SFMT_PARITY3: usize = 0x00000000;
-const SFMT_PARITY4: usize = 0x13c9e684;
-const SFMT_SL1: usize = 18;
-const SFMT_SL2: usize = 1;
-const SFMT_SR1: usize = 11;
-const SFMT_SR2: usize = 1;
-const SFMT_MSK1: usize = 0xdfffffef;
-const SFMT_MSK2: usize = 0xddfecb7f;
-const SFMT_MSK3: usize = 0xbffaffff;
-const SFMT_MSK4: usize = 0xbffffff6;
+const SFMT_SL1: u32 = 18;
+const SFMT_SR1: u32 = 11;
 
-impl Sfmt {
+const SFMT_MSK1: u32 = 0xdfffffef;
+const SFMT_MSK2: u32 = 0xddfecb7f;
+const SFMT_MSK3: u32 = 0xbffaffff;
+const SFMT_MSK4: u32 = 0xbffffff6;
+const SFMT_PARITY1: u32 = 0x00000001;
+const SFMT_PARITY2: u32 = 0x00000000;
+const SFMT_PARITY3: u32 = 0x00000000;
+const SFMT_PARITY4: u32 = 0x13c9e684;
+
+impl Sfmt1993764 {
+    /// Creates a new `Sfmt` instance.
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
 
-        let mut state = [Default::default(); SFMT_N];
-        for i in 0..state.len() {
-            state[i] = w128 {
-                u: wrap![
-                    seedgen.nextu() as u32,
-                    seedgen.nextu() as u32,
-                    seedgen.nextu() as u32,
-                    seedgen.nextu() as u32,
-                ],
-                u64: wrap![seedgen.nextu(), seedgen.nextu()],
-            };
+        // Initialize state using u32 array for simplicity
+        let mut raw_state = [0u32; SFMT_N * 4];
+        for i in 0..SFMT_N * 2 {
+            // Fill with 64-bit values from SplitMix64
+            let s = seedgen.nextu();
+            raw_state[2 * i] = s as u32;
+            raw_state[2 * i + 1] = (s >> 32) as u32;
         }
-        let mut a = Self {
+
+        let mut state = [u32x4::default(); SFMT_N];
+        for i in 0..SFMT_N {
+            state[i] = u32x4::from([
+                raw_state[4 * i],
+                raw_state[4 * i + 1],
+                raw_state[4 * i + 2],
+                raw_state[4 * i + 3],
+            ]);
+        }
+
+        let mut rng = Self {
             state,
-            idx: wrap!(SFMT_N32),
+            idx: SFMT_N * 2, // Force generate on first call
         };
-        a.period_certification();
-        a
+        rng.period_certification();
+        rng
     }
 
-    fn ls(o: &mut w128, i: w128, shift: usize) {
-        let th = wrap!((i.u[3].0 as u64) << 32) | wrap!(i.u[2].0 as u64);
-        let tl = wrap!((i.u[1].0 as u64) << 32) | wrap!(i.u[0].0 as u64);
+    fn gen_rand_all(&mut self) {
+        unsafe {
+            let ptr = self.state.as_mut_ptr();
+            let mut r1 = *ptr.add(SFMT_N - 2);
+            let mut r2 = *ptr.add(SFMT_N - 1);
 
-        let mut oh = th.0 << (shift * 8);
-        let ol = th.0 << (shift * 8);
-        oh |= tl.0 >> (64 - shift * 8);
+            // Constant mask vector
+            let mask = u32x4::from([SFMT_MSK1, SFMT_MSK2, SFMT_MSK3, SFMT_MSK4]);
 
-        o.u[1] = wrap!((ol as u64 >> 32) as u32);
-        o.u[0] = wrap!(ol as u32);
-        o.u[3] = wrap!((oh as u64 >> 32) as u32);
-        o.u[2] = wrap!(oh as u32);
-    }
+            for i in 0..(SFMT_N - SFMT_POS1) {
+                let p_i = ptr.add(i);
+                let a = *p_i;
+                let b = *ptr.add(i + SFMT_POS1);
 
-    fn rs(o: &mut w128, i: w128, shift: usize) {
-        let th = wrap!((i.u[3].0 as u64) << 32) | wrap!(i.u[2].0 as u64);
-        let tl = wrap!((i.u[1].0 as u64) << 32) | wrap!(i.u[0].0 as u64);
+                // do_recursion inlined
+                // a=state[i], b=state[i+SFMT_POS1], c=r1, d=r2
+                // r = a ^ x ^ ((b >> SFMT_SR1) & mask) ^ y ^ (d << SFMT_SL1)
 
-        let mut oh = th.0 >> (shift * 8);
-        let ol = th.0 >> (shift * 8);
-        oh |= tl.0 << (64 - shift * 8);
+                // x = lshift128(a, SFMT_SL2=1)
+                let x: u32x4 = bytemuck::cast((bytemuck::cast::<_, u128>(a)) << 8);
+                // y = rshift128(c=r1, SFMT_SR2=1)
+                let y: u32x4 = bytemuck::cast((bytemuck::cast::<_, u128>(r1)) >> 8);
 
-        o.u[1] = wrap!((ol as u64 >> 32) as u32);
-        o.u[0] = wrap!(ol as u32);
-        o.u[3] = wrap!((oh as u64 >> 32) as u32);
-        o.u[2] = wrap!(oh as u32);
-    }
+                let r = a ^ x ^ ((b >> SFMT_SR1) & mask) ^ y ^ (r2 << SFMT_SL1);
 
-    fn do_recursion(r: &mut w128, a: &mut w128, b: &mut w128, c: &mut w128, d: &mut w128) {
-        let mut x = Default::default();
-        let mut y = Default::default();
-        Self::ls(&mut x, *a, SFMT_SL2);
-        Self::rs(&mut y, *c, SFMT_SR2);
-        r.u[0] = wrap!(
-            a.u[0].0
-                ^ x.u[0].0
-                ^ ((b.u[0] >> SFMT_SR1).0 as usize & SFMT_MSK1) as u32
-                ^ y.u[0].0
-                ^ (d.u[0] << SFMT_SL1).0
-        );
-        r.u[1] = wrap!(
-            a.u[1].0
-                ^ x.u[1].0
-                ^ ((b.u[1] >> SFMT_SR1).0 as usize & SFMT_MSK2) as u32
-                ^ y.u[1].0
-                ^ (d.u[1] << SFMT_SL1).0
-        );
-        r.u[2] = wrap!(
-            a.u[2].0
-                ^ x.u[2].0
-                ^ ((b.u[2] >> SFMT_SR1).0 as usize & SFMT_MSK3) as u32
-                ^ y.u[2].0
-                ^ (d.u[2] << SFMT_SL1).0
-        );
-        r.u[3] = wrap!(
-            a.u[3].0
-                ^ x.u[3].0
-                ^ ((b.u[3] >> SFMT_SR1).0 as usize & SFMT_MSK4) as u32
-                ^ y.u[3].0
-                ^ (d.u[3] << SFMT_SL1).0
-        );
+                *p_i = r;
+                r1 = r2;
+                r2 = r;
+            }
+
+            for i in (SFMT_N - SFMT_POS1)..SFMT_N {
+                let p_i = ptr.add(i);
+                let a = *p_i;
+                let b = *ptr.add(i + SFMT_POS1 - SFMT_N);
+
+                // Group u32x4 operations
+                // x = lshift128(a, SFMT_SL2=1)
+                let x: u32x4 = bytemuck::cast((bytemuck::cast::<_, u128>(a)) << 8);
+                // y = rshift128(c=r1, SFMT_SR2=1)
+                let y: u32x4 = bytemuck::cast((bytemuck::cast::<_, u128>(r1)) >> 8);
+
+                let r = a ^ x ^ ((b >> SFMT_SR1) & mask) ^ y ^ (r2 << SFMT_SL1);
+
+                *p_i = r;
+                r1 = r2;
+                r2 = r;
+            }
+        }
     }
 
     fn period_certification(&mut self) {
         let mut inner = 0;
-        let mut work;
-        let mut psfmt32 = self.state[0].u;
-        let parity = wrap![SFMT_PARITY1, SFMT_PARITY2, SFMT_PARITY3, SFMT_PARITY4];
+        let psfmt32 =
+            unsafe { std::slice::from_raw_parts(self.state.as_ptr() as *const u32, SFMT_N * 4) };
+        let parity = [SFMT_PARITY1, SFMT_PARITY2, SFMT_PARITY3, SFMT_PARITY4];
 
         for i in 0..4 {
-            inner ^= psfmt32[i].0 as usize & parity[i].0;
+            inner ^= psfmt32[i] & parity[i];
         }
         let mut i = 16;
-        for _ in 16..0 {
-            i >>= 1;
+        while i > 0 {
             inner ^= inner >> i;
+            i >>= 1;
         }
         inner &= 1;
+
+        // Verification passed
         if inner == 1 {
             return;
         }
 
+        // Modification for period certification
+        let psfmt32_mut = unsafe {
+            std::slice::from_raw_parts_mut(self.state.as_mut_ptr() as *mut u32, SFMT_N * 4)
+        };
+
         for i in 0..4 {
-            work = 1;
-            for _j in 0..32 {
-                if (work as usize & parity[i].0) != 0 {
-                    psfmt32[i] ^= work;
+            let mut work = 1;
+            for _ in 0..32 {
+                if (work & parity[i]) != 0 {
+                    psfmt32_mut[i] ^= work;
                     return;
                 }
-                work = work << 1;
+                work <<= 1;
             }
         }
     }
 
-    fn get_array(&mut self, array: &mut [w128]) {
-        let mut i = 0;
-        let mut j = 0;
-        let mut r1;
-        let mut r2;
+    /// Generates the next random `u64` value.
+    #[inline]
+    pub fn nextu(&mut self) -> u64 {
+        if self.idx >= SFMT_N * 2 {
+            self.gen_rand_all();
+            self.idx = 0;
+        }
 
-        r1 = self.state[SFMT_N - 2];
-        r2 = self.state[SFMT_N - 1];
-
-        while i < (SFMT_N - SFMT_POS1).min(array.len()) {
-            let mut a = self.state[i];
-            let mut b = self.state[i + SFMT_POS1];
-            Self::do_recursion(&mut array[i], &mut a, &mut b, &mut r1, &mut r2);
-            r1 = r2;
-            r2 = array[i];
-            i += 1;
-        }
-        while i < SFMT_N.min(array.len()) {
-            let mut a = self.state[i];
-            let mut b = array[i + SFMT_POS1 - SFMT_N];
-            Self::do_recursion(&mut array[i], &mut a, &mut b, &mut r1, &mut r2);
-            r1 = r2;
-            r2 = array[i];
-            i += 1;
-        }
-        while i < array.len().saturating_sub(SFMT_N) {
-            let mut a = array[i - SFMT_N];
-            let mut b = array[i + SFMT_POS1 - SFMT_N];
-            Self::do_recursion(&mut array[i], &mut a, &mut b, &mut r1, &mut r2);
-            r1 = r2;
-            r2 = array[i];
-            i += 1;
-        }
-        if array.len() >= SFMT_N {
-            while j < (2 * SFMT_N).saturating_sub(array.len()).min(SFMT_N) {
-                self.state[j] = array[j + array.len() - SFMT_N];
-                j += 1;
-            }
-            while i < array.len() {
-                let mut a = array[i - SFMT_N];
-                let mut b = array[i + SFMT_POS1 - SFMT_N];
-                Self::do_recursion(&mut array[i], &mut a, &mut b, &mut r1, &mut r2);
-                r1 = r2;
-                r2 = array[i];
-                if j < SFMT_N {
-                    self.state[j] = array[i];
-                    j += 1;
-                }
-                i += 1;
-            }
-        }
+        // Use cast_slice which was faster in previous benchmarks
+        let s: &[u64] = bytemuck::cast_slice(&self.state);
+        let val = s[self.idx];
+        self.idx += 1;
+        val
     }
 
-    pub fn nextu(&mut self) -> [w128; 4] {
-        let mut res = [Default::default(); 4];
-        self.get_array(&mut res);
-        self.idx = wrap!(SFMT_N32);
-        res
+    /// Generates the next random `f64` value in the range [0, 1).
+    #[inline]
+    pub fn nextf(&mut self) -> f64 {
+        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
+    }
+
+    /// Generates a random `i64` value in the range [min, max].
+    #[inline]
+    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
+        let range = (max as i128 - min as i128 + 1) as u128;
+        let x = self.nextu();
+        ((x as u128 * range) >> 64) as i64 + min
+    }
+
+    /// Generates a random `f64` value in the range [min, max).
+    #[inline]
+    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
+        let range = max - min;
+        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
+        (self.nextu() as f64 * scale) + min
+    }
+
+    /// Returns a random element from a slice.
+    #[inline]
+    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        let index = self.randi(0, choices.len() as i64 - 1);
+        &choices[index as usize]
+    }
+}
+
+impl Rng64 for Sfmt1993764 {
+    #[inline]
+    fn randi(&mut self, min: i64, max: i64) -> i64 {
+        self.randi(min, max)
+    }
+    #[inline]
+    fn randf(&mut self, min: f64, max: f64) -> f64 {
+        self.randf(min, max)
+    }
+    #[inline]
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        self.choice(choices)
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn sfmt1993764_new(seed: u64) -> *mut Sfmt1993764 {
+    Box::into_raw(Box::new(Sfmt1993764::new(seed)))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sfmt1993764_free(ptr: *mut Sfmt1993764) {
+    if !ptr.is_null() {
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sfmt1993764_next_u64s(ptr: *mut Sfmt1993764, out: *mut u64, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextu();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sfmt1993764_next_f64s(ptr: *mut Sfmt1993764, out: *mut f64, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.nextf();
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sfmt1993764_rand_i64s(
+    ptr: *mut Sfmt1993764,
+    out: *mut i64,
+    count: usize,
+    min: i64,
+    max: i64,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randi(min, max);
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn sfmt_rand_f64s(
+    ptr: *mut Sfmt1993764,
+    out: *mut f64,
+    count: usize,
+    min: f64,
+    max: f64,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for v in buffer {
+            *v = rng.randf(min, max);
+        }
     }
 }
 
@@ -578,6 +634,7 @@ pub extern "C" fn twisted_gfsr_rand_f64s(
 /// This generator produces pseudo-random numbers using the recurrence relation:
 /// X(n+1) = (a * X(n) + b) % M
 #[repr(C)]
+#[deprecated(since = "0.2.4", note = "Use Xoshiro256++/** instead.")]
 pub struct Lcg64 {
     x: Wrapping<u64>,
     a: u64,
@@ -586,6 +643,7 @@ pub struct Lcg64 {
     r: f64,
 }
 
+#[allow(deprecated)]
 impl Lcg64 {
     /// Creates a new `Lcg64` instance.
     ///
@@ -644,6 +702,7 @@ impl Lcg64 {
     }
 }
 
+#[allow(deprecated)]
 impl Rng64 for Lcg64 {
     #[inline]
     fn randi(&mut self, min: i64, max: i64) -> i64 {
@@ -660,16 +719,19 @@ impl Rng64 for Lcg64 {
     }
 }
 
+#[allow(deprecated)]
 #[unsafe(no_mangle)]
 pub extern "C" fn lcg64_new(x: u64, a: u64, b: u64, m: u64, warm: usize) -> *mut Lcg64 {
     Box::into_raw(Box::new(Lcg64::new(x, a, b, m, warm)))
 }
+#[allow(deprecated)]
 #[unsafe(no_mangle)]
 pub extern "C" fn lcg64_free(ptr: *mut Lcg64) {
     if !ptr.is_null() {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+#[allow(deprecated)]
 #[unsafe(no_mangle)]
 pub extern "C" fn lcg64_next_u64s(ptr: *mut Lcg64, out: *mut u64, count: usize) {
     unsafe {
@@ -680,6 +742,7 @@ pub extern "C" fn lcg64_next_u64s(ptr: *mut Lcg64, out: *mut u64, count: usize) 
         }
     }
 }
+#[allow(deprecated)]
 #[unsafe(no_mangle)]
 pub extern "C" fn lcg64_next_f64s(ptr: *mut Lcg64, out: *mut f64, count: usize) {
     unsafe {
@@ -690,6 +753,7 @@ pub extern "C" fn lcg64_next_f64s(ptr: *mut Lcg64, out: *mut f64, count: usize) 
         }
     }
 }
+#[allow(deprecated)]
 #[unsafe(no_mangle)]
 pub extern "C" fn lcg64_rand_i64s(
     ptr: *mut Lcg64,
@@ -706,6 +770,7 @@ pub extern "C" fn lcg64_rand_i64s(
         }
     }
 }
+#[allow(deprecated)]
 #[unsafe(no_mangle)]
 pub extern "C" fn lcg64_rand_f64s(
     ptr: *mut Lcg64,
@@ -1787,10 +1852,9 @@ mod tests {
 
     #[test]
     fn sfmt_works() {
-        let mut rng = Sfmt::new(1);
-        let mut a = [Default::default(); 2];
-        rng.get_array(&mut a);
-        assert_ne!(a[0], w128::default());
+        let mut rng = Sfmt1993764::new(1);
+        assert_eq!(rng.nextu(), 16435431249378271195);
+        assert_eq!(rng.nextf(), 0.914246861393214);
     }
 
     #[test]
@@ -1800,6 +1864,7 @@ mod tests {
         assert_eq!(rng.nextf(), 0.33567164628766477);
     }
 
+    #[allow(deprecated)]
     #[test]
     fn lcg64_works() {
         let mut rng = Lcg64::new(8, 13, 5, 24, 0);

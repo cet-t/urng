@@ -1,4 +1,4 @@
-//! # RNG Pack
+//! # Universal RNG
 //!
 //! A collection of random number generators.
 //!
@@ -6,6 +6,7 @@
 //! including:
 //!
 //! * **Mersenne Twister**: [`rng32::Mt19937`] (32-bit), [`rng64::Mt1993764`] (64-bit).
+//! * **SIMD-oriented Fast Mersenne Twister**: [`rng32::Sfmt19937`] (32-bit), [`rng64::Sfmt1993764`] (64-bit).
 //! * **Permuted Congruential Generator**: [`rng32::Pcg32`] (32-bit output).
 //! * **Philox**: [`rng32::Philox32`] (4x32-bit), [`rng64::Philox64`] (2x64-bit).
 //! * **Twisted Generalized Feedback Shift Register**: [`rng64::TwistedGFSR`] (64-bit).
@@ -24,11 +25,6 @@
 //!
 //! Each generator supports generating uniform random numbers for various types (u32, u64, f32, f64)
 //! and ranges.
-//!
-//! ## C API
-//!
-//! This crate also exports C-compatible functions for creating, using, and freeing these generators,
-//! allowing them to be used from other languages.
 
 /// A 32/64-bit random number generator trait.
 pub mod rng;
