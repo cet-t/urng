@@ -1176,14 +1176,27 @@ pub extern "C" fn sfc64_free(ptr: *mut Sfc64) {
     }
 }
 
+const SFC64_PAR_CHUNK: usize = 4096;
+
 #[unsafe(no_mangle)]
 pub extern "C" fn sfc64_next_u64s(ptr: *mut Sfc64, out: *mut u64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
-        }
+        let base_seed = rng.nextu();
+
+        buffer
+            .par_chunks_mut(SFC64_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_seed = SplitMix64::compute(
+                    base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+                );
+                let mut local_rng = Sfc64::new(chunk_seed);
+                for v in chunk {
+                    *v = local_rng.nextu();
+                }
+            });
     }
 }
 
@@ -1192,9 +1205,20 @@ pub extern "C" fn sfc64_next_f64s(ptr: *mut Sfc64, out: *mut f64, count: usize) 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
-        }
+        let base_seed = rng.nextu();
+
+        buffer
+            .par_chunks_mut(SFC64_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_seed = SplitMix64::compute(
+                    base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+                );
+                let mut local_rng = Sfc64::new(chunk_seed);
+                for v in chunk {
+                    *v = local_rng.nextf();
+                }
+            });
     }
 }
 
@@ -1209,9 +1233,20 @@ pub extern "C" fn sfc64_rand_i64s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
-        }
+        let base_seed = rng.nextu();
+
+        buffer
+            .par_chunks_mut(SFC64_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_seed = SplitMix64::compute(
+                    base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+                );
+                let mut local_rng = Sfc64::new(chunk_seed);
+                for v in chunk {
+                    *v = local_rng.randi(min, max);
+                }
+            });
     }
 }
 
@@ -1226,9 +1261,20 @@ pub extern "C" fn sfc64_rand_f64s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
-        }
+        let base_seed = rng.nextu();
+
+        buffer
+            .par_chunks_mut(SFC64_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_seed = SplitMix64::compute(
+                    base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+                );
+                let mut local_rng = Sfc64::new(chunk_seed);
+                for v in chunk {
+                    *v = local_rng.randf(min, max);
+                }
+            });
     }
 }
 
@@ -1612,14 +1658,27 @@ pub extern "C" fn xoshiro256pp_free(ptr: *mut Xoshiro256Pp) {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+const XOSHIRO256PP_PAR_CHUNK: usize = 4096;
+
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256pp_next_u64s(ptr: *mut Xoshiro256Pp, out: *mut u64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
-        }
+        let base_seed = rng.nextu();
+
+        buffer
+            .par_chunks_mut(XOSHIRO256PP_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_seed = SplitMix64::compute(
+                    base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+                );
+                let mut local_rng = Xoshiro256Pp::new(chunk_seed);
+                for v in chunk {
+                    *v = local_rng.nextu();
+                }
+            });
     }
 }
 #[unsafe(no_mangle)]
@@ -1627,9 +1686,20 @@ pub extern "C" fn xoshiro256pp_next_f64s(ptr: *mut Xoshiro256Pp, out: *mut f64, 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
-        }
+        let base_seed = rng.nextu();
+
+        buffer
+            .par_chunks_mut(XOSHIRO256PP_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_seed = SplitMix64::compute(
+                    base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+                );
+                let mut local_rng = Xoshiro256Pp::new(chunk_seed);
+                for v in chunk {
+                    *v = local_rng.nextf();
+                }
+            });
     }
 }
 #[unsafe(no_mangle)]
@@ -1643,9 +1713,20 @@ pub extern "C" fn xoshiro256pp_rand_i64s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
-        }
+        let base_seed = rng.nextu();
+
+        buffer
+            .par_chunks_mut(XOSHIRO256PP_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_seed = SplitMix64::compute(
+                    base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+                );
+                let mut local_rng = Xoshiro256Pp::new(chunk_seed);
+                for v in chunk {
+                    *v = local_rng.randi(min, max);
+                }
+            });
     }
 }
 #[unsafe(no_mangle)]
@@ -1659,9 +1740,20 @@ pub extern "C" fn xoshiro256pp_rand_f64s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
-        }
+        let base_seed = rng.nextu();
+
+        buffer
+            .par_chunks_mut(XOSHIRO256PP_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_seed = SplitMix64::compute(
+                    base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+                );
+                let mut local_rng = Xoshiro256Pp::new(chunk_seed);
+                for v in chunk {
+                    *v = local_rng.randf(min, max);
+                }
+            });
     }
 }
 
@@ -1758,14 +1850,27 @@ pub extern "C" fn xoshiro256ss_free(ptr: *mut Xoshiro256Ss) {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+const XOSHIRO256SS_PAR_CHUNK: usize = 4096;
+
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256ss_next_u64s(ptr: *mut Xoshiro256Ss, out: *mut u64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
-        }
+        let base_seed = rng.nextu();
+
+        buffer
+            .par_chunks_mut(XOSHIRO256SS_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_seed = SplitMix64::compute(
+                    base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+                );
+                let mut local_rng = Xoshiro256Ss::new(chunk_seed);
+                for v in chunk {
+                    *v = local_rng.nextu();
+                }
+            });
     }
 }
 #[unsafe(no_mangle)]
@@ -1773,9 +1878,20 @@ pub extern "C" fn xoshiro256ss_next_f64s(ptr: *mut Xoshiro256Ss, out: *mut f64, 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
-        }
+        let base_seed = rng.nextu();
+
+        buffer
+            .par_chunks_mut(XOSHIRO256SS_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_seed = SplitMix64::compute(
+                    base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+                );
+                let mut local_rng = Xoshiro256Ss::new(chunk_seed);
+                for v in chunk {
+                    *v = local_rng.nextf();
+                }
+            });
     }
 }
 #[unsafe(no_mangle)]
@@ -1789,9 +1905,20 @@ pub extern "C" fn xoshiro256ss_rand_i64s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
-        }
+        let base_seed = rng.nextu();
+
+        buffer
+            .par_chunks_mut(XOSHIRO256SS_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_seed = SplitMix64::compute(
+                    base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+                );
+                let mut local_rng = Xoshiro256Ss::new(chunk_seed);
+                for v in chunk {
+                    *v = local_rng.randi(min, max);
+                }
+            });
     }
 }
 #[unsafe(no_mangle)]
@@ -1805,9 +1932,20 @@ pub extern "C" fn xoshiro256ss_rand_f64s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
-        }
+        let base_seed = rng.nextu();
+
+        buffer
+            .par_chunks_mut(XOSHIRO256SS_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_seed = SplitMix64::compute(
+                    base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+                );
+                let mut local_rng = Xoshiro256Ss::new(chunk_seed);
+                for v in chunk {
+                    *v = local_rng.randf(min, max);
+                }
+            });
     }
 }
 
@@ -1836,12 +1974,19 @@ impl SplitMix64 {
     }
 
     /// Generates the next random `u64` value.
+    /// Computes SplitMix64 output from a specific state value.
+    #[inline]
+    pub fn compute(mut z: u64) -> u64 {
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+        z ^ (z >> 31)
+    }
+
+    /// Generates the next random `u64` value.
+    #[inline]
     pub fn nextu(&mut self) -> u64 {
         self.s += 0x9E3779B97F4A7C15;
-        let mut result = self.s;
-        result = (result ^ (result >> 30)) * wrap!(0xBF58476D1CE4E5B9);
-        result = (result ^ (result >> 27)) * wrap!(0x94D049BB133111EB);
-        (result ^ (result >> 31)).0
+        Self::compute(self.s.0)
     }
 
     #[inline]
@@ -1892,14 +2037,31 @@ pub extern "C" fn splitmix64_free(ptr: *mut SplitMix64) {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+const SPLITMIX64_PAR_CHUNK: usize = 4096;
+
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix64_next_u64s(ptr: *mut SplitMix64, out: *mut u64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
-        }
+        let s0 = rng.s.0;
+
+        buffer
+            .par_chunks_mut(SPLITMIX64_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let mut start_idx = (chunk_idx * SPLITMIX64_PAR_CHUNK) as u64;
+                for v in chunk {
+                    start_idx += 1;
+                    let state = s0.wrapping_add(start_idx.wrapping_mul(0x9E3779B97F4A7C15));
+                    *v = SplitMix64::compute(state);
+                }
+            });
+
+        rng.s.0 = rng
+            .s
+            .0
+            .wrapping_add((count as u64).wrapping_mul(0x9E3779B97F4A7C15));
     }
 }
 #[unsafe(no_mangle)]
@@ -1907,9 +2069,25 @@ pub extern "C" fn splitmix64_next_f64s(ptr: *mut SplitMix64, out: *mut f64, coun
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
-        }
+        let s0 = rng.s.0;
+        let scale = 1.0f64 / (u64::MAX as f64 + 1.0);
+
+        buffer
+            .par_chunks_mut(SPLITMIX64_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let mut start_idx = (chunk_idx * SPLITMIX64_PAR_CHUNK) as u64;
+                for v in chunk {
+                    start_idx += 1;
+                    let state = s0.wrapping_add(start_idx.wrapping_mul(0x9E3779B97F4A7C15));
+                    *v = SplitMix64::compute(state) as f64 * scale;
+                }
+            });
+
+        rng.s.0 = rng
+            .s
+            .0
+            .wrapping_add((count as u64).wrapping_mul(0x9E3779B97F4A7C15));
     }
 }
 #[unsafe(no_mangle)]
@@ -1923,9 +2101,26 @@ pub extern "C" fn splitmix64_rand_i64s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
-        }
+        let s0 = rng.s.0;
+        let range = (max as i128 - min as i128 + 1) as u128;
+
+        buffer
+            .par_chunks_mut(SPLITMIX64_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let mut start_idx = (chunk_idx * SPLITMIX64_PAR_CHUNK) as u64;
+                for v in chunk {
+                    start_idx += 1;
+                    let state = s0.wrapping_add(start_idx.wrapping_mul(0x9E3779B97F4A7C15));
+                    let val = SplitMix64::compute(state);
+                    *v = ((val as u128 * range) >> 64) as i64 + min;
+                }
+            });
+
+        rng.s.0 = rng
+            .s
+            .0
+            .wrapping_add((count as u64).wrapping_mul(0x9E3779B97F4A7C15));
     }
 }
 #[unsafe(no_mangle)]
@@ -1939,9 +2134,27 @@ pub extern "C" fn splitmix64_rand_f64s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
-        }
+        let s0 = rng.s.0;
+        let scale_val = 1.0f64 / (u64::MAX as f64 + 1.0);
+        let range_val = max - min;
+
+        buffer
+            .par_chunks_mut(SPLITMIX64_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let mut start_idx = (chunk_idx * SPLITMIX64_PAR_CHUNK) as u64;
+                for v in chunk {
+                    start_idx += 1;
+                    let state = s0.wrapping_add(start_idx.wrapping_mul(0x9E3779B97F4A7C15));
+                    let val_01 = SplitMix64::compute(state) as f64 * scale_val;
+                    *v = val_01 * range_val + min;
+                }
+            });
+
+        rng.s.0 = rng
+            .s
+            .0
+            .wrapping_add((count as u64).wrapping_mul(0x9E3779B97F4A7C15));
     }
 }
 
