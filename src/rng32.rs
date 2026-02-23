@@ -1,5 +1,6 @@
 use crate::{rng::Rng32, rng64::SplitMix64, wrap};
 use bytemuck::cast_slice;
+use rayon::prelude::*;
 use std::{hint::black_box, num::Wrapping, slice::from_raw_parts_mut};
 use wide::u32x4;
 
@@ -751,9 +752,6 @@ pub struct Philox32 {
 }
 
 impl Philox32 {
-    const fn chunk_size() -> usize {
-        4
-    }
     const fn m0() -> u32 {
         0xD2511F53
     }
@@ -782,16 +780,18 @@ impl Philox32 {
         }
     }
 
+    /// Computes Philox output from counter and key values (pure function).
+    #[inline]
+    fn compute(c: [Wrapping<u32>; 4], k: [Wrapping<u32>; 2]) -> [u32; 4] {
+        let p0 = c[0] * wrap!(Self::m0());
+        let p1 = c[2] * wrap!(Self::m1());
+        [p0.0 ^ c[1].0 ^ k[0].0, p0.0, p1.0 ^ c[3].0 ^ k[1].0, p1.0]
+    }
+
     /// Generates the next block of random numbers.
     #[inline]
     pub fn nextu(&mut self) -> [u32; 4] {
-        let mut out = [0u32; 4];
-        let p0 = self.c[0] * wrap!(Self::m0());
-        let p1 = self.c[2] * wrap!(Self::m1());
-        out[0] = p0.0 ^ self.c[1].0 ^ self.k[0].0;
-        out[1] = p0.0;
-        out[2] = p1.0 ^ self.c[3].0 ^ self.k[1].0;
-        out[3] = p1.0;
+        let out = Self::compute(self.c, self.k);
         self.c[0] += 1;
         self.c[1] += 1;
         self.c[2] += 1;
@@ -861,18 +861,45 @@ pub extern "C" fn philox32_free(ptr: *mut Philox32) {
         unsafe { drop(Box::from_raw(ptr)) }
     }
 }
+/// Parallel batch size for Philox32 (elements per thread task).
+/// Each thread processes this many u32s before yielding, enabling LLVM auto-vectorization.
+const PHILOX32_PAR_CHUNK: usize = 4096;
+
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let mut i = 0;
-        while i < count {
-            let chunk = rng.nextu();
-            let take = (count - i).min(Philox32::chunk_size());
-            buffer[i..i + take].copy_from_slice(&chunk[..take]);
-            i += take;
-        }
+        let c0 = rng.c;
+        let k = rng.k;
+
+        buffer
+            .par_chunks_mut(PHILOX32_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let base_block = (chunk_idx * PHILOX32_PAR_CHUNK) / 4;
+                let mut i = 0;
+                let mut block = base_block;
+                while i < chunk.len() {
+                    let c = [
+                        c0[0] + wrap!(block as u32),
+                        c0[1] + wrap!(block as u32),
+                        c0[2] + wrap!(block as u32),
+                        c0[3] + wrap!(block as u32),
+                    ];
+                    let result = Philox32::compute(c, k);
+                    let take = (chunk.len() - i).min(4);
+                    chunk[i..i + take].copy_from_slice(&result[..take]);
+                    i += take;
+                    block += 1;
+                }
+            });
+
+        let num_blocks = (count + 3) / 4;
+        rng.c[0] += wrap!(num_blocks as u32);
+        rng.c[1] += wrap!(num_blocks as u32);
+        rng.c[2] += wrap!(num_blocks as u32);
+        rng.c[3] += wrap!(num_blocks as u32);
     }
 }
 #[unsafe(no_mangle)]
@@ -880,15 +907,39 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let mut i = 0;
-        while i < count {
-            let chunk = rng.nextu();
-            let take = (count - i).min(Philox32::chunk_size());
-            for j in 0..take {
-                buffer[i + j] = chunk[j] as f32 * (1.0 / (u32::MAX as f32 + 1.0));
-            }
-            i += take;
-        }
+        let c0 = rng.c;
+        let k = rng.k;
+        let scale = 1.0f32 / (u32::MAX as f32 + 1.0);
+
+        buffer
+            .par_chunks_mut(PHILOX32_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let base_block = (chunk_idx * PHILOX32_PAR_CHUNK) / 4;
+                let mut i = 0;
+                let mut block = base_block;
+                while i < chunk.len() {
+                    let c = [
+                        c0[0] + wrap!(block as u32),
+                        c0[1] + wrap!(block as u32),
+                        c0[2] + wrap!(block as u32),
+                        c0[3] + wrap!(block as u32),
+                    ];
+                    let result = Philox32::compute(c, k);
+                    let take = (chunk.len() - i).min(4);
+                    for j in 0..take {
+                        chunk[i + j] = result[j] as f32 * scale;
+                    }
+                    i += take;
+                    block += 1;
+                }
+            });
+
+        let num_blocks = (count + 3) / 4;
+        rng.c[0] += wrap!(num_blocks as u32);
+        rng.c[1] += wrap!(num_blocks as u32);
+        rng.c[2] += wrap!(num_blocks as u32);
+        rng.c[3] += wrap!(num_blocks as u32);
     }
 }
 #[unsafe(no_mangle)]
@@ -902,16 +953,39 @@ pub extern "C" fn philox32_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let mut i = 0;
-        while i < count {
-            let chunk = rng.nextu();
-            let take = (count - i).min(Philox32::chunk_size());
-            for j in 0..take {
-                let range = (max as i64 - min as i64 + 1) as u64;
-                buffer[i + j] = ((chunk[j] as u64 * range) >> 32) as i32 + min;
-            }
-            i += take;
-        }
+        let c0 = rng.c;
+        let k = rng.k;
+        let range = (max as i64 - min as i64 + 1) as u64;
+
+        buffer
+            .par_chunks_mut(PHILOX32_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let base_block = (chunk_idx * PHILOX32_PAR_CHUNK) / 4;
+                let mut i = 0;
+                let mut block = base_block;
+                while i < chunk.len() {
+                    let c = [
+                        c0[0] + wrap!(block as u32),
+                        c0[1] + wrap!(block as u32),
+                        c0[2] + wrap!(block as u32),
+                        c0[3] + wrap!(block as u32),
+                    ];
+                    let result = Philox32::compute(c, k);
+                    let take = (chunk.len() - i).min(4);
+                    for j in 0..take {
+                        chunk[i + j] = ((result[j] as u64 * range) >> 32) as i32 + min;
+                    }
+                    i += take;
+                    block += 1;
+                }
+            });
+
+        let num_blocks = (count + 3) / 4;
+        rng.c[0] += wrap!(num_blocks as u32);
+        rng.c[1] += wrap!(num_blocks as u32);
+        rng.c[2] += wrap!(num_blocks as u32);
+        rng.c[3] += wrap!(num_blocks as u32);
     }
 }
 #[unsafe(no_mangle)]
@@ -925,16 +999,39 @@ pub extern "C" fn philox32_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let mut i = 0;
-        while i < count {
-            let chunk = rng.nextu();
-            let take = (count - i).min(Philox32::chunk_size());
-            for j in 0..take {
-                let scale = (max - min) * (1.0 / (u32::MAX as f32 + 1.0));
-                buffer[i + j] = (chunk[j] as f32 * scale) + min;
-            }
-            i += take;
-        }
+        let c0 = rng.c;
+        let k = rng.k;
+        let scale = (max - min) * (1.0f32 / (u32::MAX as f32 + 1.0));
+
+        buffer
+            .par_chunks_mut(PHILOX32_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let base_block = (chunk_idx * PHILOX32_PAR_CHUNK) / 4;
+                let mut i = 0;
+                let mut block = base_block;
+                while i < chunk.len() {
+                    let c = [
+                        c0[0] + wrap!(block as u32),
+                        c0[1] + wrap!(block as u32),
+                        c0[2] + wrap!(block as u32),
+                        c0[3] + wrap!(block as u32),
+                    ];
+                    let result = Philox32::compute(c, k);
+                    let take = (chunk.len() - i).min(4);
+                    for j in 0..take {
+                        chunk[i + j] = (result[j] as f32 * scale) + min;
+                    }
+                    i += take;
+                    block += 1;
+                }
+            });
+
+        let num_blocks = (count + 3) / 4;
+        rng.c[0] += wrap!(num_blocks as u32);
+        rng.c[1] += wrap!(num_blocks as u32);
+        rng.c[2] += wrap!(num_blocks as u32);
+        rng.c[3] += wrap!(num_blocks as u32);
     }
 }
 

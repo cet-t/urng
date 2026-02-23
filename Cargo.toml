@@ -20,3 +20,4 @@ csbindgen = "1.9.7"
 [dependencies]
 wide = "0.7.33"
 bytemuck = "1.25.0"
+rayon = "1.10"

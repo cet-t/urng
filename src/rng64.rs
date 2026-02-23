@@ -1,5 +1,6 @@
 use crate::rng::Rng64;
 use crate::wrap;
+use rayon::prelude::*;
 use std::hint::black_box;
 use std::num::Wrapping;
 use std::slice::from_raw_parts_mut;
@@ -800,9 +801,6 @@ pub struct Philox64 {
 }
 
 impl Philox64 {
-    const fn chunk_size() -> usize {
-        2
-    }
     const fn m0() -> u128 {
         0xD2B74407B1CE6E93
     }
@@ -816,12 +814,12 @@ impl Philox64 {
         }
     }
 
-    /// Generates the next block of random numbers.
+    /// Computes Philox output from counter and key values (pure function).
     #[inline]
-    pub fn nextu(&mut self) -> [u64; 2] {
-        let mut v0 = self.c[0];
-        let mut v1 = self.c[1];
-        let mut k = self.k[0];
+    fn compute(c: [u64; 2], k: [u64; 2]) -> [u64; 2] {
+        let mut v0 = c[0];
+        let mut v1 = c[1];
+        let mut key = k[0];
 
         let w0: u64 = 0x9E3779B97F4A7C15;
 
@@ -829,20 +827,26 @@ impl Philox64 {
             let prod = (v0 as u128).wrapping_mul(Self::m0());
             let hi = (prod >> 64) as u64;
             let lo = prod as u64;
-            let next_v0 = hi ^ v1 ^ k;
+            let next_v0 = hi ^ v1 ^ key;
             let next_v1 = lo;
 
             v0 = next_v0;
             v1 = next_v1;
-            k = k.wrapping_add(w0);
+            key = key.wrapping_add(w0);
         }
 
+        [v0, v1]
+    }
+
+    /// Generates the next block of random numbers.
+    #[inline]
+    pub fn nextu(&mut self) -> [u64; 2] {
+        let out = Self::compute(self.c, self.k);
         self.c[0] = self.c[0].wrapping_add(1);
         if self.c[0] == 0 {
             self.c[1] = self.c[1].wrapping_add(1);
         }
-
-        [v0, v1]
+        out
     }
 
     /// Generates the next random `f64` value in the range [0, 1).
@@ -900,17 +904,44 @@ pub extern "C" fn philox64_free(ptr: *mut Philox64) {
         unsafe { drop(Box::from_raw(ptr)) }
     }
 }
+/// Parallel batch size for Philox64 (elements per thread task).
+const PHILOX64_PAR_CHUNK: usize = 4096;
+
 #[unsafe(no_mangle)]
 pub extern "C" fn philox64_next_u64s(ptr: *mut Philox64, out: *mut u64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let mut i = 0;
-        while i < count {
-            let chunk = rng.nextu();
-            let take = (count - i).min(Philox64::chunk_size());
-            buffer[i..i + take].copy_from_slice(&chunk[..take]);
-            i += take;
+        let c0 = rng.c;
+        let k = rng.k;
+
+        buffer
+            .par_chunks_mut(PHILOX64_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let base_block = (chunk_idx * PHILOX64_PAR_CHUNK) / 2;
+                let mut i = 0;
+                let mut block = base_block;
+                while i < chunk.len() {
+                    let mut c = c0;
+                    let (new_c0, carry) = c[0].overflowing_add(block as u64);
+                    c[0] = new_c0;
+                    if carry {
+                        c[1] = c[1].wrapping_add(1);
+                    }
+                    let result = Philox64::compute(c, k);
+                    let take = (chunk.len() - i).min(2);
+                    chunk[i..i + take].copy_from_slice(&result[..take]);
+                    i += take;
+                    block += 1;
+                }
+            });
+
+        let num_blocks = ((count + 1) / 2) as u64;
+        let (new_c0, carry) = rng.c[0].overflowing_add(num_blocks);
+        rng.c[0] = new_c0;
+        if carry {
+            rng.c[1] = rng.c[1].wrapping_add(1);
         }
     }
 }
@@ -920,14 +951,39 @@ pub extern "C" fn philox64_next_f64s(ptr: *mut Philox64, out: *mut f64, count: u
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let mut i = 0;
-        while i < count {
-            let chunk = rng.nextu();
-            let take = (count - i).min(Philox64::chunk_size());
-            for j in 0..take {
-                buffer[i + j] = chunk[j] as f64 * (1.0 / (u64::MAX as f64 + 1.0));
-            }
-            i += take;
+        let c0 = rng.c;
+        let k = rng.k;
+        let scale = 1.0f64 / (u64::MAX as f64 + 1.0);
+
+        buffer
+            .par_chunks_mut(PHILOX64_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let base_block = (chunk_idx * PHILOX64_PAR_CHUNK) / 2;
+                let mut i = 0;
+                let mut block = base_block;
+                while i < chunk.len() {
+                    let mut c = c0;
+                    let (new_c0, carry) = c[0].overflowing_add(block as u64);
+                    c[0] = new_c0;
+                    if carry {
+                        c[1] = c[1].wrapping_add(1);
+                    }
+                    let result = Philox64::compute(c, k);
+                    let take = (chunk.len() - i).min(2);
+                    for j in 0..take {
+                        chunk[i + j] = result[j] as f64 * scale;
+                    }
+                    i += take;
+                    block += 1;
+                }
+            });
+
+        let num_blocks = ((count + 1) / 2) as u64;
+        let (new_c0, carry) = rng.c[0].overflowing_add(num_blocks);
+        rng.c[0] = new_c0;
+        if carry {
+            rng.c[1] = rng.c[1].wrapping_add(1);
         }
     }
 }
@@ -942,15 +998,39 @@ pub extern "C" fn philox64_rand_i64s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let mut i = 0;
-        while i < count {
-            let chunk = rng.nextu();
-            let take = (count - i).min(Philox64::chunk_size());
-            for j in 0..take {
-                let range = (max as i128 - min as i128 + 1) as u128;
-                buffer[i + j] = ((chunk[j] as u128 * range) >> 64) as i64 + min;
-            }
-            i += take;
+        let c0 = rng.c;
+        let k = rng.k;
+        let range = (max as i128 - min as i128 + 1) as u128;
+
+        buffer
+            .par_chunks_mut(PHILOX64_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let base_block = (chunk_idx * PHILOX64_PAR_CHUNK) / 2;
+                let mut i = 0;
+                let mut block = base_block;
+                while i < chunk.len() {
+                    let mut c = c0;
+                    let (new_c0, carry) = c[0].overflowing_add(block as u64);
+                    c[0] = new_c0;
+                    if carry {
+                        c[1] = c[1].wrapping_add(1);
+                    }
+                    let result = Philox64::compute(c, k);
+                    let take = (chunk.len() - i).min(2);
+                    for j in 0..take {
+                        chunk[i + j] = ((result[j] as u128 * range) >> 64) as i64 + min;
+                    }
+                    i += take;
+                    block += 1;
+                }
+            });
+
+        let num_blocks = ((count + 1) / 2) as u64;
+        let (new_c0, carry) = rng.c[0].overflowing_add(num_blocks);
+        rng.c[0] = new_c0;
+        if carry {
+            rng.c[1] = rng.c[1].wrapping_add(1);
         }
     }
 }
@@ -965,15 +1045,41 @@ pub extern "C" fn philox64_rand_f64s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let mut i = 0;
-        while i < count {
-            let chunk = rng.nextu();
-            let take = (count - i).min(Philox64::chunk_size());
-            for j in 0..take {
-                let val_01 = chunk[j] as f64 * (1.0 / (u64::MAX as f64 + 1.0));
-                buffer[i + j] = val_01 * (max - min) + min;
-            }
-            i += take;
+        let c0 = rng.c;
+        let k = rng.k;
+        let scale_val = 1.0f64 / (u64::MAX as f64 + 1.0);
+        let range_val = max - min;
+
+        buffer
+            .par_chunks_mut(PHILOX64_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let base_block = (chunk_idx * PHILOX64_PAR_CHUNK) / 2;
+                let mut i = 0;
+                let mut block = base_block;
+                while i < chunk.len() {
+                    let mut c = c0;
+                    let (new_c0, carry) = c[0].overflowing_add(block as u64);
+                    c[0] = new_c0;
+                    if carry {
+                        c[1] = c[1].wrapping_add(1);
+                    }
+                    let result = Philox64::compute(c, k);
+                    let take = (chunk.len() - i).min(2);
+                    for j in 0..take {
+                        let val_01 = result[j] as f64 * scale_val;
+                        chunk[i + j] = val_01 * range_val + min;
+                    }
+                    i += take;
+                    block += 1;
+                }
+            });
+
+        let num_blocks = ((count + 1) / 2) as u64;
+        let (new_c0, carry) = rng.c[0].overflowing_add(num_blocks);
+        rng.c[0] = new_c0;
+        if carry {
+            rng.c[1] = rng.c[1].wrapping_add(1);
         }
     }
 }
