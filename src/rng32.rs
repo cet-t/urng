@@ -752,13 +752,6 @@ pub struct Philox32 {
 }
 
 impl Philox32 {
-    const fn m0() -> u32 {
-        0xD2511F53
-    }
-    const fn m1() -> u32 {
-        0xCD9E8D57
-    }
-
     /// Creates a new `Philox32` instance.
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
@@ -783,9 +776,37 @@ impl Philox32 {
     /// Computes Philox output from counter and key values (pure function).
     #[inline]
     fn compute(c: [Wrapping<u32>; 4], k: [Wrapping<u32>; 2]) -> [u32; 4] {
-        let p0 = c[0] * wrap!(Self::m0());
-        let p1 = c[2] * wrap!(Self::m1());
-        [p0.0 ^ c[1].0 ^ k[0].0, p0.0, p1.0 ^ c[3].0 ^ k[1].0, p1.0]
+        let mut x = [c[0].0, c[1].0, c[2].0, c[3].0];
+        let mut key = [k[0].0, k[1].0];
+
+        const M0: u64 = 0xD2511F53;
+        const M1: u64 = 0xCD9E8D57;
+        const W0: u32 = 0x9E3779B9;
+        const W1: u32 = 0xBB67AE85;
+
+        for _ in 0..10 {
+            let prod0 = (x[0] as u64).wrapping_mul(M0);
+            let hi0 = (prod0 >> 32) as u32;
+            let lo0 = prod0 as u32;
+
+            let prod1 = (x[2] as u64).wrapping_mul(M1);
+            let hi1 = (prod1 >> 32) as u32;
+            let lo1 = prod1 as u32;
+
+            let next_x0 = hi1 ^ x[1] ^ key[0];
+            let next_x1 = lo1;
+            let next_x2 = hi0 ^ x[3] ^ key[1];
+            let next_x3 = lo0;
+
+            x[0] = next_x0;
+            x[1] = next_x1;
+            x[2] = next_x2;
+            x[3] = next_x3;
+
+            key[0] = key[0].wrapping_add(W0);
+            key[1] = key[1].wrapping_add(W1);
+        }
+        x
     }
 
     /// Generates the next block of random numbers.
@@ -1414,8 +1435,8 @@ mod tests {
     #[test]
     fn philox32_works() {
         let mut rng = Philox32::new(1);
-        assert_eq!(rng.nextu(), [2944603146, 1966386973, 963419730, 83976542]);
-        assert_eq!(rng.nextf(), 0.61405116);
+        assert_eq!(rng.nextu(), [1606368191, 902838097, 1231688191, 2515046358]);
+        assert_eq!(rng.nextf(), 0.9445588);
     }
 
     #[test]
