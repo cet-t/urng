@@ -919,21 +919,39 @@ pub extern "C" fn philox64_next_u64s(ptr: *mut Philox64, out: *mut u64, count: u
             .par_chunks_mut(PHILOX64_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let base_block = (chunk_idx * PHILOX64_PAR_CHUNK) / 2;
-                let mut i = 0;
-                let mut block = base_block;
-                while i < chunk.len() {
+                let chunk_base_block = (chunk_idx * PHILOX64_PAR_CHUNK) / 2;
+                let mut chunks_exact = chunk.chunks_exact_mut(2);
+                let mut b_offset = 0u64;
+
+                for dst in chunks_exact.by_ref() {
                     let mut c = c0;
-                    let (new_c0, carry) = c[0].overflowing_add(block as u64);
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u64) + b_offset);
                     c[0] = new_c0;
-                    if carry {
+                    if overflow {
                         c[1] = c[1].wrapping_add(1);
                     }
+
                     let result = Philox64::compute(c, k);
-                    let take = (chunk.len() - i).min(2);
-                    chunk[i..i + take].copy_from_slice(&result[..take]);
-                    i += take;
-                    block += 1;
+                    dst[0] = result[0];
+                    dst[1] = result[1];
+                    b_offset += 1;
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let mut c = c0;
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u64) + b_offset);
+                    c[0] = new_c0;
+                    if overflow {
+                        c[1] = c[1].wrapping_add(1);
+                    }
+
+                    let result = Philox64::compute(c, k);
+                    for j in 0..rem.len() {
+                        rem[j] = result[j];
+                    }
                 }
             });
 
@@ -959,23 +977,39 @@ pub extern "C" fn philox64_next_f64s(ptr: *mut Philox64, out: *mut f64, count: u
             .par_chunks_mut(PHILOX64_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let base_block = (chunk_idx * PHILOX64_PAR_CHUNK) / 2;
-                let mut i = 0;
-                let mut block = base_block;
-                while i < chunk.len() {
+                let chunk_base_block = (chunk_idx * PHILOX64_PAR_CHUNK) / 2;
+                let mut chunks_exact = chunk.chunks_exact_mut(2);
+                let mut b_offset = 0u64;
+
+                for dst in chunks_exact.by_ref() {
                     let mut c = c0;
-                    let (new_c0, carry) = c[0].overflowing_add(block as u64);
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u64) + b_offset);
                     c[0] = new_c0;
-                    if carry {
+                    if overflow {
                         c[1] = c[1].wrapping_add(1);
                     }
+
                     let result = Philox64::compute(c, k);
-                    let take = (chunk.len() - i).min(2);
-                    for j in 0..take {
-                        chunk[i + j] = result[j] as f64 * scale;
+                    dst[0] = result[0] as f64 * scale;
+                    dst[1] = result[1] as f64 * scale;
+                    b_offset += 1;
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let mut c = c0;
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u64) + b_offset);
+                    c[0] = new_c0;
+                    if overflow {
+                        c[1] = c[1].wrapping_add(1);
                     }
-                    i += take;
-                    block += 1;
+
+                    let result = Philox64::compute(c, k);
+                    for j in 0..rem.len() {
+                        rem[j] = result[j] as f64 * scale;
+                    }
                 }
             });
 
@@ -1006,23 +1040,39 @@ pub extern "C" fn philox64_rand_i64s(
             .par_chunks_mut(PHILOX64_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let base_block = (chunk_idx * PHILOX64_PAR_CHUNK) / 2;
-                let mut i = 0;
-                let mut block = base_block;
-                while i < chunk.len() {
+                let chunk_base_block = (chunk_idx * PHILOX64_PAR_CHUNK) / 2;
+                let mut chunks_exact = chunk.chunks_exact_mut(2);
+                let mut b_offset = 0u64;
+
+                for dst in chunks_exact.by_ref() {
                     let mut c = c0;
-                    let (new_c0, carry) = c[0].overflowing_add(block as u64);
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u64) + b_offset);
                     c[0] = new_c0;
-                    if carry {
+                    if overflow {
                         c[1] = c[1].wrapping_add(1);
                     }
+
                     let result = Philox64::compute(c, k);
-                    let take = (chunk.len() - i).min(2);
-                    for j in 0..take {
-                        chunk[i + j] = ((result[j] as u128 * range) >> 64) as i64 + min;
+                    dst[0] = ((result[0] as u128 * range) >> 64) as i64 + min;
+                    dst[1] = ((result[1] as u128 * range) >> 64) as i64 + min;
+                    b_offset += 1;
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let mut c = c0;
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u64) + b_offset);
+                    c[0] = new_c0;
+                    if overflow {
+                        c[1] = c[1].wrapping_add(1);
                     }
-                    i += take;
-                    block += 1;
+
+                    let result = Philox64::compute(c, k);
+                    for j in 0..rem.len() {
+                        rem[j] = ((result[j] as u128 * range) >> 64) as i64 + min;
+                    }
                 }
             });
 
@@ -1054,24 +1104,39 @@ pub extern "C" fn philox64_rand_f64s(
             .par_chunks_mut(PHILOX64_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let base_block = (chunk_idx * PHILOX64_PAR_CHUNK) / 2;
-                let mut i = 0;
-                let mut block = base_block;
-                while i < chunk.len() {
+                let chunk_base_block = (chunk_idx * PHILOX64_PAR_CHUNK) / 2;
+                let mut chunks_exact = chunk.chunks_exact_mut(2);
+                let mut b_offset = 0u64;
+
+                for dst in chunks_exact.by_ref() {
                     let mut c = c0;
-                    let (new_c0, carry) = c[0].overflowing_add(block as u64);
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u64) + b_offset);
                     c[0] = new_c0;
-                    if carry {
+                    if overflow {
                         c[1] = c[1].wrapping_add(1);
                     }
+
                     let result = Philox64::compute(c, k);
-                    let take = (chunk.len() - i).min(2);
-                    for j in 0..take {
-                        let val_01 = result[j] as f64 * scale_val;
-                        chunk[i + j] = val_01 * range_val + min;
+                    dst[0] = (result[0] as f64 * scale_val) * range_val + min;
+                    dst[1] = (result[1] as f64 * scale_val) * range_val + min;
+                    b_offset += 1;
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let mut c = c0;
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u64) + b_offset);
+                    c[0] = new_c0;
+                    if overflow {
+                        c[1] = c[1].wrapping_add(1);
                     }
-                    i += take;
-                    block += 1;
+
+                    let result = Philox64::compute(c, k);
+                    for j in 0..rem.len() {
+                        rem[j] = (result[j] as f64 * scale_val) * range_val + min;
+                    }
                 }
             });
 
