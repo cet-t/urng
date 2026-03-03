@@ -41,4 +41,9 @@ pub mod rng128;
 /// A weighted random selection structure using a Binary Search Tree (BST) approach.
 pub mod bst;
 
+/// A weighted random selection structure using an Alias Method approach.
+pub mod sampler;
+
+pub mod sampler64;
+
 pub mod macros;
