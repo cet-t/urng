@@ -4,6 +4,8 @@ use rayon::prelude::*;
 use std::{hint::black_box, num::Wrapping, slice::from_raw_parts_mut};
 use wide::u32x4;
 
+use std::arch::x86_64::*;
+
 // --- Mt19937 ---
 
 /// A 32-bit Mersenne Twister (MT19937) random number generator.
@@ -1157,6 +1159,101 @@ pub extern "C" fn philox32_rand_f32s(
     }
 }
 
+// --- Philox32x4-10 x4 ---
+
+const PHILOX32_512_LEN: usize = 16;
+
+#[repr(C, align(64))]
+pub struct Philox32_512 {
+    c: __m512i,
+    k: __m512i,
+}
+
+impl Philox32_512 {
+    pub fn new(seed: u32) -> Self {
+        let mut c = [0u32; PHILOX32_512_LEN];
+        let mut k = [0u32; PHILOX32_512_LEN];
+
+        let mut seedgen = SplitMix32::new(seed);
+        c.iter_mut().for_each(|c| *c = seedgen.nextu());
+
+        // [k0, 0, k1, 0]
+        (0..PHILOX32_512_LEN).step_by(4).for_each(|i| {
+            k[i + 0] = seedgen.nextu();
+            k[i + 1] = 0;
+            k[i + 2] = seedgen.nextu();
+            k[i + 3] = 0;
+        });
+
+        unsafe {
+            Self {
+                c: _mm512_loadu_si512(c.as_ptr() as *const _),
+                k: _mm512_loadu_si512(k.as_ptr() as *const _),
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub fn compute(&mut self) -> [u32; PHILOX32_512_LEN] {
+        let mut x = self.c;
+        let mut key = self.k;
+        let m = unsafe { _mm512_set1_epi64(0xCD9E8D57_D2511F53u64 as i64) };
+        let w = unsafe { _mm512_set1_epi64(0xBB67AE85_9E3779B9u64 as i64) };
+
+        for _ in 0..10 {
+            unsafe {
+                // x0 * M0, x2 * M1 = [lo0, hi0, lo1, hi1]
+                let prod = _mm512_mul_epu32(x, m);
+
+                // shuffle -> [hi1, lo1, hi0, lo0]
+                let shuf = _mm512_shuffle_epi32(prod, 0x1B);
+
+                // x >> 32 -> [x1, 0, x3, 0]
+                let x_shift = _mm512_srli_epi64(x, 32);
+
+                // x ^ x_shift ^ key
+                x = _mm512_xor_epi32(shuf, _mm512_xor_epi32(x_shift, key));
+
+                // key += w
+                key = _mm512_add_epi32(key, w);
+            }
+        }
+
+        unsafe {
+            let mut out = [0u32; PHILOX32_512_LEN];
+            _mm512_storeu_si512(out.as_mut_ptr() as *mut _, x);
+            out
+        }
+    }
+
+    #[inline(always)]
+    pub fn nextu(&mut self) -> [u32; PHILOX32_512_LEN] {
+        let out = self.compute();
+
+        // AVX-512による 4 x 128-bit カウンタの並列インクリメント
+        unsafe {
+            // [1, 1, 1, 1, 1, 1, 1, 1] as 64-bit
+            let one = _mm512_set1_epi64(1);
+
+            // 下位64ビット (インデックス 0, 2, 4, 6 に相当 = マスク 0x55) のみ +1 する
+            let next_c = _mm512_mask_add_epi64(self.c, 0x55, self.c, one);
+
+            // 下位64ビットが 0 にオーバーフローしたかチェック
+            let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, _mm512_setzero_si512());
+            let carry_mask = (eq_zero_mask & 0x55) << 1;
+
+            if carry_mask != 0 {
+                // オーバーフローした場合は上位64ビット層にも +1 する
+                self.c = _mm512_mask_add_epi64(next_c, carry_mask, next_c, one);
+            } else {
+                self.c = next_c;
+            }
+        }
+
+        out
+    }
+}
+
 // --- Xorshift32 ---
 
 /// A 32-bit Xorshift random number generator.
@@ -1539,6 +1636,12 @@ mod tests {
         assert_eq!(rng.nextu(), [1606368191, 902838097, 1231688191, 2515046358]);
         assert_eq!(rng.nextf(), 0.5834115);
     }
+
+    // #[test]
+    // fn philox32x4x4_works() {
+    //     let mut rng = Philox32x4x4::new(1);
+    //     assert_eq!(rng.nextu(), [1606368191, 902838097, 1231688191, 2515046358]);
+    // }
 
     #[test]
     fn xorshift32_works() {
