@@ -1,7 +1,11 @@
-use crate::{rng::Rng32, rng64::SplitMix64, wrap};
+use crate::{
+    rng::{Philox32T, Rng32},
+    rng64::SplitMix64,
+    wrap,
+};
 use bytemuck::cast_slice;
 use rayon::prelude::*;
-use std::{hint::black_box, num::Wrapping, slice::from_raw_parts_mut};
+use std::{hint::black_box, num::Wrapping, ptr::copy_nonoverlapping, slice::from_raw_parts_mut};
 use wide::u32x4;
 
 use std::arch::x86_64::*;
@@ -744,39 +748,34 @@ pub extern "C" fn pcg32_rand_f32s(
 
 // --- Philox32 ---
 
+const PHILOX32_PAR_CHUNK: usize = 4096;
+
 /// A Philox 4x32 random number generator.
 ///
 /// This is a counter-based RNG suitable for parallel applications.
 #[repr(C)]
-pub struct Philox32 {
+pub struct Philox32x4 {
     c: [Wrapping<u32>; 4],
     k: [Wrapping<u32>; 2],
 }
 
-impl Philox32 {
+impl Philox32x4 {
     /// Creates a new `Philox32` instance.
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
-            c: [
-                wrap!(seedgen.nextu()),
-                wrap!(seedgen.nextu()),
-                wrap!(seedgen.nextu()),
-                wrap!(seedgen.nextu()),
+            c: wrap![
+                seedgen.nextu(),
+                seedgen.nextu(),
+                seedgen.nextu(),
+                seedgen.nextu(),
             ],
-            k: [wrap!(seedgen.nextu()), wrap!(seedgen.nextu())],
-        }
-    }
-
-    /// Advances the generator state by `count` steps.
-    pub fn warm(&mut self, count: usize) {
-        for _i in 0..count {
-            let _ = self.nextu();
+            k: wrap![seedgen.nextu(), seedgen.nextu()],
         }
     }
 
     /// Computes Philox output from counter and key values (pure function).
-    #[inline]
+    #[inline(always)]
     fn compute(c: [Wrapping<u32>; 4], k: [Wrapping<u32>; 2]) -> [u32; 4] {
         let mut x = [c[0].0, c[1].0, c[2].0, c[3].0];
         let mut key = [k[0].0, k[1].0];
@@ -812,7 +811,7 @@ impl Philox32 {
     }
 
     /// Generates the next block of random numbers.
-    #[inline]
+    #[inline(always)]
     pub fn nextu(&mut self) -> [u32; 4] {
         let out = Self::compute(self.c, self.k);
         self.c[0] += 1;
@@ -829,13 +828,13 @@ impl Philox32 {
     }
 
     /// Generates the next random `f32` value in the range [0, 1).
-    #[inline]
+    #[inline(always)]
     pub fn nextf(&mut self) -> f32 {
         self.nextu()[0] as f32 * (1.0 / (u32::MAX as f32 + 1.0))
     }
 
     /// Generates a random `i32` value in the range [min, max].
-    #[inline]
+    #[inline(always)]
     pub fn randi(&mut self, min: i32, max: i32) -> i32 {
         let range = (max as i64 - min as i64 + 1) as u64;
         let x = self.nextu()[0];
@@ -843,7 +842,7 @@ impl Philox32 {
     }
 
     /// Generates a random `f32` value in the range [min, max).
-    #[inline]
+    #[inline(always)]
     pub fn randf(&mut self, min: f32, max: f32) -> f32 {
         let range = max - min;
         let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
@@ -851,14 +850,23 @@ impl Philox32 {
     }
 
     /// Returns a random element from a slice.
-    #[inline]
+    #[inline(always)]
     pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         let index = self.randi(0, choices.len() as i32 - 1);
         &choices[index as usize]
     }
 }
 
-impl Rng32 for Philox32 {
+impl Philox32T for Philox32x4 {
+    type Output = [u32; 4];
+
+    #[inline(always)]
+    fn nextu(&mut self) -> Self::Output {
+        Philox32x4::nextu(self)
+    }
+}
+
+impl Rng32 for Philox32x4 {
     #[inline]
     fn randi(&mut self, min: i32, max: i32) -> i32 {
         self.randi(min, max)
@@ -874,28 +882,17 @@ impl Rng32 for Philox32 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn philox32_new(seed: u32) -> *mut Philox32 {
-    Box::into_raw(Box::new(Philox32::new(seed)))
+pub extern "C" fn philox32x4_new(seed: u32) -> *mut Philox32x4 {
+    Box::into_raw(Box::new(Philox32x4::new(seed)))
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn philox32_warm(ptr: *mut Philox32, count: usize) {
-    unsafe {
-        let rng = &mut *ptr;
-        rng.warm(count);
-    }
-}
-#[unsafe(no_mangle)]
-pub extern "C" fn philox32_free(ptr: *mut Philox32) {
+pub extern "C" fn philox32x4_free(ptr: *mut Philox32x4) {
     if !ptr.is_null() {
         unsafe { drop(Box::from_raw(ptr)) }
     }
 }
-/// Parallel batch size for Philox32 (elements per thread task).
-/// Each thread processes this many u32s before yielding, enabling LLVM auto-vectorization.
-const PHILOX32_PAR_CHUNK: usize = 4096;
-
 #[unsafe(no_mangle)]
-pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: usize) {
+pub extern "C" fn philox32x4_next_u32s(ptr: *mut Philox32x4, out: *mut u32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
@@ -919,7 +916,7 @@ pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: u
                         c[1].0 = c[1].0.wrapping_add(1);
                     }
 
-                    let result = Philox32::compute(c, k);
+                    let result = Philox32x4::compute(c, k);
                     dst[0] = result[0];
                     dst[1] = result[1];
                     dst[2] = result[2];
@@ -937,7 +934,7 @@ pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: u
                         c[1].0 = c[1].0.wrapping_add(1);
                     }
 
-                    let result = Philox32::compute(c, k);
+                    let result = Philox32x4::compute(c, k);
                     for j in 0..rem.len() {
                         rem[j] = result[j];
                     }
@@ -957,7 +954,7 @@ pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: u
     }
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: usize) {
+pub extern "C" fn philox32x4_next_f32s(ptr: *mut Philox32x4, out: *mut f32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
@@ -982,7 +979,7 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
                         c[1].0 = c[1].0.wrapping_add(1);
                     }
 
-                    let result = Philox32::compute(c, k);
+                    let result = Philox32x4::compute(c, k);
                     dst[0] = result[0] as f32 * scale;
                     dst[1] = result[1] as f32 * scale;
                     dst[2] = result[2] as f32 * scale;
@@ -1000,7 +997,7 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
                         c[1].0 = c[1].0.wrapping_add(1);
                     }
 
-                    let result = Philox32::compute(c, k);
+                    let result = Philox32x4::compute(c, k);
                     for j in 0..rem.len() {
                         rem[j] = result[j] as f32 * scale;
                     }
@@ -1020,8 +1017,8 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
     }
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn philox32_rand_i32s(
-    ptr: *mut Philox32,
+pub extern "C" fn philox32x4_rand_i32s(
+    ptr: *mut Philox32x4,
     out: *mut i32,
     count: usize,
     min: i32,
@@ -1051,7 +1048,7 @@ pub extern "C" fn philox32_rand_i32s(
                         c[1].0 = c[1].0.wrapping_add(1);
                     }
 
-                    let result = Philox32::compute(c, k);
+                    let result = Philox32x4::compute(c, k);
                     dst[0] = ((result[0] as u64 * range) >> 32) as i32 + min;
                     dst[1] = ((result[1] as u64 * range) >> 32) as i32 + min;
                     dst[2] = ((result[2] as u64 * range) >> 32) as i32 + min;
@@ -1069,7 +1066,7 @@ pub extern "C" fn philox32_rand_i32s(
                         c[1].0 = c[1].0.wrapping_add(1);
                     }
 
-                    let result = Philox32::compute(c, k);
+                    let result = Philox32x4::compute(c, k);
                     for j in 0..rem.len() {
                         rem[j] = ((result[j] as u64 * range) >> 32) as i32 + min;
                     }
@@ -1089,8 +1086,8 @@ pub extern "C" fn philox32_rand_i32s(
     }
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn philox32_rand_f32s(
-    ptr: *mut Philox32,
+pub extern "C" fn philox32x4_rand_f32s(
+    ptr: *mut Philox32x4,
     out: *mut f32,
     count: usize,
     min: f32,
@@ -1121,7 +1118,7 @@ pub extern "C" fn philox32_rand_f32s(
                         c[1].0 = c[1].0.wrapping_add(1);
                     }
 
-                    let result = Philox32::compute(c, k);
+                    let result = Philox32x4::compute(c, k);
                     dst[0] = (result[0] as f32 * scale_val) * range_val + min;
                     dst[1] = (result[1] as f32 * scale_val) * range_val + min;
                     dst[2] = (result[2] as f32 * scale_val) * range_val + min;
@@ -1139,7 +1136,7 @@ pub extern "C" fn philox32_rand_f32s(
                         c[1].0 = c[1].0.wrapping_add(1);
                     }
 
-                    let result = Philox32::compute(c, k);
+                    let result = Philox32x4::compute(c, k);
                     for j in 0..rem.len() {
                         rem[j] = (result[j] as f32 * scale_val) * range_val + min;
                     }
@@ -1161,24 +1158,35 @@ pub extern "C" fn philox32_rand_f32s(
 
 // --- Philox32x4-10 x4 ---
 
-const PHILOX32_512_LEN: usize = 16;
+#[allow(non_upper_case_globals)]
+const PHILOX32x16: usize = 16;
+#[allow(non_upper_case_globals)]
+const PHILOX32x4x4_PAR_CHUNK: usize = 16384;
+#[allow(non_upper_case_globals)]
+const PHILOX32x4x4_CHUNK_RATIO: u128 = (PHILOX32x4x4_PAR_CHUNK / PHILOX32x16) as u128;
+#[allow(non_upper_case_globals)]
+const PHILOX32x4x4_SHIFT: u128 = PHILOX32x4x4_CHUNK_RATIO.trailing_zeros() as u128;
+#[allow(non_upper_case_globals)]
+const PHILOX32x16_SHIFT: usize = PHILOX32x16.trailing_zeros() as usize;
 
+#[cfg(target_arch = "x86_64")]
 #[repr(C, align(64))]
-pub struct Philox32_512 {
+pub struct Philox32x4x4 {
     c: __m512i,
     k: __m512i,
 }
 
-impl Philox32_512 {
+#[cfg(target_arch = "x86_64")]
+impl Philox32x4x4 {
     pub fn new(seed: u32) -> Self {
-        let mut c = [0u32; PHILOX32_512_LEN];
-        let mut k = [0u32; PHILOX32_512_LEN];
+        let mut c = [0u32; PHILOX32x16];
+        let mut k = [0u32; PHILOX32x16];
 
         let mut seedgen = SplitMix32::new(seed);
         c.iter_mut().for_each(|c| *c = seedgen.nextu());
 
         // [k0, 0, k1, 0]
-        (0..PHILOX32_512_LEN).step_by(4).for_each(|i| {
+        (0..PHILOX32x16).step_by(4).for_each(|i| {
             k[i + 0] = seedgen.nextu();
             k[i + 1] = 0;
             k[i + 2] = seedgen.nextu();
@@ -1194,7 +1202,7 @@ impl Philox32_512 {
     }
 
     #[inline(always)]
-    pub fn compute(&mut self) -> [u32; PHILOX32_512_LEN] {
+    pub fn compute(&mut self) -> [u32; PHILOX32x16] {
         let mut x = self.c;
         let mut key = self.k;
         let m = unsafe { _mm512_set1_epi64(0xCD9E8D57_D2511F53u64 as i64) };
@@ -1220,14 +1228,14 @@ impl Philox32_512 {
         }
 
         unsafe {
-            let mut out = [0u32; PHILOX32_512_LEN];
+            let mut out = [0u32; PHILOX32x16];
             _mm512_storeu_si512(out.as_mut_ptr() as *mut _, x);
             out
         }
     }
 
     #[inline(always)]
-    pub fn nextu(&mut self) -> [u32; PHILOX32_512_LEN] {
+    pub fn nextu(&mut self) -> [u32; PHILOX32x16] {
         let out = self.compute();
 
         // AVX-512による 4 x 128-bit カウンタの並列インクリメント
@@ -1251,6 +1259,405 @@ impl Philox32_512 {
         }
 
         out
+    }
+}
+
+impl Philox32T for Philox32x4x4 {
+    type Output = [u32; PHILOX32x16];
+
+    #[inline(always)]
+    fn nextu(&mut self) -> Self::Output {
+        Philox32x4x4::nextu(self)
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32x4x4_new(seed: u32) -> *mut Philox32x4x4 {
+    Box::into_raw(Box::new(Philox32x4x4::new(seed)))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32x4x4_free(ptr: *mut Philox32x4x4) {
+    if !ptr.is_null() {
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32x4x4_next_u32s(ptr: *mut Philox32x4x4, out: *mut u32, count: usize) {
+    if count == 0 {
+        return;
+    }
+    unsafe {
+        let rng = &mut *ptr;
+        let c = rng.c;
+        let k = rng.k;
+        let one = _mm512_set1_epi64(1);
+
+        let buffer = from_raw_parts_mut(out, count);
+
+        buffer
+            .par_chunks_mut(PHILOX32x4x4_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let offset = (chunk_idx as u128) << PHILOX32x4x4_SHIFT;
+
+                // calculate c
+                let mut c_array = [0u128; 4];
+                _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, c);
+                for i in 0..4 {
+                    c_array[i] = c_array[i].wrapping_add(offset);
+                }
+                let mut c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
+
+                let is_aligned = (chunk.as_ptr() as usize) & 63 == 0;
+                let mut chunks_exact = chunk.chunks_exact_mut(PHILOX32x16);
+
+                if is_aligned {
+                    for dst in chunks_exact.by_ref() {
+                        let mut tmp_rng = Philox32x4x4 { c, k };
+                        let result = tmp_rng.compute();
+                        let v = _mm512_loadu_si512(result.as_ptr() as *const _);
+                        _mm512_stream_si512(dst.as_mut_ptr() as *mut _, v);
+
+                        // +1
+                        let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
+                        let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, _mm512_setzero_si512());
+                        let carry_mask = (eq_zero_mask & 0x55) << 1;
+                        c = _mm512_mask_add_epi64(next_c, carry_mask, next_c, one);
+                    }
+                } else {
+                    for dst in chunks_exact.by_ref() {
+                        let mut tmp_rng = Philox32x4x4 { c, k };
+                        let result = tmp_rng.compute();
+                        copy_nonoverlapping(result.as_ptr(), dst.as_mut_ptr(), PHILOX32x16);
+
+                        // +1
+                        let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
+                        let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, _mm512_setzero_si512());
+                        let carry_mask = (eq_zero_mask & 0x55) << 1;
+                        c = _mm512_mask_add_epi64(next_c, carry_mask, next_c, one);
+                    }
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let mut tmp_rng = Philox32x4x4 { c, k };
+                    let result = tmp_rng.compute();
+                    for j in 0..rem.len() {
+                        rem[j] = result[j];
+                    }
+                }
+            });
+
+        let num_blocks = ((count + PHILOX32x16 - 1) >> PHILOX32x16_SHIFT) as u128;
+        let mut c_array = [0u128; 4];
+        _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, rng.c);
+        for i in 0..4 {
+            c_array[i] = c_array[i].wrapping_add(num_blocks);
+        }
+        rng.c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32x4x4_next_f32s(ptr: *mut Philox32x4x4, out: *mut f32, count: usize) {
+    if count == 0 {
+        return;
+    }
+    unsafe {
+        let rng = &mut *ptr;
+        let c0 = rng.c;
+        let k = rng.k;
+        let one = _mm512_set1_epi64(1);
+        let scale = _mm512_set1_ps(1.0f32 / (u32::MAX as f32 + 1.0));
+
+        let buffer = from_raw_parts_mut(out, count);
+
+        buffer
+            .par_chunks_mut(PHILOX32x4x4_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let offset = chunk_idx as u128 * PHILOX32x4x4_CHUNK_RATIO;
+                let mut c_array = [0u128; 4];
+                _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, c0);
+                for i in 0..4 {
+                    c_array[i] = c_array[i].wrapping_add(offset);
+                }
+                let mut c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
+
+                let is_aligned = (chunk.as_ptr() as usize) & 63 == 0;
+                let mut chunks_exact = chunk.chunks_exact_mut(PHILOX32x16);
+
+                if is_aligned {
+                    for dst in chunks_exact.by_ref() {
+                        let mut tmp_rng = Philox32x4x4 { c, k };
+                        let result_u32 = tmp_rng.compute();
+
+                        let v_u32 = _mm512_loadu_si512(result_u32.as_ptr() as *const _);
+                        let v_f32 = _mm512_cvtepu32_ps(v_u32);
+                        let v_res = _mm512_mul_ps(v_f32, scale);
+                        _mm512_stream_ps(dst.as_mut_ptr() as *mut f32, v_res);
+
+                        let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
+                        let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, _mm512_setzero_si512());
+                        let carry_mask = (eq_zero_mask & 0x55) << 1;
+                        c = _mm512_mask_add_epi64(next_c, carry_mask, next_c, one);
+                    }
+                } else {
+                    for dst in chunks_exact.by_ref() {
+                        let mut tmp_rng = Philox32x4x4 { c, k };
+                        let result_u32 = tmp_rng.compute();
+
+                        let v_u32 = _mm512_loadu_si512(result_u32.as_ptr() as *const _);
+                        let v_f32 = _mm512_cvtepu32_ps(v_u32);
+                        let v_res = _mm512_mul_ps(v_f32, scale);
+                        _mm512_storeu_ps(dst.as_mut_ptr() as *mut f32, v_res);
+
+                        let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
+                        let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, _mm512_setzero_si512());
+                        let carry_mask = (eq_zero_mask & 0x55) << 1;
+                        c = _mm512_mask_add_epi64(next_c, carry_mask, next_c, one);
+                    }
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let mut tmp_rng = Philox32x4x4 { c, k };
+                    let result_u32 = tmp_rng.compute();
+                    let v_u32 = _mm512_loadu_si512(result_u32.as_ptr() as *const _);
+                    let v_f32 = _mm512_cvtepu32_ps(v_u32);
+                    let v_res = _mm512_mul_ps(v_f32, scale);
+                    let mut tmp_f32 = [0f32; 16];
+                    _mm512_storeu_ps(tmp_f32.as_mut_ptr() as *mut _, v_res);
+                    for j in 0..rem.len() {
+                        rem[j] = tmp_f32[j];
+                    }
+                }
+            });
+
+        let num_blocks = ((count + PHILOX32x16 - 1) >> PHILOX32x16_SHIFT) as u128;
+        let mut c_array = [0u128; 4];
+        _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, rng.c);
+        for i in 0..4 {
+            c_array[i] = c_array[i].wrapping_add(num_blocks);
+        }
+        rng.c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32x4x4_rand_i32s(
+    ptr: *mut Philox32x4x4,
+    out: *mut i32,
+    count: usize,
+    min: i32,
+    max: i32,
+) {
+    if count == 0 {
+        return;
+    }
+    unsafe {
+        let rng = &mut *ptr;
+        let c = rng.c;
+        let k = rng.k;
+        let one = _mm512_set1_epi64(1);
+        let range = (max as i64 - min as i64 + 1) as u64;
+
+        let v_range = _mm512_set1_epi64(range as i64);
+        let v_min = _mm512_set1_epi32(min);
+        let merge_mask = 0b1010101010101010;
+
+        let buffer = from_raw_parts_mut(out, count);
+
+        buffer
+            .par_chunks_mut(PHILOX32x4x4_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let offset = (chunk_idx as u128) << PHILOX32x4x4_SHIFT;
+                let mut c_array = [0u128; 4];
+                _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, c);
+                for i in 0..4 {
+                    c_array[i] = c_array[i].wrapping_add(offset);
+                }
+                let mut c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
+
+                let is_aligned = (chunk.as_ptr() as usize) & 63 == 0; // N % 64 == 0
+                let mut chunks_exact = chunk.chunks_exact_mut(PHILOX32x16);
+
+                if is_aligned {
+                    for dst in chunks_exact.by_ref() {
+                        let mut tmp_rng = Philox32x4x4 { c, k };
+                        let result_u32 = tmp_rng.compute();
+
+                        let v_u32 = _mm512_loadu_si512(result_u32.as_ptr() as *const _);
+
+                        let prod_even = _mm512_mul_epu32(v_u32, v_range);
+                        let res_even = _mm512_srli_epi64(prod_even, 32);
+
+                        let v_u32_shifted = _mm512_srli_epi64(v_u32, 32);
+                        let prod_odd = _mm512_mul_epu32(v_u32_shifted, v_range);
+
+                        let merged = _mm512_mask_blend_epi32(merge_mask, res_even, prod_odd);
+                        let v_res = _mm512_add_epi32(merged, v_min);
+                        _mm512_stream_si512(dst.as_mut_ptr() as *mut _, v_res);
+
+                        // +1
+                        let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
+                        let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, _mm512_setzero_si512());
+                        let carry_mask = (eq_zero_mask & 0x55) << 1;
+                        c = _mm512_mask_add_epi64(next_c, carry_mask, next_c, one);
+                    }
+                } else {
+                    for dst in chunks_exact.by_ref() {
+                        let mut tmp_rng = Philox32x4x4 { c, k };
+                        let result_u32 = tmp_rng.compute();
+
+                        let v_u32 = _mm512_loadu_si512(result_u32.as_ptr() as *const _);
+
+                        let prod_even = _mm512_mul_epu32(v_u32, v_range);
+                        let res_even = _mm512_srli_epi64(prod_even, 32);
+
+                        let v_u32_shifted = _mm512_srli_epi64(v_u32, 32);
+                        let prod_odd = _mm512_mul_epu32(v_u32_shifted, v_range);
+
+                        let merged = _mm512_mask_blend_epi32(merge_mask, res_even, prod_odd);
+                        let v_res = _mm512_add_epi32(merged, v_min);
+
+                        _mm512_storeu_si512(dst.as_mut_ptr() as *mut _, v_res);
+
+                        // +1
+                        let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
+                        let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, _mm512_setzero_si512());
+                        let carry_mask = (eq_zero_mask & 0x55) << 1;
+                        c = _mm512_mask_add_epi64(next_c, carry_mask, next_c, one);
+                    }
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let mut tmp_rng = Philox32x4x4 { c, k };
+                    let result_u32 = tmp_rng.compute();
+
+                    let v_u32 = _mm512_loadu_si512(result_u32.as_ptr() as *const _);
+                    let prod_even = _mm512_mul_epu32(v_u32, v_range);
+                    let res_even = _mm512_srli_epi64(prod_even, 32);
+
+                    let v_u32_shifted = _mm512_srli_epi64(v_u32, 32);
+                    let prod_odd = _mm512_mul_epu32(v_u32_shifted, v_range);
+
+                    let merged = _mm512_mask_blend_epi32(merge_mask, res_even, prod_odd);
+                    let v_res = _mm512_add_epi32(merged, v_min);
+
+                    let mut tmp_res = [0i32; 16];
+                    _mm512_storeu_si512(tmp_res.as_mut_ptr() as *mut _, v_res);
+
+                    for j in 0..rem.len() {
+                        rem[j] = tmp_res[j];
+                    }
+                }
+            });
+
+        let num_blocks = ((count + PHILOX32x16 - 1) >> PHILOX32x16_SHIFT) as u128;
+        let mut c_array = [0u128; 4];
+        _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, rng.c);
+        for i in 0..4 {
+            c_array[i] = c_array[i].wrapping_add(num_blocks);
+        }
+        rng.c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32x4x4_rand_f32s(
+    ptr: *mut Philox32x4x4,
+    out: *mut f32,
+    count: usize,
+    min: f32,
+    max: f32,
+) {
+    if count == 0 {
+        return;
+    }
+    unsafe {
+        let rng = &mut *ptr;
+        let c = rng.c;
+        let k = rng.k;
+        let one = _mm512_set1_epi64(1);
+
+        let scale_val = 1.0f32 / (u32::MAX as f32 + 1.0);
+        let range_val = max - min;
+        let scale_mul_range = scale_val * range_val;
+
+        let v_mult = _mm512_set1_ps(scale_mul_range);
+        let v_min = _mm512_set1_ps(min);
+
+        let buffer = from_raw_parts_mut(out, count);
+
+        buffer
+            .par_chunks_mut(PHILOX32x4x4_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let offset = chunk_idx as u128 * PHILOX32x4x4_CHUNK_RATIO;
+                let mut c_array = [0u128; 4];
+                _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, c);
+                for i in 0..4 {
+                    c_array[i] = c_array[i].wrapping_add(offset);
+                }
+                let mut c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
+
+                let is_aligned = (chunk.as_ptr() as usize) & 63 == 0;
+                let mut chunks_exact = chunk.chunks_exact_mut(PHILOX32x16);
+
+                if is_aligned {
+                    for dst in chunks_exact.by_ref() {
+                        let mut tmp_rng = Philox32x4x4 { c, k };
+                        let result_u32 = tmp_rng.compute();
+
+                        let v_u32 = _mm512_loadu_si512(result_u32.as_ptr() as *const _);
+                        let v_f32 = _mm512_cvtepu32_ps(v_u32);
+                        let v_res = _mm512_fmadd_ps(v_f32, v_mult, v_min);
+                        _mm512_stream_ps(dst.as_mut_ptr() as *mut f32, v_res);
+
+                        let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
+                        let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, _mm512_setzero_si512());
+                        let carry_mask = (eq_zero_mask & 0x55) << 1;
+                        c = _mm512_mask_add_epi64(next_c, carry_mask, next_c, one);
+                    }
+                } else {
+                    for dst in chunks_exact.by_ref() {
+                        let mut tmp_rng = Philox32x4x4 { c, k };
+                        let result_u32 = tmp_rng.compute();
+
+                        let v_u32 = _mm512_loadu_si512(result_u32.as_ptr() as *const _);
+                        let v_f32 = _mm512_cvtepu32_ps(v_u32);
+                        let v_res = _mm512_fmadd_ps(v_f32, v_mult, v_min);
+                        _mm512_storeu_ps(dst.as_mut_ptr() as *mut f32, v_res);
+
+                        let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
+                        let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, _mm512_setzero_si512());
+                        let carry_mask = (eq_zero_mask & 0x55) << 1;
+                        c = _mm512_mask_add_epi64(next_c, carry_mask, next_c, one);
+                    }
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let mut tmp_rng = Philox32x4x4 { c, k };
+                    let result_u32 = tmp_rng.compute();
+                    let v_u32 = _mm512_loadu_si512(result_u32.as_ptr() as *const _);
+                    let v_f32 = _mm512_cvtepu32_ps(v_u32);
+                    let v_res = _mm512_fmadd_ps(v_f32, v_mult, v_min);
+                    let mut tmp_f32 = [0f32; 16];
+                    _mm512_storeu_ps(tmp_f32.as_mut_ptr() as *mut _, v_res);
+                    for j in 0..rem.len() {
+                        rem[j] = tmp_f32[j];
+                    }
+                }
+            });
+
+        let num_blocks = ((count + PHILOX32x16 - 1) >> PHILOX32x16_SHIFT) as u128;
+        let mut c_array = [0u128; 4];
+        _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, rng.c);
+        for i in 0..4 {
+            c_array[i] = c_array[i].wrapping_add(num_blocks);
+        }
+        rng.c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
     }
 }
 
@@ -1632,16 +2039,23 @@ mod tests {
 
     #[test]
     fn philox32_works() {
-        let mut rng = Philox32::new(1);
+        let mut rng = Philox32x4::new(1);
         assert_eq!(rng.nextu(), [1606368191, 902838097, 1231688191, 2515046358]);
         assert_eq!(rng.nextf(), 0.5834115);
     }
 
-    // #[test]
-    // fn philox32x4x4_works() {
-    //     let mut rng = Philox32x4x4::new(1);
-    //     assert_eq!(rng.nextu(), [1606368191, 902838097, 1231688191, 2515046358]);
-    // }
+    #[test]
+    fn philox32x4x4_works() {
+        let mut rng = Philox32x4x4::new(1);
+        assert_eq!(
+            rng.nextu(),
+            [
+                3433810671, 3908867097, 2181896131, 1964852980, 502764505, 3339643839, 845579800,
+                356287197, 2203086005, 970497114, 2053487157, 3627004578, 1765004304, 1367891752,
+                630877398, 2591301858
+            ]
+        );
+    }
 
     #[test]
     fn xorshift32_works() {

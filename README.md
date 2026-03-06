@@ -12,7 +12,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.2.4"
+urng = "0.2.6"
 ```
 
 ## Supported Generators
@@ -23,16 +23,17 @@ All generators implement either the `Rng32` or `Rng64` trait, providing a unifie
 
 Output `u32` natively.
 
-| Struct       | Algorithm        | Period / State   | Description                               |
-| ------------ | ---------------- | ---------------- | ----------------------------------------- |
-| `Mt19937`    | Mersenne Twister | $2^{19937}-1$    | Standard reliable generator.              |
-| `Sfmt19937`  | SFMT             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.      |
-| `Pcg32`      | PCG-XSH-RR       | $2^{64}$         | Fast, statistically good, small state.    |
-| `Philox32`   | Philox 4x32      | -                | Counter-based, suitable for parallel use. |
-| `SplitMix32` | SplitMix32       | $2^{32}$         | Fast, used for initializing other states. |
-| `Xorwow`     | XORWOW           | $2^{192}-2^{32}$ | Used in NVIDIA cuRAND.                    |
-| `Xorshift32` | Xorshift         | $2^{32}-1$       | Very simple and fast.                     |
-| `Lcg32`      | LCG              | $m$              | Linear Congruential Generator.            |
+| Struct         | Algorithm        | Period / State   | Description                               |
+| -------------- | ---------------- | ---------------- | ----------------------------------------- |
+| `Mt19937`      | Mersenne Twister | $2^{19937}-1$    | Standard reliable generator.              |
+| `Sfmt19937`    | SFMT             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.      |
+| `Pcg32`        | PCG-XSH-RR       | $2^{64}$         | Fast, statistically good, small state.    |
+| `Philox32x4`   | Philox 4x32      | -                | Counter-based, suitable for parallel use. |
+| `Philox32x4x4` | Philox 4x4x32    | -                | Counter-based, feature for AVX512.        |
+| `SplitMix32`   | SplitMix32       | $2^{32}$         | Fast, used for initializing other states. |
+| `Xorwow`       | XORWOW           | $2^{192}-2^{32}$ | Used in NVIDIA cuRAND.                    |
+| `Xorshift32`   | Xorshift         | $2^{32}-1$       | Very simple and fast.                     |
+| `Lcg32`        | LCG              | $m$              | Linear Congruential Generator.            |
 
 ### 64-bit Generators (`urng::rng64`)
 

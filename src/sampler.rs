@@ -1,4 +1,4 @@
-﻿use crate::rng::{Rng32, Rng64};
+﻿use crate::rng::Rng64;
 
 pub trait Sampler64<'a, R: Rng64> {
     /// Creates a new sampler with the given random number generator and weights.

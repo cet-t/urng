@@ -8,7 +8,7 @@
 //! * **Mersenne Twister**: [`rng32::Mt19937`] (32-bit), [`rng64::Mt1993764`] (64-bit).
 //! * **SIMD-oriented Fast Mersenne Twister**: [`rng32::Sfmt19937`] (32-bit), [`rng64::Sfmt1993764`] (64-bit).
 //! * **Permuted Congruential Generator**: [`rng32::Pcg32`] (32-bit output).
-//! * **Philox**: [`rng32::Philox32`] (4x32-bit), [`rng64::Philox64`] (2x64-bit).
+//! * **Philox**: [`rng32::Philox32x4`] (4x32-bit), [`rng64::Philox64`] (2x64-bit).
 //! * **Twisted Generalized Feedback Shift Register**: [`rng64::TwistedGFSR`] (64-bit).
 //! * **Small Fast Chaotic**: [`rng64::Sfc64`] (64-bit).
 //! * **Xorshift**: [`rng32::Xorshift32`] (32-bit), [`rng64::Xorshift64`] (64-bit), [`rng128::Xorshift128`] (128-bit state).

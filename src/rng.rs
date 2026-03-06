@@ -17,3 +17,8 @@ pub trait Rng64 {
     /// Returns a random element from a slice.
     fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T;
 }
+
+pub trait Philox32T {
+    type Output;
+    fn nextu(&mut self) -> Self::Output;
+}
