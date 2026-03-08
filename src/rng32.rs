@@ -794,15 +794,10 @@ impl Philox32x4 {
             let hi1 = (prod1 >> 32) as u32;
             let lo1 = prod1 as u32;
 
-            let next_x0 = hi1 ^ x[1] ^ key[0];
-            let next_x1 = lo1;
-            let next_x2 = hi0 ^ x[3] ^ key[1];
-            let next_x3 = lo0;
-
-            x[0] = next_x0;
-            x[1] = next_x1;
-            x[2] = next_x2;
-            x[3] = next_x3;
+            x[0] = hi1 ^ x[1] ^ key[0];
+            x[1] = lo1;
+            x[2] = hi0 ^ x[3] ^ key[1];
+            x[3] = lo0;
 
             key[0] = key[0].wrapping_add(W0);
             key[1] = key[1].wrapping_add(W1);
@@ -1169,6 +1164,9 @@ const PHILOX32x4x4_SHIFT: u128 = PHILOX32x4x4_CHUNK_RATIO.trailing_zeros() as u1
 #[allow(non_upper_case_globals)]
 const PHILOX32x16_SHIFT: usize = PHILOX32x16.trailing_zeros() as usize;
 
+/// A Philox 4x32x4 random number generator.
+///
+/// This is a counter-based RNG suitable for parallel applications.
 #[cfg(target_arch = "x86_64")]
 #[repr(C, align(64))]
 pub struct Philox32x4x4 {
@@ -1178,6 +1176,7 @@ pub struct Philox32x4x4 {
 
 #[cfg(target_arch = "x86_64")]
 impl Philox32x4x4 {
+    /// Creates a new `Philox32x4x4` instance.
     pub fn new(seed: u32) -> Self {
         let mut c = [0u32; PHILOX32x16];
         let mut k = [0u32; PHILOX32x16];
@@ -1202,7 +1201,7 @@ impl Philox32x4x4 {
     }
 
     #[inline(always)]
-    pub fn compute(&mut self) -> [u32; PHILOX32x16] {
+    pub(crate) fn compute(&mut self) -> [u32; PHILOX32x16] {
         let mut x = self.c;
         let mut key = self.k;
         let m = unsafe { _mm512_set1_epi64(0xCD9E8D57_D2511F53u64 as i64) };
@@ -1234,24 +1233,25 @@ impl Philox32x4x4 {
         }
     }
 
+    /// Generates the next block of random numbers.
     #[inline(always)]
     pub fn nextu(&mut self) -> [u32; PHILOX32x16] {
         let out = self.compute();
 
-        // AVX-512による 4 x 128-bit カウンタの並列インクリメント
+        // increment counter
         unsafe {
-            // [1, 1, 1, 1, 1, 1, 1, 1] as 64-bit
+            // [1, 1, 1, 1, 1, 1, 1, 1]
             let one = _mm512_set1_epi64(1);
 
-            // 下位64ビット (インデックス 0, 2, 4, 6 に相当 = マスク 0x55) のみ +1 する
+            // lower 64 bits (indices 0, 2, 4, 6) +1
             let next_c = _mm512_mask_add_epi64(self.c, 0x55, self.c, one);
 
-            // 下位64ビットが 0 にオーバーフローしたかチェック
+            // check overflow of lower 64 bits
             let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, _mm512_setzero_si512());
             let carry_mask = (eq_zero_mask & 0x55) << 1;
 
             if carry_mask != 0 {
-                // オーバーフローした場合は上位64ビット層にも +1 する
+                // if overflow, add to upper 64 bits
                 self.c = _mm512_mask_add_epi64(next_c, carry_mask, next_c, one);
             } else {
                 self.c = next_c;
@@ -1259,6 +1259,56 @@ impl Philox32x4x4 {
         }
 
         out
+    }
+
+    #[inline(always)]
+    pub fn nextf(&mut self) -> [f32; PHILOX32x16] {
+        /*
+        let out = self.nextu();
+        let mut dst = [0f32; PHILOX32x16];
+        let scale = 1.0 / (u32::MAX as f32 + 1.0);
+        for i in 0..PHILOX32x16 {
+            dst[i] = (out[i] as f32) * scale;
+        }
+        dst
+        */
+
+        let out = self.nextu();
+        unsafe {
+            let v_u32 = _mm512_loadu_si512(out.as_ptr() as *const _);
+            let v_f32 = _mm512_cvtepu32_ps(v_u32);
+            let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
+            let v_res = _mm512_mul_ps(v_f32, scale);
+
+            let mut res = [0f32; PHILOX32x16];
+            _mm512_storeu_ps(res.as_mut_ptr(), v_res);
+            res
+        }
+    }
+
+    /// Generates a random `i32` value in the range [min, max].
+    #[inline(always)]
+    pub fn randi(&mut self, min: i32, max: i32) -> [i32; PHILOX32x16] {
+        let range = (max as i64 - min as i64 + 1) as u64;
+        let out = self.nextu();
+        let mut dst = [0i32; PHILOX32x16];
+        for i in 0..PHILOX32x16 {
+            dst[i] = ((out[i] as u64 * range) >> 32) as i32 + min;
+        }
+        dst
+    }
+
+    /// Generates a random `f32` value in the range [min, max).
+    #[inline(always)]
+    pub fn randf(&mut self, min: f32, max: f32) -> [f32; PHILOX32x16] {
+        let range = max - min;
+        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
+        let out = self.nextu();
+        let mut dst = [0f32; PHILOX32x16];
+        for i in 0..PHILOX32x16 {
+            dst[i] = (out[i] as f32 * scale) + min;
+        }
+        dst
     }
 }
 
@@ -1661,6 +1711,73 @@ pub extern "C" fn philox32x4x4_rand_f32s(
     }
 }
 
+#[cfg(target_arch = "x86_64")]
+pub type Philox32 = Philox32x4x4;
+
+#[cfg(not(target_arch = "x86_64"))]
+pub type Philox32 = Philox32x4;
+
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32_new(seed: u32) -> *mut Philox32 {
+    #[cfg(target_arch = "x86_64")]
+    return philox32x4x4_new(seed);
+
+    #[cfg(not(target_arch = "x86_64"))]
+    return philox32x4_new(seed);
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32_free(ptr: *mut Philox32) {
+    #[cfg(target_arch = "x86_64")]
+    philox32x4x4_free(ptr);
+
+    #[cfg(not(target_arch = "x86_64"))]
+    philox32x4_free(ptr);
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: usize) {
+    #[cfg(target_arch = "x86_64")]
+    philox32x4x4_next_u32s(ptr, out, count);
+
+    #[cfg(not(target_arch = "x86_64"))]
+    philox32x4_next_u32s(ptr, out, count);
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: usize) {
+    #[cfg(target_arch = "x86_64")]
+    philox32x4x4_next_f32s(ptr, out, count);
+
+    #[cfg(not(target_arch = "x86_64"))]
+    philox32x4_next_f32s(ptr, out, count);
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32_rand_i32s(
+    ptr: *mut Philox32,
+    out: *mut i32,
+    count: usize,
+    min: i32,
+    max: i32,
+) {
+    #[cfg(target_arch = "x86_64")]
+    philox32x4x4_rand_i32s(ptr, out, count, min, max);
+
+    #[cfg(not(target_arch = "x86_64"))]
+    philox32x4_rand_i32s(ptr, out, count, min, max);
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32_rand_f32s(
+    ptr: *mut Philox32,
+    out: *mut f32,
+    count: usize,
+    min: f32,
+    max: f32,
+) {
+    #[cfg(target_arch = "x86_64")]
+    philox32x4x4_rand_f32s(ptr, out, count, min, max);
+
+    #[cfg(not(target_arch = "x86_64"))]
+    philox32x4_rand_f32s(ptr, out, count, min, max);
+}
+
 // --- Xorshift32 ---
 
 /// A 32-bit Xorshift random number generator.
@@ -2053,6 +2170,27 @@ mod tests {
                 3433810671, 3908867097, 2181896131, 1964852980, 502764505, 3339643839, 845579800,
                 356287197, 2203086005, 970497114, 2053487157, 3627004578, 1765004304, 1367891752,
                 630877398, 2591301858
+            ]
+        );
+        assert_eq!(
+            rng.nextf(),
+            [
+                0.74029744,
+                0.22862802,
+                0.8084649,
+                0.44234967,
+                0.21707518,
+                0.063766554,
+                0.7941085,
+                0.43958178,
+                0.6189914,
+                0.41019267,
+                0.08147346,
+                0.58526325,
+                0.33999366,
+                0.60349184,
+                0.52620786,
+                0.041621894
             ]
         );
     }
