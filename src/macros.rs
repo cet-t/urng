@@ -302,3 +302,22 @@ mod tests {
         assert!(val64 >= 100 && val64 <= 200);
     }
 }
+
+#[macro_export]
+macro_rules! dispatch_simd {
+    ($ret_type:ty, $fallback_fn:ident, $avx512_fn:ident, $seed:expr) => {{
+        #[cfg(target_arch = "x86_64")]
+        if std::arch::is_x86_feature_detected!("avx512f") {
+            return $avx512_fn($seed) as *mut $ret_type;
+        }
+        $fallback_fn($seed) as *mut $ret_type
+    }};
+    ($avx512_type:ty, $fallback_type:ty, $fallback_fn:ident, $avx512_fn:ident, $ptr:expr $(, $arg:expr)*) => {{
+        #[cfg(target_arch = "x86_64")]
+        if std::arch::is_x86_feature_detected!("avx512f") {
+            $avx512_fn($ptr as *mut $avx512_type $(, $arg)*);
+            return;
+        }
+        $fallback_fn($ptr as *mut $fallback_type $(, $arg)*);
+    }};
+}

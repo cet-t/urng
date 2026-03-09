@@ -46,4 +46,5 @@ pub mod sampler;
 
 pub mod sampler64;
 
+#[macro_use]
 pub mod macros;

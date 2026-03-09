@@ -12,7 +12,7 @@ lto = "fat"
 codegen-units = 1
 
 [lib]
-crate-type = ["cdylib", "rlib" ]
+crate-type = ["cdylib", "rlib"]
 
 [build-dependencies]
 csbindgen = "1.9.7"
