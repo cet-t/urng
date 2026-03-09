@@ -2194,6 +2194,1177 @@ pub extern "C" fn splitmix32_rand_f32s(
     }
 }
 
+// --- Threefry32x4 ---
+
+const THREEFRY32_C240: u32 = 0x1BD11BDA;
+
+/// A Threefry4x32 random number generator (Random123 family).
+///
+/// This is a counter-based RNG using a reduced-round (20 rounds) Threefish cipher
+/// with 32-bit words and 4 output values per block.
+#[repr(C, align(64))]
+pub struct Threefry32x4 {
+    c: [u32; 4],
+    k: [u32; 5],
+    tw: [u32; 3],
+    index: usize,
+    buffer: [u32; 4],
+}
+
+impl Threefry32x4 {
+    /// Creates a new `Threefry32x4` instance.
+    pub fn new(seed: u32) -> Self {
+        let mut seedgen = SplitMix32::new(seed);
+        let mut k = [0u32; 5];
+        for i in 0..4 {
+            k[i] = seedgen.nextu();
+        }
+        k[4] = THREEFRY32_C240 ^ k[0] ^ k[1] ^ k[2] ^ k[3];
+
+        let tw0 = seedgen.nextu();
+        let tw1 = seedgen.nextu();
+        let tw = [tw0, tw1, tw0 ^ tw1];
+
+        Self {
+            c: [0; 4],
+            k,
+            tw,
+            index: 4,
+            buffer: [0; 4],
+        }
+    }
+
+    #[inline(always)]
+    pub fn compute(c: [u32; 4], k: &[u32; 5], tw: &[u32; 3]) -> [u32; 4] {
+        let mut v = c;
+
+        macro_rules! round {
+            ($r_sh_0:expr, $r_sh_1:expr) => {
+                let y0 = v[0].wrapping_add(v[1]);
+                let f1 = v[1].rotate_left($r_sh_0) ^ y0;
+
+                let y1 = v[2].wrapping_add(v[3]);
+                let f3 = v[3].rotate_left($r_sh_1) ^ y1;
+
+                v[0] = y0;
+                v[1] = f3;
+                v[2] = y1;
+                v[3] = f1;
+            };
+        }
+
+        macro_rules! inject_key {
+            ($s:expr) => {
+                v[0] = v[0].wrapping_add(k[$s % 5]);
+                v[1] = v[1].wrapping_add(k[($s + 1) % 5].wrapping_add(tw[$s % 3]));
+                v[2] = v[2].wrapping_add(k[($s + 2) % 5].wrapping_add(tw[($s + 1) % 3]));
+                v[3] = v[3].wrapping_add(k[($s + 3) % 5].wrapping_add($s as u32));
+            };
+        }
+
+        inject_key!(0);
+        round!(10, 26);
+        round!(11, 21);
+        round!(13, 27);
+        round!(23, 5);
+
+        inject_key!(1);
+        round!(6, 20);
+        round!(17, 11);
+        round!(25, 10);
+        round!(18, 20);
+
+        inject_key!(2);
+        round!(10, 26);
+        round!(11, 21);
+        round!(13, 27);
+        round!(23, 5);
+
+        inject_key!(3);
+        round!(6, 20);
+        round!(17, 11);
+        round!(25, 10);
+        round!(18, 20);
+
+        inject_key!(4);
+        round!(10, 26);
+        round!(11, 21);
+        round!(13, 27);
+        round!(23, 5);
+
+        let ksi5_0 = k[0];
+        let ksi5_1 = k[1].wrapping_add(tw[2]);
+        let ksi5_2 = k[2].wrapping_add(tw[0]);
+        let ksi5_3 = k[3].wrapping_add(5);
+
+        [
+            v[0].wrapping_add(ksi5_0) ^ c[0],
+            v[1].wrapping_add(ksi5_1) ^ c[1],
+            v[2].wrapping_add(ksi5_2) ^ c[2],
+            v[3].wrapping_add(ksi5_3) ^ c[3],
+        ]
+    }
+
+    #[inline(always)]
+    fn next_block(&mut self) -> [u32; 4] {
+        let dst = Self::compute(self.c, &self.k, &self.tw);
+
+        self.c[0] = self.c[0].wrapping_add(1);
+        if self.c[0] == 0 {
+            self.c[1] = self.c[1].wrapping_add(1);
+            if self.c[1] == 0 {
+                self.c[2] = self.c[2].wrapping_add(1);
+                if self.c[2] == 0 {
+                    self.c[3] = self.c[3].wrapping_add(1);
+                }
+            }
+        }
+
+        dst
+    }
+
+    /// Generates the next 4 random `u32` values.
+    #[inline]
+    pub fn nextu(&mut self) -> [u32; 4] {
+        if self.index >= 4 {
+            self.buffer = self.next_block();
+            self.index = 0;
+        }
+        let val = self.buffer;
+        self.index += 4;
+        val
+    }
+
+    /// Generates the next 4 random `f32` values in the range [0, 1).
+    #[inline]
+    pub fn nextf(&mut self) -> [f32; 4] {
+        let out = self.nextu();
+        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
+        let mut dst = [0f32; 4];
+        for i in 0..4 {
+            dst[i] = out[i] as f32 * SCALE;
+        }
+        dst
+    }
+
+    /// Generates 4 random `i32` values in the range [min, max].
+    #[inline]
+    pub fn randi(&mut self, min: i32, max: i32) -> [i32; 4] {
+        let range = (max as i64 - min as i64 + 1) as u64;
+        let out = self.nextu();
+        let mut dst = [0i32; 4];
+        for i in 0..4 {
+            dst[i] = ((out[i] as u64 * range) >> 32) as i32 + min;
+        }
+        dst
+    }
+
+    /// Generates 4 random `f32` values in the range [min, max).
+    #[inline]
+    pub fn randf(&mut self, min: f32, max: f32) -> [f32; 4] {
+        let range = max - min;
+        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
+        let out = self.nextu();
+        let mut dst = [0f32; 4];
+        for i in 0..4 {
+            dst[i] = (out[i] as f32 * scale) + min;
+        }
+        dst
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn threefry32x4_new(seed: u32) -> *mut Threefry32x4 {
+    Box::into_raw(Box::new(Threefry32x4::new(seed)))
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn threefry32x4_free(ptr: *mut Threefry32x4) {
+    if !ptr.is_null() {
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+const THREEFRY32_PAR_CHUNK: usize = 4096;
+
+#[unsafe(no_mangle)]
+pub extern "C" fn threefry32x4_next_u32s(ptr: *mut Threefry32x4, out: *mut u32, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let c0 = rng.c;
+        let k = rng.k;
+        let tw = rng.tw;
+
+        buffer
+            .par_chunks_mut(THREEFRY32_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_base_offset = (chunk_idx * (THREEFRY32_PAR_CHUNK / 4)) as u64;
+                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
+                let c64_start = c0_64.wrapping_add(chunk_base_offset);
+
+                let mut chunks_exact = chunk.chunks_exact_mut(4);
+                let mut b_offset = 0u64;
+
+                for dst in chunks_exact.by_ref() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
+
+                    let result = Threefry32x4::compute(c, &k, &tw);
+                    dst[0] = result[0];
+                    dst[1] = result[1];
+                    dst[2] = result[2];
+                    dst[3] = result[3];
+                    b_offset += 1;
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
+
+                    let result = Threefry32x4::compute(c, &k, &tw);
+                    for j in 0..rem.len() {
+                        rem[j] = result[j];
+                    }
+                }
+            });
+
+        let num_blocks = (count + 3) / 4;
+        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
+        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
+        rng.c[0] = new_c64 as u32;
+        rng.c[1] = (new_c64 >> 32) as u32;
+        if new_c64 < c0_64 {
+            let (n_c2, ovf3) = rng.c[2].overflowing_add(1);
+            rng.c[2] = n_c2;
+            if ovf3 {
+                rng.c[3] = rng.c[3].wrapping_add(1);
+            }
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn threefry32x4_next_f32s(ptr: *mut Threefry32x4, out: *mut f32, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let c0 = rng.c;
+        let k = rng.k;
+        let tw = rng.tw;
+        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
+
+        buffer
+            .par_chunks_mut(THREEFRY32_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_base_offset = (chunk_idx * (THREEFRY32_PAR_CHUNK / 4)) as u64;
+                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
+                let c64_start = c0_64.wrapping_add(chunk_base_offset);
+
+                let mut chunks_exact = chunk.chunks_exact_mut(4);
+                let mut b_offset = 0u64;
+
+                for dst in chunks_exact.by_ref() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
+
+                    let result = Threefry32x4::compute(c, &k, &tw);
+                    dst[0] = result[0] as f32 * SCALE;
+                    dst[1] = result[1] as f32 * SCALE;
+                    dst[2] = result[2] as f32 * SCALE;
+                    dst[3] = result[3] as f32 * SCALE;
+                    b_offset += 1;
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
+
+                    let result = Threefry32x4::compute(c, &k, &tw);
+                    for j in 0..rem.len() {
+                        rem[j] = result[j] as f32 * SCALE;
+                    }
+                }
+            });
+
+        let num_blocks = (count + 3) / 4;
+        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
+        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
+        rng.c[0] = new_c64 as u32;
+        rng.c[1] = (new_c64 >> 32) as u32;
+        if new_c64 < c0_64 {
+            let (n_c2, ovf3) = rng.c[2].overflowing_add(1);
+            rng.c[2] = n_c2;
+            if ovf3 {
+                rng.c[3] = rng.c[3].wrapping_add(1);
+            }
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn threefry32x4_rand_i32s(
+    ptr: *mut Threefry32x4,
+    out: *mut i32,
+    count: usize,
+    min: i32,
+    max: i32,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let c0 = rng.c;
+        let k = rng.k;
+        let tw = rng.tw;
+        let range = (max as i64 - min as i64 + 1) as u64;
+
+        buffer
+            .par_chunks_mut(THREEFRY32_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_base_offset = (chunk_idx * (THREEFRY32_PAR_CHUNK / 4)) as u64;
+                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
+                let c64_start = c0_64.wrapping_add(chunk_base_offset);
+
+                let mut chunks_exact = chunk.chunks_exact_mut(4);
+                let mut b_offset = 0u64;
+
+                for dst in chunks_exact.by_ref() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
+
+                    let result = Threefry32x4::compute(c, &k, &tw);
+                    dst[0] = ((result[0] as u64 * range) >> 32) as i32 + min;
+                    dst[1] = ((result[1] as u64 * range) >> 32) as i32 + min;
+                    dst[2] = ((result[2] as u64 * range) >> 32) as i32 + min;
+                    dst[3] = ((result[3] as u64 * range) >> 32) as i32 + min;
+                    b_offset += 1;
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
+
+                    let result = Threefry32x4::compute(c, &k, &tw);
+                    for j in 0..rem.len() {
+                        rem[j] = ((result[j] as u64 * range) >> 32) as i32 + min;
+                    }
+                }
+            });
+
+        let num_blocks = (count + 3) / 4;
+        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
+        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
+        rng.c[0] = new_c64 as u32;
+        rng.c[1] = (new_c64 >> 32) as u32;
+        if new_c64 < c0_64 {
+            let (n_c2, ovf3) = rng.c[2].overflowing_add(1);
+            rng.c[2] = n_c2;
+            if ovf3 {
+                rng.c[3] = rng.c[3].wrapping_add(1);
+            }
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn threefry32x4_rand_f32s(
+    ptr: *mut Threefry32x4,
+    out: *mut f32,
+    count: usize,
+    min: f32,
+    max: f32,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let c0 = rng.c;
+        let k = rng.k;
+        let tw = rng.tw;
+        let scale_val = 1.0f32 / (u32::MAX as f32 + 1.0);
+        let range_val = max - min;
+
+        buffer
+            .par_chunks_mut(THREEFRY32_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_base_offset = (chunk_idx * (THREEFRY32_PAR_CHUNK / 4)) as u64;
+                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
+                let c64_start = c0_64.wrapping_add(chunk_base_offset);
+
+                let mut chunks_exact = chunk.chunks_exact_mut(4);
+                let mut b_offset = 0u64;
+
+                for dst in chunks_exact.by_ref() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
+
+                    let result = Threefry32x4::compute(c, &k, &tw);
+                    dst[0] = (result[0] as f32 * scale_val) * range_val + min;
+                    dst[1] = (result[1] as f32 * scale_val) * range_val + min;
+                    dst[2] = (result[2] as f32 * scale_val) * range_val + min;
+                    dst[3] = (result[3] as f32 * scale_val) * range_val + min;
+                    b_offset += 1;
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
+
+                    let result = Threefry32x4::compute(c, &k, &tw);
+                    for j in 0..rem.len() {
+                        rem[j] = (result[j] as f32 * scale_val) * range_val + min;
+                    }
+                }
+            });
+
+        let num_blocks = (count + 3) / 4;
+        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
+        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
+        rng.c[0] = new_c64 as u32;
+        rng.c[1] = (new_c64 >> 32) as u32;
+        if new_c64 < c0_64 {
+            let (n_c2, ovf3) = rng.c[2].overflowing_add(1);
+            rng.c[2] = n_c2;
+            if ovf3 {
+                rng.c[3] = rng.c[3].wrapping_add(1);
+            }
+        }
+    }
+}
+
+// --- Threefry32x2 ---
+
+/// A Threefry2x32 random number generator.
+pub struct Threefry32x2 {
+    c: [u32; 2],
+    k: [u32; 3],
+    buffer: [u32; 2],
+    index: usize,
+}
+
+impl Threefry32x2 {
+    /// Creates a new `Threefry32x2` instance.
+    #[inline]
+    pub fn new(seed: u32) -> Self {
+        let mut sm = SplitMix32::new(seed);
+        let k0 = sm.nextu();
+        let k1 = sm.nextu();
+        let k2 = k0 ^ k1 ^ THREEFRY32_C240;
+
+        Self {
+            c: [0, 0],
+            k: [k0, k1, k2],
+            buffer: [0; 2],
+            index: 2,
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn compute(c: [u32; 2], k: &[u32; 3]) -> [u32; 2] {
+        let mut v = c;
+
+        macro_rules! round {
+            ($r_sh:expr) => {
+                let y = v[0].wrapping_add(v[1]);
+                let f = v[1].rotate_left($r_sh) ^ y;
+                v[0] = y;
+                v[1] = f;
+            };
+        }
+
+        macro_rules! inject_key {
+            ($s:expr) => {
+                v[0] = v[0].wrapping_add(k[$s % 3]);
+                v[1] = v[1].wrapping_add(k[($s + 1) % 3].wrapping_add($s as u32));
+            };
+        }
+
+        inject_key!(0);
+        round!(13);
+        round!(15);
+        round!(26);
+        round!(6);
+
+        inject_key!(1);
+        round!(17);
+        round!(29);
+        round!(16);
+        round!(24);
+
+        inject_key!(2);
+        round!(13);
+        round!(15);
+        round!(26);
+        round!(6);
+
+        inject_key!(3);
+        round!(17);
+        round!(29);
+        round!(16);
+        round!(24);
+
+        inject_key!(4);
+        round!(13);
+        round!(15);
+        round!(26);
+        round!(6);
+
+        let ksi5_0 = k[2];
+        let ksi5_1 = k[0].wrapping_add(5);
+
+        [v[0].wrapping_add(ksi5_0), v[1].wrapping_add(ksi5_1)]
+    }
+
+    #[inline(always)]
+    fn next_block(&mut self) -> [u32; 2] {
+        let dst = Self::compute(self.c, &self.k);
+        let (n_c0, overflow) = self.c[0].overflowing_add(1);
+        self.c[0] = n_c0;
+        if overflow {
+            self.c[1] = self.c[1].wrapping_add(1);
+        }
+        dst
+    }
+
+    /// Generates the next 2 random `u32` values.
+    #[inline]
+    pub fn nextu(&mut self) -> [u32; 2] {
+        if self.index >= 2 {
+            self.buffer = self.next_block();
+            self.index = 0;
+        }
+        let val = self.buffer;
+        self.index += 2;
+        val
+    }
+
+    /// Generates the next 2 random `f32` values in the range [0, 1).
+    #[inline]
+    pub fn nextf(&mut self) -> [f32; 2] {
+        let out = self.nextu();
+        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
+        [out[0] as f32 * SCALE, out[1] as f32 * SCALE]
+    }
+
+    /// Generates 2 random `i32` values in the range [min, max].
+    #[inline]
+    pub fn randi(&mut self, min: i32, max: i32) -> [i32; 2] {
+        let range = (max as i64 - min as i64 + 1) as u64;
+        let out = self.nextu();
+        [
+            ((out[0] as u64 * range) >> 32) as i32 + min,
+            ((out[1] as u64 * range) >> 32) as i32 + min,
+        ]
+    }
+
+    /// Generates 2 random `f32` values in the range [min, max).
+    #[inline]
+    pub fn randf(&mut self, min: f32, max: f32) -> [f32; 2] {
+        let range = max - min;
+        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
+        let out = self.nextu();
+        [(out[0] as f32 * scale) + min, (out[1] as f32 * scale) + min]
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn threefry32x2_new(seed: u32) -> *mut Threefry32x2 {
+    Box::into_raw(Box::new(Threefry32x2::new(seed)))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn threefry32x2_free(ptr: *mut Threefry32x2) {
+    if !ptr.is_null() {
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+
+const THREEFRY32X2_PAR_CHUNK: usize = 4096;
+
+#[unsafe(no_mangle)]
+pub extern "C" fn threefry32x2_next_u32s(ptr: *mut Threefry32x2, out: *mut u32, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let c0 = rng.c;
+        let k = rng.k;
+
+        buffer
+            .par_chunks_mut(THREEFRY32X2_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_base_offset = (chunk_idx * (THREEFRY32X2_PAR_CHUNK / 2)) as u64;
+                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
+                let c64_start = c0_64.wrapping_add(chunk_base_offset);
+
+                let mut chunks_exact = chunk.chunks_exact_mut(2);
+                let mut b_offset = 0u64;
+
+                for dst in chunks_exact.by_ref() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
+
+                    let result = Threefry32x2::compute(c, &k);
+                    dst[0] = result[0];
+                    dst[1] = result[1];
+                    b_offset += 1;
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
+
+                    let result = Threefry32x2::compute(c, &k);
+                    for j in 0..rem.len() {
+                        rem[j] = result[j];
+                    }
+                }
+            });
+
+        let num_blocks = (count + 1) / 2;
+        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
+        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
+        rng.c[0] = new_c64 as u32;
+        rng.c[1] = (new_c64 >> 32) as u32;
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn threefry32x2_next_f32s(ptr: *mut Threefry32x2, out: *mut f32, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let c0 = rng.c;
+        let k = rng.k;
+        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
+
+        buffer
+            .par_chunks_mut(THREEFRY32X2_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_base_offset = (chunk_idx * (THREEFRY32X2_PAR_CHUNK / 2)) as u64;
+                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
+                let c64_start = c0_64.wrapping_add(chunk_base_offset);
+
+                let mut chunks_exact = chunk.chunks_exact_mut(2);
+                let mut b_offset = 0u64;
+
+                for dst in chunks_exact.by_ref() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
+
+                    let result = Threefry32x2::compute(c, &k);
+                    dst[0] = result[0] as f32 * SCALE;
+                    dst[1] = result[1] as f32 * SCALE;
+                    b_offset += 1;
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
+
+                    let result = Threefry32x2::compute(c, &k);
+                    for j in 0..rem.len() {
+                        rem[j] = result[j] as f32 * SCALE;
+                    }
+                }
+            });
+
+        let num_blocks = (count + 1) / 2;
+        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
+        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
+        rng.c[0] = new_c64 as u32;
+        rng.c[1] = (new_c64 >> 32) as u32;
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn threefry32x2_rand_i32s(
+    ptr: *mut Threefry32x2,
+    out: *mut i32,
+    count: usize,
+    min: i32,
+    max: i32,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let c0 = rng.c;
+        let k = rng.k;
+        let range = (max as i64 - min as i64 + 1) as u64;
+
+        buffer
+            .par_chunks_mut(THREEFRY32X2_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_base_offset = (chunk_idx * (THREEFRY32X2_PAR_CHUNK / 2)) as u64;
+                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
+                let c64_start = c0_64.wrapping_add(chunk_base_offset);
+
+                let mut chunks_exact = chunk.chunks_exact_mut(2);
+                let mut b_offset = 0u64;
+
+                for dst in chunks_exact.by_ref() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
+
+                    let result = Threefry32x2::compute(c, &k);
+                    dst[0] = ((result[0] as u64 * range) >> 32) as i32 + min;
+                    dst[1] = ((result[1] as u64 * range) >> 32) as i32 + min;
+                    b_offset += 1;
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
+
+                    let result = Threefry32x2::compute(c, &k);
+                    for j in 0..rem.len() {
+                        rem[j] = ((result[j] as u64 * range) >> 32) as i32 + min;
+                    }
+                }
+            });
+
+        let num_blocks = (count + 1) / 2;
+        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
+        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
+        rng.c[0] = new_c64 as u32;
+        rng.c[1] = (new_c64 >> 32) as u32;
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn threefry32x2_rand_f32s(
+    ptr: *mut Threefry32x2,
+    out: *mut f32,
+    count: usize,
+    min: f32,
+    max: f32,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let c0 = rng.c;
+        let k = rng.k;
+        let scale_val = 1.0f32 / (u32::MAX as f32 + 1.0);
+        let range_val = max - min;
+
+        buffer
+            .par_chunks_mut(THREEFRY32X2_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let chunk_base_offset = (chunk_idx * (THREEFRY32X2_PAR_CHUNK / 2)) as u64;
+                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
+                let c64_start = c0_64.wrapping_add(chunk_base_offset);
+
+                let mut chunks_exact = chunk.chunks_exact_mut(2);
+                let mut b_offset = 0u64;
+
+                for dst in chunks_exact.by_ref() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
+
+                    let result = Threefry32x2::compute(c, &k);
+                    dst[0] = (result[0] as f32 * scale_val) * range_val + min;
+                    dst[1] = (result[1] as f32 * scale_val) * range_val + min;
+                    b_offset += 1;
+                }
+
+                let rem = chunks_exact.into_remainder();
+                if !rem.is_empty() {
+                    let current_c64 = c64_start.wrapping_add(b_offset);
+                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
+
+                    let result = Threefry32x2::compute(c, &k);
+                    for j in 0..rem.len() {
+                        rem[j] = (result[j] as f32 * scale_val) * range_val + min;
+                    }
+                }
+            });
+
+        let num_blocks = (count + 1) / 2;
+        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
+        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
+        rng.c[0] = new_c64 as u32;
+        rng.c[1] = (new_c64 >> 32) as u32;
+    }
+}
+
+// --- Squares32 ---
+
+/// The Squares random number generator (32-bit output version by Bernard Widynski).
+pub struct Squares32 {
+    c: u64,
+    k: u64,
+}
+
+impl Squares32 {
+    /// Creates a new `Squares32` instance.
+    #[inline]
+    pub fn new(seed: u64) -> Self {
+        let mut seedgen = SplitMix64::new(seed | 1);
+        Self {
+            c: 0,
+            k: seedgen.nextu(),
+        }
+    }
+
+    /// Core computation: 4 rounds of middle-square with counter.
+    /// Takes pre-computed y = ctr*key and z = y + key to avoid
+    /// redundant multiplication in batch scenarios.
+    #[inline(always)]
+    pub fn compute_yz(y: u64, z: u64) -> u32 {
+        let mut x: u64;
+
+        x = y.wrapping_mul(y).wrapping_add(y);
+        x = x.rotate_left(32);
+
+        x = x.wrapping_mul(x).wrapping_add(z);
+        x = x.rotate_left(32);
+
+        x = x.wrapping_mul(x).wrapping_add(y);
+        x = x.rotate_left(32);
+
+        (x.wrapping_mul(x).wrapping_add(z) >> 32) as u32
+    }
+
+    /// Convenience wrapper: compute from counter and key directly.
+    #[inline(always)]
+    pub fn compute(ctr: u64, key: u64) -> u32 {
+        let y = ctr.wrapping_mul(key);
+        let z = y.wrapping_add(key);
+        Self::compute_yz(y, z)
+    }
+
+    /// Generates the next random `u32` value.
+    #[inline(always)]
+    pub fn nextu(&mut self) -> u32 {
+        let out = Self::compute(self.c, self.k);
+        self.c = self.c.wrapping_add(1);
+        out
+    }
+
+    /// Generates the next random `f32` value in the range [0, 1).
+    #[inline(always)]
+    pub fn nextf(&mut self) -> f32 {
+        self.nextu() as f32 * (1.0 / (u32::MAX as f32 + 1.0))
+    }
+
+    /// Generates a random `i32` value in the range [min, max].
+    #[inline(always)]
+    pub fn randi(&mut self, min: i32, max: i32) -> i32 {
+        let range = (max as i64 - min as i64 + 1) as u64;
+        ((self.nextu() as u64 * range) >> 32) as i32 + min
+    }
+
+    /// Generates a random `f32` value in the range [min, max).
+    #[inline(always)]
+    pub fn randf(&mut self, min: f32, max: f32) -> f32 {
+        let range = max - min;
+        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
+        (self.nextu() as f32 * scale) + min
+    }
+}
+
+// C-ABI exports for Squares32
+
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32_new(seed: u64) -> *mut Squares32 {
+    Box::into_raw(Box::new(Squares32::new(seed)))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32_free(ptr: *mut Squares32) {
+    if !ptr.is_null() {
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+
+const SQUARES32_PAR_CHUNK: usize = 4096;
+
+/// 4-way unrolled batch kernel for Squares32.
+/// y0..y3 are independent lanes, each advanced by k4 = 4*k per batch.
+/// Since z_i = y_i + k, and y_{i+1} = y_i + k, we get z_i == y_{i+1},
+/// eliminating redundant adds. No loop-carried dependency within a batch.
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32_next_u32s(ptr: *mut Squares32, out: *mut u32, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let c0 = rng.c;
+        let k = rng.k;
+        let k4 = k.wrapping_mul(4);
+
+        buffer
+            .par_chunks_mut(SQUARES32_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let c_start = c0.wrapping_add((chunk_idx * SQUARES32_PAR_CHUNK) as u64);
+                let y_base = c_start.wrapping_mul(k);
+                let mut y0 = y_base;
+                let mut y1 = y_base.wrapping_add(k);
+                let mut y2 = y1.wrapping_add(k);
+                let mut y3 = y2.wrapping_add(k);
+
+                let mut chunks4 = chunk.chunks_exact_mut(4);
+                for dst in chunks4.by_ref() {
+                    // z_i = y_i + k == y1 = y0+k, z0 = y1, z1 = y2, z2 = y3
+                    let z3 = y3.wrapping_add(k);
+                    dst[0] = Squares32::compute_yz(y0, y1);
+                    dst[1] = Squares32::compute_yz(y1, y2);
+                    dst[2] = Squares32::compute_yz(y2, y3);
+                    dst[3] = Squares32::compute_yz(y3, z3);
+                    y0 = y0.wrapping_add(k4);
+                    y1 = y1.wrapping_add(k4);
+                    y2 = y2.wrapping_add(k4);
+                    y3 = y3.wrapping_add(k4);
+                }
+                let rem = chunks4.into_remainder();
+                let mut yr = y0;
+                for dst in rem.iter_mut() {
+                    let zr = yr.wrapping_add(k);
+                    *dst = Squares32::compute_yz(yr, zr);
+                    yr = yr.wrapping_add(k);
+                }
+            });
+
+        rng.c = rng.c.wrapping_add(count as u64);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32_next_f32s(ptr: *mut Squares32, out: *mut f32, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let c0 = rng.c;
+        let k = rng.k;
+        let k4 = k.wrapping_mul(4);
+        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
+
+        buffer
+            .par_chunks_mut(SQUARES32_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let c_start = c0.wrapping_add((chunk_idx * SQUARES32_PAR_CHUNK) as u64);
+                let y_base = c_start.wrapping_mul(k);
+                let mut y0 = y_base;
+                let mut y1 = y_base.wrapping_add(k);
+                let mut y2 = y1.wrapping_add(k);
+                let mut y3 = y2.wrapping_add(k);
+
+                let mut chunks4 = chunk.chunks_exact_mut(4);
+                for dst in chunks4.by_ref() {
+                    let z3 = y3.wrapping_add(k);
+                    dst[0] = Squares32::compute_yz(y0, y1) as f32 * SCALE;
+                    dst[1] = Squares32::compute_yz(y1, y2) as f32 * SCALE;
+                    dst[2] = Squares32::compute_yz(y2, y3) as f32 * SCALE;
+                    dst[3] = Squares32::compute_yz(y3, z3) as f32 * SCALE;
+                    y0 = y0.wrapping_add(k4);
+                    y1 = y1.wrapping_add(k4);
+                    y2 = y2.wrapping_add(k4);
+                    y3 = y3.wrapping_add(k4);
+                }
+                let rem = chunks4.into_remainder();
+                let mut yr = y0;
+                for dst in rem.iter_mut() {
+                    let zr = yr.wrapping_add(k);
+                    *dst = Squares32::compute_yz(yr, zr) as f32 * SCALE;
+                    yr = yr.wrapping_add(k);
+                }
+            });
+
+        rng.c = rng.c.wrapping_add(count as u64);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32_rand_i32s(
+    ptr: *mut Squares32,
+    out: *mut i32,
+    count: usize,
+    min: i32,
+    max: i32,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let c0 = rng.c;
+        let k = rng.k;
+        let k4 = k.wrapping_mul(4);
+        let range = (max as i64 - min as i64 + 1) as u64;
+
+        buffer
+            .par_chunks_mut(SQUARES32_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let c_start = c0.wrapping_add((chunk_idx * SQUARES32_PAR_CHUNK) as u64);
+                let y_base = c_start.wrapping_mul(k);
+                let mut y0 = y_base;
+                let mut y1 = y_base.wrapping_add(k);
+                let mut y2 = y1.wrapping_add(k);
+                let mut y3 = y2.wrapping_add(k);
+
+                let mut chunks4 = chunk.chunks_exact_mut(4);
+                for dst in chunks4.by_ref() {
+                    let z3 = y3.wrapping_add(k);
+                    dst[0] = ((Squares32::compute_yz(y0, y1) as u64 * range) >> 32) as i32 + min;
+                    dst[1] = ((Squares32::compute_yz(y1, y2) as u64 * range) >> 32) as i32 + min;
+                    dst[2] = ((Squares32::compute_yz(y2, y3) as u64 * range) >> 32) as i32 + min;
+                    dst[3] = ((Squares32::compute_yz(y3, z3) as u64 * range) >> 32) as i32 + min;
+                    y0 = y0.wrapping_add(k4);
+                    y1 = y1.wrapping_add(k4);
+                    y2 = y2.wrapping_add(k4);
+                    y3 = y3.wrapping_add(k4);
+                }
+                let rem = chunks4.into_remainder();
+                let mut yr = y0;
+                for dst in rem.iter_mut() {
+                    let zr = yr.wrapping_add(k);
+                    *dst = ((Squares32::compute_yz(yr, zr) as u64 * range) >> 32) as i32 + min;
+                    yr = yr.wrapping_add(k);
+                }
+            });
+
+        rng.c = rng.c.wrapping_add(count as u64);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32_rand_f32s(
+    ptr: *mut Squares32,
+    out: *mut f32,
+    count: usize,
+    min: f32,
+    max: f32,
+) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let c0 = rng.c;
+        let k = rng.k;
+        let k4 = k.wrapping_mul(4);
+        let combined_scale = (max - min) * (1.0f32 / (u32::MAX as f32 + 1.0));
+
+        buffer
+            .par_chunks_mut(SQUARES32_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                let c_start = c0.wrapping_add((chunk_idx * SQUARES32_PAR_CHUNK) as u64);
+                let y_base = c_start.wrapping_mul(k);
+                let mut y0 = y_base;
+                let mut y1 = y_base.wrapping_add(k);
+                let mut y2 = y1.wrapping_add(k);
+                let mut y3 = y2.wrapping_add(k);
+
+                let mut chunks4 = chunk.chunks_exact_mut(4);
+                for dst in chunks4.by_ref() {
+                    let z3 = y3.wrapping_add(k);
+                    dst[0] = Squares32::compute_yz(y0, y1) as f32 * combined_scale + min;
+                    dst[1] = Squares32::compute_yz(y1, y2) as f32 * combined_scale + min;
+                    dst[2] = Squares32::compute_yz(y2, y3) as f32 * combined_scale + min;
+                    dst[3] = Squares32::compute_yz(y3, z3) as f32 * combined_scale + min;
+                    y0 = y0.wrapping_add(k4);
+                    y1 = y1.wrapping_add(k4);
+                    y2 = y2.wrapping_add(k4);
+                    y3 = y3.wrapping_add(k4);
+                }
+                let rem = chunks4.into_remainder();
+                let mut yr = y0;
+                for dst in rem.iter_mut() {
+                    let zr = yr.wrapping_add(k);
+                    *dst = Squares32::compute_yz(yr, zr) as f32 * combined_scale + min;
+                    yr = yr.wrapping_add(k);
+                }
+            });
+
+        rng.c = rng.c.wrapping_add(count as u64);
+    }
+}
+
+#[allow(non_upper_case_globals)]
+const SQUARES32x8: usize = 8;
+
+#[cfg(target_arch = "x86_64")]
+#[repr(C, align(64))]
+pub struct Squares32x8 {
+    c: __m512i, // 64x4
+    k: __m512i,
+}
+
+#[cfg(target_arch = "x86_64")]
+impl Squares32x8 {
+    /// Creates a new `Squares32x4` instance.
+    #[cfg(target_arch = "x86_64")]
+    pub unsafe fn new(seed: u32) -> Self {
+        let mut k = [0u64; SQUARES32x8];
+        let mut seedgen = SplitMix64::new(seed as u64 | 1);
+        k.iter_mut().for_each(|v| {
+            *v = seedgen.nextu();
+        });
+
+        unsafe {
+            Self {
+                c: _mm512_set1_epi64(0),
+                k: _mm512_loadu_si512(k.as_ptr() as *const _),
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) unsafe fn compute_yz(y: __m512i, z: __m512i) -> [u32; 8] {
+        unsafe {
+            // let y = _mm512_loadu_epi64(y.as_ptr() as *const _);
+            // let z = _mm512_loadu_epi64(z.as_ptr() as *const _);
+
+            // x = y.wrapping_mul(y).wrapping_add(y);
+            let mut x = _mm512_add_epi64(_mm512_mullo_epi64(y, y), y);
+            // x = x.rotate_left(32);
+            x = _mm512_rol_epi64(x, 32);
+
+            // x = x.wrapping_mul(x).wrapping_add(z);
+            x = _mm512_add_epi64(_mm512_mullo_epi64(x, x), z);
+            // x = x.rotate_left(32);
+            x = _mm512_rol_epi64(x, 32);
+
+            // x = x.wrapping_mul(x).wrapping_add(y);
+            x = _mm512_add_epi64(_mm512_mullo_epi64(x, x), y);
+            // x = x.rotate_left(32);
+            x = _mm512_rol_epi64(x, 32);
+
+            // (x.wrapping_mul(x).wrapping_add(z) >> 32) as u32
+            x = _mm512_srli_epi64(_mm512_add_epi64(_mm512_mullo_epi64(x, x), z), 32);
+
+            let dst_v = _mm512_cvtepi64_epi32(x);
+            let mut dst = [0u32; SQUARES32x8];
+            _mm256_storeu_si256(dst.as_mut_ptr() as *mut _, dst_v);
+
+            dst
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) unsafe fn compute(c: u64, k: u64) -> [u32; SQUARES32x8] {
+        unsafe {
+            let c = _mm512_add_epi64(
+                _mm512_set1_epi64(c as i64),
+                _mm512_setr_epi64(0, 1, 2, 3, 4, 5, 6, 7), // r: reverse
+            );
+            let key_vec = _mm512_set1_epi64(k as i64);
+            let y_vec = _mm512_mullo_epi64(c, key_vec);
+            let z_vec = _mm512_add_epi64(y_vec, key_vec);
+
+            let dst = Self::compute_yz(y_vec, z_vec);
+            dst
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2281,5 +3452,45 @@ mod tests {
         let mut rng = Xorwow::new(1);
         assert_eq!(rng.nextu(), 1365527255);
         assert_eq!(rng.nextf(), 0.45477358);
+    }
+
+    #[test]
+    fn threefry32x4_works() {
+        let mut rng = Threefry32x4::new(1);
+        assert_eq!(rng.nextu(), [12519260, 3511377784, 3358857301, 2366592296]);
+        assert_eq!(
+            rng.nextf(),
+            [0.19581375, 0.019083649, 0.8195202, 0.87931794]
+        );
+    }
+
+    #[test]
+    fn threefry32x2_works() {
+        let mut rng = Threefry32x2::new(1);
+        assert_eq!(rng.nextu(), [1748843679, 2574680703]);
+        assert_eq!(rng.nextf(), [0.62456435, 0.346636]);
+    }
+
+    #[test]
+    fn squares32_works() {
+        let mut rng = Squares32::new(1);
+        assert_eq!(rng.nextu(), 1225738608);
+        assert_eq!(rng.nextf(), 0.9183048);
+    }
+
+    #[test]
+    fn squares32x8_works() {
+        unsafe {
+            let mut seedgen = SplitMix64::new(1);
+            let results = Squares32x8::compute(0, seedgen.nextu());
+
+            assert_eq!(
+                results,
+                [
+                    1225738608, 3944088997, 2344576009, 896386238, 1754778585, 90946642,
+                    1788108373, 3630939197
+                ]
+            );
+        }
     }
 }
