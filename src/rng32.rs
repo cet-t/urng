@@ -126,36 +126,48 @@ impl Rng32 for Mt19937 {
     }
 }
 
+/// Creates a new `Mt19937` instance.
+/// The caller is responsible for freeing the memory using `mt19937_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn mt19937_new(seed: u32) -> *mut Mt19937 {
     Box::into_raw(Box::new(Mt19937::new(seed)))
 }
+
+/// Frees the memory of a `Mt19937` instance.
 #[unsafe(no_mangle)]
 pub extern "C" fn mt19937_free(ptr: *mut Mt19937) {
     if !ptr.is_null() {
-        unsafe { drop(Box::from_raw(ptr)) };
+        unsafe {
+            let _ = Box::from_raw(ptr);
+        }
     }
 }
+
+/// Fills the output buffer with the next random `u32` values.
 #[unsafe(no_mangle)]
 pub extern "C" fn mt19937_next_u32s(ptr: *mut Mt19937, out: *mut u32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
+        for x in buffer {
+            *x = rng.nextu();
         }
     }
 }
+
+/// Fills the output buffer with the next random `f32` values in the range [0, 1).
 #[unsafe(no_mangle)]
 pub extern "C" fn mt19937_next_f32s(ptr: *mut Mt19937, out: *mut f32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
+        for x in buffer {
+            *x = rng.nextf();
         }
     }
 }
+
+/// Fills the output buffer with random `i32` values in the range [min, max].
 #[unsafe(no_mangle)]
 pub extern "C" fn mt19937_rand_i32s(
     ptr: *mut Mt19937,
@@ -167,11 +179,13 @@ pub extern "C" fn mt19937_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
+        for x in buffer {
+            *x = rng.randi(min, max);
         }
     }
 }
+
+/// Fills the output buffer with random `f32` values in the range [min, max).
 #[unsafe(no_mangle)]
 pub extern "C" fn mt19937_rand_f32s(
     ptr: *mut Mt19937,
@@ -183,8 +197,8 @@ pub extern "C" fn mt19937_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
+        for x in buffer {
+            *x = rng.randf(min, max);
         }
     }
 }
@@ -387,38 +401,50 @@ impl Rng32 for Sfmt19937 {
     }
 }
 
+/// Creates a new `Sfmt19937` instance.
+/// The caller is responsible for freeing the memory using `sfmt19937_free`.
 #[unsafe(no_mangle)]
-pub extern "C" fn sfmt_new(seed: u64) -> *mut Sfmt19937 {
+pub extern "C" fn sfmt19937_new(seed: u64) -> *mut Sfmt19937 {
     Box::into_raw(Box::new(Sfmt19937::new(seed)))
 }
+
+/// Frees the memory of a `Sfmt19937` instance.
 #[unsafe(no_mangle)]
-pub extern "C" fn sfmt_free(ptr: *mut Sfmt19937) {
+pub extern "C" fn sfmt19937_free(ptr: *mut Sfmt19937) {
     if !ptr.is_null() {
-        unsafe { drop(Box::from_raw(ptr)) };
-    }
-}
-#[unsafe(no_mangle)]
-pub extern "C" fn sfmt_next_u32s(ptr: *mut Sfmt19937, out: *mut u32, count: usize) {
-    unsafe {
-        let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
+        unsafe {
+            let _ = Box::from_raw(ptr);
         }
     }
 }
+
+/// Fills the output buffer with the next random `u32` values.
 #[unsafe(no_mangle)]
-pub extern "C" fn sfmt_next_f32s(ptr: *mut Sfmt19937, out: *mut f32, count: usize) {
+pub extern "C" fn sfmt19937_next_u32s(ptr: *mut Sfmt19937, out: *mut u32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
+        for x in buffer {
+            *x = rng.nextu();
         }
     }
 }
+
+/// Fills the output buffer with the next random `f32` values in the range [0, 1).
 #[unsafe(no_mangle)]
-pub extern "C" fn sfmt_rand_i32s(
+pub extern "C" fn sfmt19937_next_f32s(ptr: *mut Sfmt19937, out: *mut f32, count: usize) {
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        for x in buffer {
+            *x = rng.nextf();
+        }
+    }
+}
+
+/// Fills the output buffer with random `i32` values in the range [min, max].
+#[unsafe(no_mangle)]
+pub extern "C" fn sfmt19937_rand_i32s(
     ptr: *mut Sfmt19937,
     out: *mut i32,
     count: usize,
@@ -428,13 +454,15 @@ pub extern "C" fn sfmt_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
+        for x in buffer {
+            *x = rng.randi(min, max);
         }
     }
 }
+
+/// Fills the output buffer with random `f32` values in the range [min, max).
 #[unsafe(no_mangle)]
-pub extern "C" fn sfmt_rand_f32s(
+pub extern "C" fn sfmt19937_rand_f32s(
     ptr: *mut Sfmt19937,
     out: *mut f32,
     count: usize,
@@ -444,8 +472,8 @@ pub extern "C" fn sfmt_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
+        for x in buffer {
+            *x = rng.randf(min, max);
         }
     }
 }
@@ -679,36 +707,48 @@ impl Rng32 for Pcg32 {
     }
 }
 
+/// Creates a new `Pcg32` instance.
+/// The caller is responsible for freeing the memory using `pcg32_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn pcg32_new(seed: u64) -> *mut Pcg32 {
     Box::into_raw(Box::new(Pcg32::new(seed)))
 }
+
+/// Frees the memory of a `Pcg32` instance.
 #[unsafe(no_mangle)]
 pub extern "C" fn pcg32_free(ptr: *mut Pcg32) {
     if !ptr.is_null() {
-        unsafe { drop(Box::from_raw(ptr)) };
+        unsafe {
+            let _ = Box::from_raw(ptr);
+        }
     }
 }
+
+/// Fills the output buffer with the next random `u32` values.
 #[unsafe(no_mangle)]
 pub extern "C" fn pcg32_next_u32s(ptr: *mut Pcg32, out: *mut u32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
+        for x in buffer {
+            *x = rng.nextu();
         }
     }
 }
+
+/// Fills the output buffer with the next random `f32` values in the range [0, 1).
 #[unsafe(no_mangle)]
 pub extern "C" fn pcg32_next_f32s(ptr: *mut Pcg32, out: *mut f32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
+        for x in buffer {
+            *x = rng.nextf();
         }
     }
 }
+
+/// Fills the output buffer with random `i32` values in the range [min, max].
 #[unsafe(no_mangle)]
 pub extern "C" fn pcg32_rand_i32s(
     ptr: *mut Pcg32,
@@ -720,11 +760,13 @@ pub extern "C" fn pcg32_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
+        for x in buffer {
+            *x = rng.randi(min, max);
         }
     }
 }
+
+/// Fills the output buffer with random `f32` values in the range [min, max).
 #[unsafe(no_mangle)]
 pub extern "C" fn pcg32_rand_f32s(
     ptr: *mut Pcg32,
@@ -736,8 +778,8 @@ pub extern "C" fn pcg32_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
+        for x in buffer {
+            *x = rng.randf(min, max);
         }
     }
 }
@@ -890,18 +932,30 @@ impl Rng32 for Philox32x4 {
     }
 }
 
+/// Creates a new `Philox32x4` instance.
+/// The caller is responsible for freeing the memory using `philox32x4_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32x4_new(seed: u32) -> *mut Philox32x4 {
     Box::into_raw(Box::new(Philox32x4::new(seed)))
 }
+
+/// Frees the memory of a `Philox32x4` instance.
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32x4_free(ptr: *mut Philox32x4) {
     if !ptr.is_null() {
-        unsafe { drop(Box::from_raw(ptr)) }
+        unsafe {
+            let _ = Box::from_raw(ptr);
+        }
     }
 }
+
+/// Fills the output buffer with the next random `u32` values.
+/// This function uses parallel processing for large counts.
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32x4_next_u32s(ptr: *mut Philox32x4, out: *mut u32, count: usize) {
+    if count == 0 {
+        return;
+    }
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
@@ -944,8 +998,8 @@ pub extern "C" fn philox32x4_next_u32s(ptr: *mut Philox32x4, out: *mut u32, coun
                     }
 
                     let result = Philox32x4::compute(c, k);
-                    for j in 0..rem.len() {
-                        rem[j] = result[j];
+                    for i in 0..rem.len() {
+                        rem[i] = result[i];
                     }
                 }
             });
@@ -962,8 +1016,13 @@ pub extern "C" fn philox32x4_next_u32s(ptr: *mut Philox32x4, out: *mut u32, coun
         }
     }
 }
+
+/// Fills the output buffer with the next random `f32` values in the range [0, 1).
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32x4_next_f32s(ptr: *mut Philox32x4, out: *mut f32, count: usize) {
+    if count == 0 {
+        return;
+    }
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
@@ -1025,6 +1084,8 @@ pub extern "C" fn philox32x4_next_f32s(ptr: *mut Philox32x4, out: *mut f32, coun
         }
     }
 }
+
+/// Fills the output buffer with random `i32` values in the range [min, max].
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32x4_rand_i32s(
     ptr: *mut Philox32x4,
@@ -1033,6 +1094,9 @@ pub extern "C" fn philox32x4_rand_i32s(
     min: i32,
     max: i32,
 ) {
+    if count == 0 {
+        return;
+    }
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
@@ -1094,6 +1158,8 @@ pub extern "C" fn philox32x4_rand_i32s(
         }
     }
 }
+
+/// Fills the output buffer with random `f32` values in the range [min, max).
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32x4_rand_f32s(
     ptr: *mut Philox32x4,
@@ -1102,6 +1168,9 @@ pub extern "C" fn philox32x4_rand_f32s(
     min: f32,
     max: f32,
 ) {
+    if count == 0 {
+        return;
+    }
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
@@ -1323,16 +1392,21 @@ impl Philox32x4x4 {
     }
 }
 
+/// Creates a new `Philox32x4x4` instance.
+/// The caller is responsible for freeing the memory using `philox32x4x4_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32x4x4_new(seed: u32) -> *mut Philox32x4x4 {
     unsafe { Box::into_raw(Box::new(Philox32x4x4::new(seed))) }
 }
+/// Frees the memory of a `Philox32x4x4` instance.
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32x4x4_free(ptr: *mut Philox32x4x4) {
     if !ptr.is_null() {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+/// Fills the output buffer with the next random `u32` values.
+/// This function utilizes AVX-512 SIMD and parallel processing for high throughput.
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32x4x4_next_u32s(ptr: *mut Philox32x4x4, out: *mut u32, count: usize) {
     if count == 0 {
@@ -1362,6 +1436,7 @@ pub extern "C" fn philox32x4x4_next_u32s(ptr: *mut Philox32x4x4, out: *mut u32, 
         rng.c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
     }
 }
+/// Fills the output buffer with the next random `f32` values in the range [0, 1).
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32x4x4_next_f32s(ptr: *mut Philox32x4x4, out: *mut f32, count: usize) {
     if count == 0 {
@@ -1392,6 +1467,7 @@ pub extern "C" fn philox32x4x4_next_f32s(ptr: *mut Philox32x4x4, out: *mut f32, 
         rng.c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
     }
 }
+/// Fills the output buffer with random `i32` values in the range [min, max].
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32x4x4_rand_i32s(
     ptr: *mut Philox32x4x4,
@@ -1927,36 +2003,48 @@ impl Rng32 for Xorshift32 {
     }
 }
 
+/// Creates a new `Xorshift32` instance.
+/// The caller is responsible for freeing the memory using `xorshift32_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift32_new(seed: u32) -> *mut Xorshift32 {
     Box::into_raw(Box::new(Xorshift32::new(seed)))
 }
+
+/// Frees the memory of a `Xorshift32` instance.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift32_free(ptr: *mut Xorshift32) {
     if !ptr.is_null() {
-        unsafe { drop(Box::from_raw(ptr)) };
+        unsafe {
+            let _ = Box::from_raw(ptr);
+        }
     }
 }
+
+/// Fills the output buffer with the next random `u32` values.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift32_next_u32s(ptr: *mut Xorshift32, out: *mut u32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
+        for x in buffer {
+            *x = rng.nextu();
         }
     }
 }
+
+/// Fills the output buffer with the next random `f32` values in the range [0, 1).
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift32_next_f32s(ptr: *mut Xorshift32, out: *mut f32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
+        for x in buffer {
+            *x = rng.nextf();
         }
     }
 }
+
+/// Fills the output buffer with random `i32` values in the range [min, max].
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift32_rand_i32s(
     ptr: *mut Xorshift32,
@@ -1968,11 +2056,13 @@ pub extern "C" fn xorshift32_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
+        for x in buffer {
+            *x = rng.randi(min, max);
         }
     }
 }
+
+/// Fills the output buffer with random `f32` values in the range [min, max).
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift32_rand_f32s(
     ptr: *mut Xorshift32,
@@ -1984,8 +2074,8 @@ pub extern "C" fn xorshift32_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
+        for x in buffer {
+            *x = rng.randf(min, max);
         }
     }
 }
@@ -2134,36 +2224,48 @@ impl Rng32 for SplitMix32 {
     }
 }
 
+/// Creates a new `SplitMix32` instance.
+/// The caller is responsible for freeing the memory using `splitmix32_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix32_new(seed: u32) -> *mut SplitMix32 {
     Box::into_raw(Box::new(SplitMix32::new(seed)))
 }
+
+/// Frees the memory of a `SplitMix32` instance.
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix32_free(ptr: *mut SplitMix32) {
     if !ptr.is_null() {
-        unsafe { drop(Box::from_raw(ptr)) };
+        unsafe {
+            let _ = Box::from_raw(ptr);
+        }
     }
 }
+
+/// Fills the output buffer with the next random `u32` values.
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix32_next_u32s(ptr: *mut SplitMix32, out: *mut u32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
+        for x in buffer {
+            *x = rng.nextu();
         }
     }
 }
+
+/// Fills the output buffer with the next random `f32` values in the range [0, 1).
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix32_next_f32s(ptr: *mut SplitMix32, out: *mut f32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
+        for x in buffer {
+            *x = rng.nextf();
         }
     }
 }
+
+/// Fills the output buffer with random `i32` values in the range [min, max].
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix32_rand_i32s(
     ptr: *mut SplitMix32,
@@ -2175,11 +2277,13 @@ pub extern "C" fn splitmix32_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
+        for x in buffer {
+            *x = rng.randi(min, max);
         }
     }
 }
+
+/// Fills the output buffer with random `f32` values in the range [min, max).
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix32_rand_f32s(
     ptr: *mut SplitMix32,
@@ -2191,8 +2295,8 @@ pub extern "C" fn splitmix32_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
+        for x in buffer {
+            *x = rng.randf(min, max);
         }
     }
 }
@@ -2376,18 +2480,27 @@ impl Threefry32x4 {
     }
 }
 
+/// Creates a new `Threefry32x4` instance.
+/// The caller is responsible for freeing the memory using `threefry32x4_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefry32x4_new(seed: u32) -> *mut Threefry32x4 {
     Box::into_raw(Box::new(Threefry32x4::new(seed)))
 }
+
+/// Frees the memory of a `Threefry32x4` instance.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefry32x4_free(ptr: *mut Threefry32x4) {
     if !ptr.is_null() {
-        unsafe { drop(Box::from_raw(ptr)) };
+        unsafe {
+            let _ = Box::from_raw(ptr);
+        }
     }
 }
+
 const THREEFRY32_PAR_CHUNK: usize = 4096;
 
+/// Fills the output buffer with the next random `u32` values.
+/// This function uses parallel processing for large counts.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefry32x4_next_u32s(ptr: *mut Threefry32x4, out: *mut u32, count: usize) {
     unsafe {
@@ -2772,20 +2885,27 @@ impl Threefry32x2 {
     }
 }
 
+/// Creates a new `Threefry32x2` instance.
+/// The caller is responsible for freeing the memory using `threefry32x2_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefry32x2_new(seed: u32) -> *mut Threefry32x2 {
     Box::into_raw(Box::new(Threefry32x2::new(seed)))
 }
 
+/// Frees the memory of a `Threefry32x2` instance.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefry32x2_free(ptr: *mut Threefry32x2) {
     if !ptr.is_null() {
-        unsafe { drop(Box::from_raw(ptr)) };
+        unsafe {
+            let _ = Box::from_raw(ptr);
+        }
     }
 }
 
 const THREEFRY32X2_PAR_CHUNK: usize = 4096;
 
+/// Fills the output buffer with the next random `u32` values.
+/// This function uses parallel processing for large counts.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefry32x2_next_u32s(ptr: *mut Threefry32x2, out: *mut u32, count: usize) {
     unsafe {
@@ -3076,15 +3196,20 @@ impl Squares32x1 {
 
 // C-ABI exports for Squares32
 
+/// Creates a new `Squares32x1` instance.
+/// The caller is responsible for freeing the memory using `squares32x1_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32x1_new(seed: u64) -> *mut Squares32x1 {
     Box::into_raw(Box::new(Squares32x1::new(seed)))
 }
 
+/// Frees the memory of a `Squares32x1` instance.
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32x1_free(ptr: *mut Squares32x1) {
     if !ptr.is_null() {
-        unsafe { drop(Box::from_raw(ptr)) };
+        unsafe {
+            let _ = Box::from_raw(ptr);
+        }
     }
 }
 
@@ -3293,16 +3418,22 @@ pub extern "C" fn squares32x1_rand_f32s(
 #[allow(non_upper_case_globals)]
 const SQUARES32x8: usize = 8;
 
+/// A high-throughput Squares random number generator utilizing AVX-512 SIMD instructions.
+/// This implementation processes 8 counters in parallel and is highly optimized with 4-way unrolling.
 #[cfg(target_arch = "x86_64")]
-#[repr(C, align(64))]
+#[repr(C)]
+#[repr(align(64))]
 pub struct Squares32x8 {
-    c: __m512i, // 64x4
-    k: __m512i,
+    /// 8 counters stored in a 512-bit SIMD register.
+    pub c: core::arch::x86_64::__m512i,
+    /// 8 keys stored in a 512-bit SIMD register.
+    pub k: core::arch::x86_64::__m512i,
 }
 
 #[cfg(target_arch = "x86_64")]
 impl Squares32x8 {
-    /// Creates a new `Squares32x4` instance.
+    /// Creates a new `Squares32x8` instance from a 32-bit seed.
+    /// The seed is used to initialize the counters and keys.
     #[target_feature(enable = "avx512f")]
     pub unsafe fn new(seed: u32) -> Self {
         let mut k = [0u64; SQUARES32x8];
@@ -3319,41 +3450,45 @@ impl Squares32x8 {
         }
     }
 
-    #[inline(always)]
-    pub(crate) unsafe fn compute_yz(y: __m512i, z: __m512i) -> __m256i {
-        unsafe {
-            // x = y.wrapping_mul(y).wrapping_add(y);
-            let mut x = _mm512_add_epi64(_mm512_mullo_epi64(y, y), y);
-            // x = x.rotate_left(32);
-            x = _mm512_rol_epi64(x, 32);
+    /// Core computation: 4 rounds of middle-square with counter.
+    /// Returns 8x u32 random values in the lower 32-bits of each 64-bit lane.
+    ///
+    /// # Arguments
+    /// * `y` - Pre-computed y = ctr * key.
+    /// * `z` - Pre-computed z = y + key.
+    #[target_feature(enable = "avx512f,avx512dq")]
+    pub unsafe fn compute_yz(
+        y: core::arch::x86_64::__m512i,
+        z: core::arch::x86_64::__m512i,
+    ) -> core::arch::x86_64::__m256i {
+        let mut x = _mm512_add_epi64(_mm512_mullo_epi64(y, y), y);
+        x = _mm512_or_si512(_mm512_slli_epi64(x, 32), _mm512_srli_epi64(x, 32));
 
-            // x = x.wrapping_mul(x).wrapping_add(z);
-            x = _mm512_add_epi64(_mm512_mullo_epi64(x, x), z);
-            // x = x.rotate_left(32);
-            x = _mm512_rol_epi64(x, 32);
+        x = _mm512_add_epi64(_mm512_mullo_epi64(x, x), z);
+        x = _mm512_or_si512(_mm512_slli_epi64(x, 32), _mm512_srli_epi64(x, 32));
 
-            // x = x.wrapping_mul(x).wrapping_add(y);
-            x = _mm512_add_epi64(_mm512_mullo_epi64(x, x), y);
-            // x = x.rotate_left(32);
-            x = _mm512_rol_epi64(x, 32);
+        x = _mm512_add_epi64(_mm512_mullo_epi64(x, x), y);
+        x = _mm512_or_si512(_mm512_slli_epi64(x, 32), _mm512_srli_epi64(x, 32));
 
-            // (x.wrapping_mul(x).wrapping_add(z) >> 32) as u32
-            x = _mm512_srli_epi64(_mm512_add_epi64(_mm512_mullo_epi64(x, x), z), 32);
-
-            _mm512_cvtepi64_epi32(x)
-        }
+        _mm512_cvtepi64_epi32(_mm512_srli_epi64(
+            _mm512_add_epi64(_mm512_mullo_epi64(x, x), z),
+            32,
+        ))
     }
 
-    #[inline(always)]
+    /// Convenience wrapper to compute random values from counter and key directly.
+    #[target_feature(enable = "avx512f,avx512dq")]
     pub(crate) unsafe fn compute(c: __m512i, k: __m512i) -> __m256i {
         unsafe {
-            let y_v = _mm512_mullo_epi64(c, k);
-            let z_v = _mm512_add_epi64(y_v, k);
-            Self::compute_yz(y_v, z_v)
+            let y = _mm512_mullo_epi64(c, k);
+            let z = _mm512_add_epi64(y, k);
+            Self::compute_yz(y, z)
         }
     }
 
-    #[target_feature(enable = "avx512f")]
+    /// Generates 8 new `u32` random numbers.
+    /// Increments the internal counters by 8.
+    #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn nextu(&mut self) -> [u32; SQUARES32x8] {
         unsafe {
             let v = Self::compute(self.c, self.k);
@@ -3364,19 +3499,28 @@ impl Squares32x8 {
         }
     }
 }
+/// Creates a new `Squares32x8` instance.
+/// The caller is responsible for freeing the memory using `squares32x8_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32x8_new(seed: u32) -> *mut Squares32x8 {
     unsafe { Box::into_raw(Box::new(Squares32x8::new(seed))) }
 }
+
+/// Frees the memory of a `Squares32x8` instance.
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32x8_free(ptr: *mut Squares32x8) {
     if !ptr.is_null() {
-        unsafe { drop(Box::from_raw(ptr)) };
+        unsafe {
+            let _ = Box::from_raw(ptr);
+        }
     }
 }
+
 #[allow(non_upper_case_globals)]
 const SQUARES32x8_PAR_CHUNK: usize = 4096;
 
+/// Fills the output buffer with the next random `u32` values.
+/// This function utilizes AVX-512 SIMD and parallel processing for maximum throughput.
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32x8_next_u32s(ptr: *mut Squares32x8, out: *mut u32, count: usize) {
     if count == 0 {
@@ -3491,6 +3635,8 @@ unsafe fn squares32x8_next_u32s_chunk(
     }
 }
 
+/// Fills the output buffer with the next random `f32` values in the range [0, 1).
+/// This function utilizes AVX-512 SIMD and parallel processing for maximum throughput.
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32x8_next_f32s(ptr: *mut Squares32x8, out: *mut f32, count: usize) {
     if count == 0 {
@@ -3602,6 +3748,8 @@ unsafe fn squares32x8_next_f32s_chunk(
     }
 }
 
+/// Fills the output buffer with random `i32` values in the range [min, max].
+/// This function utilizes AVX-512 SIMD and parallel processing for maximum throughput.
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32x8_rand_i32s(
     ptr: *mut Squares32x8,
@@ -3743,6 +3891,8 @@ unsafe fn squares32x8_rand_i32s_chunk(
     }
 }
 
+/// Fills the output buffer with random `f32` values in the range [min, max).
+/// This function utilizes AVX-512 SIMD and parallel processing for maximum throughput.
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32x8_rand_f32s(
     ptr: *mut Squares32x8,
@@ -3873,44 +4023,50 @@ pub type Squares32 = core::ffi::c_void;
 #[cfg(not(target_arch = "x86_64"))]
 pub type Squares32 = core::ffi::c_void;
 
+/// Creates a new `Squares32` instance, automatically selecting the best implementation.
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32_new(seed: u32) -> *mut Squares32 {
-    dispatch_simd!(Squares32, philox32x4_new, philox32x4x4_new, seed)
+    #[cfg(target_arch = "x86_64")]
+    if is_x86_feature_detected!("avx512f") {
+        return squares32x8_new(seed) as *mut Squares32;
+    }
+    squares32x1_new(seed as u64) as *mut Squares32
 }
+
+/// Frees the memory of a `Squares32` instance.
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32_free(ptr: *mut Squares32) {
-    dispatch_simd!(
-        Squares32x8,
-        Squares32x1,
-        squares32x1_free,
-        squares32x8_free,
-        ptr
-    )
+    #[cfg(target_arch = "x86_64")]
+    if is_x86_feature_detected!("avx512f") {
+        squares32x8_free(ptr as *mut Squares32x8);
+        return;
+    }
+    squares32x1_free(ptr as *mut Squares32x1);
 }
+
+/// Fills the output buffer with the next random `u32` values.
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32_next_u32s(ptr: *mut Squares32, out: *mut u32, count: usize) {
-    dispatch_simd!(
-        Squares32x8,
-        Squares32x1,
-        squares32x1_next_u32s,
-        squares32x8_next_u32s,
-        ptr,
-        out,
-        count
-    )
+    #[cfg(target_arch = "x86_64")]
+    if is_x86_feature_detected!("avx512f") {
+        squares32x8_next_u32s(ptr as *mut Squares32x8, out, count);
+        return;
+    }
+    squares32x1_next_u32s(ptr as *mut Squares32x1, out, count);
 }
+
+/// Fills the output buffer with the next random `f32` values in the range [0, 1).
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32_next_f32s(ptr: *mut Squares32, out: *mut f32, count: usize) {
-    dispatch_simd!(
-        Squares32x8,
-        Squares32x1,
-        squares32x1_next_f32s,
-        squares32x8_next_f32s,
-        ptr,
-        out,
-        count
-    )
+    #[cfg(target_arch = "x86_64")]
+    if is_x86_feature_detected!("avx512f") {
+        squares32x8_next_f32s(ptr as *mut Squares32x8, out, count);
+        return;
+    }
+    squares32x1_next_f32s(ptr as *mut Squares32x1, out, count);
 }
+
+/// Fills the output buffer with random `i32` values in the range [min, max].
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32_rand_i32s(
     ptr: *mut Squares32,
@@ -3919,18 +4075,15 @@ pub extern "C" fn squares32_rand_i32s(
     min: i32,
     max: i32,
 ) {
-    dispatch_simd!(
-        Squares32x8,
-        Squares32x1,
-        squares32x1_rand_i32s,
-        squares32x8_rand_i32s,
-        ptr,
-        out,
-        count,
-        min,
-        max
-    )
+    #[cfg(target_arch = "x86_64")]
+    if is_x86_feature_detected!("avx512f") {
+        squares32x8_rand_i32s(ptr as *mut Squares32x8, out, count, min, max);
+        return;
+    }
+    squares32x1_rand_i32s(ptr as *mut Squares32x1, out, count, min, max);
 }
+
+/// Fills the output buffer with random `f32` values in the range [min, max).
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32_rand_f32s(
     ptr: *mut Squares32,
@@ -3939,17 +4092,12 @@ pub extern "C" fn squares32_rand_f32s(
     min: f32,
     max: f32,
 ) {
-    dispatch_simd!(
-        Squares32x8,
-        Squares32x1,
-        squares32x1_rand_f32s,
-        squares32x8_rand_f32s,
-        ptr,
-        out,
-        count,
-        min,
-        max
-    )
+    #[cfg(target_arch = "x86_64")]
+    if is_x86_feature_detected!("avx512f") {
+        squares32x8_rand_f32s(ptr as *mut Squares32x8, out, count, min, max);
+        return;
+    }
+    squares32x1_rand_f32s(ptr as *mut Squares32x1, out, count, min, max);
 }
 
 #[cfg(test)]
