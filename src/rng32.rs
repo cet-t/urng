@@ -1478,90 +1478,6 @@ pub extern "C" fn philox32x4x4_rand_f32s(
 }
 
 #[cfg(target_arch = "x86_64")]
-pub type Philox32 = core::ffi::c_void;
-
-#[cfg(not(target_arch = "x86_64"))]
-pub type Philox32 = core::ffi::c_void;
-
-#[unsafe(no_mangle)]
-pub extern "C" fn philox32_new(seed: u32) -> *mut Philox32 {
-    dispatch_simd!(Philox32, philox32x4_new, philox32x4x4_new, seed)
-}
-#[unsafe(no_mangle)]
-pub extern "C" fn philox32_free(ptr: *mut Philox32) {
-    dispatch_simd!(
-        Philox32x4x4,
-        Philox32x4,
-        philox32x4_free,
-        philox32x4x4_free,
-        ptr
-    )
-}
-#[unsafe(no_mangle)]
-pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: usize) {
-    dispatch_simd!(
-        Philox32x4x4,
-        Philox32x4,
-        philox32x4_next_u32s,
-        philox32x4x4_next_u32s,
-        ptr,
-        out,
-        count
-    )
-}
-#[unsafe(no_mangle)]
-pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: usize) {
-    dispatch_simd!(
-        Philox32x4x4,
-        Philox32x4,
-        philox32x4_next_f32s,
-        philox32x4x4_next_f32s,
-        ptr,
-        out,
-        count
-    )
-}
-#[unsafe(no_mangle)]
-pub extern "C" fn philox32_rand_i32s(
-    ptr: *mut Philox32,
-    out: *mut i32,
-    count: usize,
-    min: i32,
-    max: i32,
-) {
-    dispatch_simd!(
-        Philox32x4x4,
-        Philox32x4,
-        philox32x4_rand_i32s,
-        philox32x4x4_rand_i32s,
-        ptr,
-        out,
-        count,
-        min,
-        max
-    )
-}
-#[unsafe(no_mangle)]
-pub extern "C" fn philox32_rand_f32s(
-    ptr: *mut Philox32,
-    out: *mut f32,
-    count: usize,
-    min: f32,
-    max: f32,
-) {
-    dispatch_simd!(
-        Philox32x4x4,
-        Philox32x4,
-        philox32x4_rand_f32s,
-        philox32x4x4_rand_f32s,
-        ptr,
-        out,
-        count,
-        min,
-        max
-    )
-}
-#[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 unsafe fn philox32x4x4_next_u32s_chunk(
     chunk_idx: usize,
@@ -1848,6 +1764,93 @@ unsafe fn philox32x4x4_rand_f32s_chunk(
             rem[j] = tmp_f32[j];
         }
     }
+}
+
+// -- Philox32 --
+
+#[cfg(target_arch = "x86_64")]
+pub type Philox32 = core::ffi::c_void;
+
+#[cfg(not(target_arch = "x86_64"))]
+pub type Philox32 = core::ffi::c_void;
+
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32_new(seed: u32) -> *mut Philox32 {
+    dispatch_simd!(Philox32, philox32x4_new, philox32x4x4_new, seed)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32_free(ptr: *mut Philox32) {
+    dispatch_simd!(
+        Philox32x4x4,
+        Philox32x4,
+        philox32x4_free,
+        philox32x4x4_free,
+        ptr
+    )
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: usize) {
+    dispatch_simd!(
+        Philox32x4x4,
+        Philox32x4,
+        philox32x4_next_u32s,
+        philox32x4x4_next_u32s,
+        ptr,
+        out,
+        count
+    )
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: usize) {
+    dispatch_simd!(
+        Philox32x4x4,
+        Philox32x4,
+        philox32x4_next_f32s,
+        philox32x4x4_next_f32s,
+        ptr,
+        out,
+        count
+    )
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32_rand_i32s(
+    ptr: *mut Philox32,
+    out: *mut i32,
+    count: usize,
+    min: i32,
+    max: i32,
+) {
+    dispatch_simd!(
+        Philox32x4x4,
+        Philox32x4,
+        philox32x4_rand_i32s,
+        philox32x4x4_rand_i32s,
+        ptr,
+        out,
+        count,
+        min,
+        max
+    )
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn philox32_rand_f32s(
+    ptr: *mut Philox32,
+    out: *mut f32,
+    count: usize,
+    min: f32,
+    max: f32,
+) {
+    dispatch_simd!(
+        Philox32x4x4,
+        Philox32x4,
+        philox32x4_rand_f32s,
+        philox32x4x4_rand_f32s,
+        ptr,
+        out,
+        count,
+        min,
+        max
+    )
 }
 
 // --- Xorshift32 ---
@@ -2998,12 +3001,12 @@ pub extern "C" fn threefry32x2_rand_f32s(
 // --- Squares32 ---
 
 /// The Squares random number generator (32-bit output version by Bernard Widynski).
-pub struct Squares32 {
+pub struct Squares32x1 {
     c: u64,
     k: u64,
 }
 
-impl Squares32 {
+impl Squares32x1 {
     /// Creates a new `Squares32` instance.
     #[inline]
     pub fn new(seed: u64) -> Self {
@@ -3074,12 +3077,12 @@ impl Squares32 {
 // C-ABI exports for Squares32
 
 #[unsafe(no_mangle)]
-pub extern "C" fn squares32_new(seed: u64) -> *mut Squares32 {
-    Box::into_raw(Box::new(Squares32::new(seed)))
+pub extern "C" fn squares32x1_new(seed: u64) -> *mut Squares32x1 {
+    Box::into_raw(Box::new(Squares32x1::new(seed)))
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn squares32_free(ptr: *mut Squares32) {
+pub extern "C" fn squares32x1_free(ptr: *mut Squares32x1) {
     if !ptr.is_null() {
         unsafe { drop(Box::from_raw(ptr)) };
     }
@@ -3092,7 +3095,7 @@ const SQUARES32_PAR_CHUNK: usize = 4096;
 /// Since z_i = y_i + k, and y_{i+1} = y_i + k, we get z_i == y_{i+1},
 /// eliminating redundant adds. No loop-carried dependency within a batch.
 #[unsafe(no_mangle)]
-pub extern "C" fn squares32_next_u32s(ptr: *mut Squares32, out: *mut u32, count: usize) {
+pub extern "C" fn squares32x1_next_u32s(ptr: *mut Squares32x1, out: *mut u32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
@@ -3115,10 +3118,10 @@ pub extern "C" fn squares32_next_u32s(ptr: *mut Squares32, out: *mut u32, count:
                 for dst in chunks4.by_ref() {
                     // z_i = y_i + k == y1 = y0+k, z0 = y1, z1 = y2, z2 = y3
                     let z3 = y3.wrapping_add(k);
-                    dst[0] = Squares32::compute_yz(y0, y1);
-                    dst[1] = Squares32::compute_yz(y1, y2);
-                    dst[2] = Squares32::compute_yz(y2, y3);
-                    dst[3] = Squares32::compute_yz(y3, z3);
+                    dst[0] = Squares32x1::compute_yz(y0, y1);
+                    dst[1] = Squares32x1::compute_yz(y1, y2);
+                    dst[2] = Squares32x1::compute_yz(y2, y3);
+                    dst[3] = Squares32x1::compute_yz(y3, z3);
                     y0 = y0.wrapping_add(k4);
                     y1 = y1.wrapping_add(k4);
                     y2 = y2.wrapping_add(k4);
@@ -3128,7 +3131,7 @@ pub extern "C" fn squares32_next_u32s(ptr: *mut Squares32, out: *mut u32, count:
                 let mut yr = y0;
                 for dst in rem.iter_mut() {
                     let zr = yr.wrapping_add(k);
-                    *dst = Squares32::compute_yz(yr, zr);
+                    *dst = Squares32x1::compute_yz(yr, zr);
                     yr = yr.wrapping_add(k);
                 }
             });
@@ -3138,7 +3141,7 @@ pub extern "C" fn squares32_next_u32s(ptr: *mut Squares32, out: *mut u32, count:
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn squares32_next_f32s(ptr: *mut Squares32, out: *mut f32, count: usize) {
+pub extern "C" fn squares32x1_next_f32s(ptr: *mut Squares32x1, out: *mut f32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
@@ -3161,10 +3164,10 @@ pub extern "C" fn squares32_next_f32s(ptr: *mut Squares32, out: *mut f32, count:
                 let mut chunks4 = chunk.chunks_exact_mut(4);
                 for dst in chunks4.by_ref() {
                     let z3 = y3.wrapping_add(k);
-                    dst[0] = Squares32::compute_yz(y0, y1) as f32 * SCALE;
-                    dst[1] = Squares32::compute_yz(y1, y2) as f32 * SCALE;
-                    dst[2] = Squares32::compute_yz(y2, y3) as f32 * SCALE;
-                    dst[3] = Squares32::compute_yz(y3, z3) as f32 * SCALE;
+                    dst[0] = Squares32x1::compute_yz(y0, y1) as f32 * SCALE;
+                    dst[1] = Squares32x1::compute_yz(y1, y2) as f32 * SCALE;
+                    dst[2] = Squares32x1::compute_yz(y2, y3) as f32 * SCALE;
+                    dst[3] = Squares32x1::compute_yz(y3, z3) as f32 * SCALE;
                     y0 = y0.wrapping_add(k4);
                     y1 = y1.wrapping_add(k4);
                     y2 = y2.wrapping_add(k4);
@@ -3174,7 +3177,7 @@ pub extern "C" fn squares32_next_f32s(ptr: *mut Squares32, out: *mut f32, count:
                 let mut yr = y0;
                 for dst in rem.iter_mut() {
                     let zr = yr.wrapping_add(k);
-                    *dst = Squares32::compute_yz(yr, zr) as f32 * SCALE;
+                    *dst = Squares32x1::compute_yz(yr, zr) as f32 * SCALE;
                     yr = yr.wrapping_add(k);
                 }
             });
@@ -3184,8 +3187,8 @@ pub extern "C" fn squares32_next_f32s(ptr: *mut Squares32, out: *mut f32, count:
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn squares32_rand_i32s(
-    ptr: *mut Squares32,
+pub extern "C" fn squares32x1_rand_i32s(
+    ptr: *mut Squares32x1,
     out: *mut i32,
     count: usize,
     min: i32,
@@ -3213,10 +3216,10 @@ pub extern "C" fn squares32_rand_i32s(
                 let mut chunks4 = chunk.chunks_exact_mut(4);
                 for dst in chunks4.by_ref() {
                     let z3 = y3.wrapping_add(k);
-                    dst[0] = ((Squares32::compute_yz(y0, y1) as u64 * range) >> 32) as i32 + min;
-                    dst[1] = ((Squares32::compute_yz(y1, y2) as u64 * range) >> 32) as i32 + min;
-                    dst[2] = ((Squares32::compute_yz(y2, y3) as u64 * range) >> 32) as i32 + min;
-                    dst[3] = ((Squares32::compute_yz(y3, z3) as u64 * range) >> 32) as i32 + min;
+                    dst[0] = ((Squares32x1::compute_yz(y0, y1) as u64 * range) >> 32) as i32 + min;
+                    dst[1] = ((Squares32x1::compute_yz(y1, y2) as u64 * range) >> 32) as i32 + min;
+                    dst[2] = ((Squares32x1::compute_yz(y2, y3) as u64 * range) >> 32) as i32 + min;
+                    dst[3] = ((Squares32x1::compute_yz(y3, z3) as u64 * range) >> 32) as i32 + min;
                     y0 = y0.wrapping_add(k4);
                     y1 = y1.wrapping_add(k4);
                     y2 = y2.wrapping_add(k4);
@@ -3226,7 +3229,7 @@ pub extern "C" fn squares32_rand_i32s(
                 let mut yr = y0;
                 for dst in rem.iter_mut() {
                     let zr = yr.wrapping_add(k);
-                    *dst = ((Squares32::compute_yz(yr, zr) as u64 * range) >> 32) as i32 + min;
+                    *dst = ((Squares32x1::compute_yz(yr, zr) as u64 * range) >> 32) as i32 + min;
                     yr = yr.wrapping_add(k);
                 }
             });
@@ -3236,8 +3239,8 @@ pub extern "C" fn squares32_rand_i32s(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn squares32_rand_f32s(
-    ptr: *mut Squares32,
+pub extern "C" fn squares32x1_rand_f32s(
+    ptr: *mut Squares32x1,
     out: *mut f32,
     count: usize,
     min: f32,
@@ -3265,10 +3268,10 @@ pub extern "C" fn squares32_rand_f32s(
                 let mut chunks4 = chunk.chunks_exact_mut(4);
                 for dst in chunks4.by_ref() {
                     let z3 = y3.wrapping_add(k);
-                    dst[0] = Squares32::compute_yz(y0, y1) as f32 * combined_scale + min;
-                    dst[1] = Squares32::compute_yz(y1, y2) as f32 * combined_scale + min;
-                    dst[2] = Squares32::compute_yz(y2, y3) as f32 * combined_scale + min;
-                    dst[3] = Squares32::compute_yz(y3, z3) as f32 * combined_scale + min;
+                    dst[0] = Squares32x1::compute_yz(y0, y1) as f32 * combined_scale + min;
+                    dst[1] = Squares32x1::compute_yz(y1, y2) as f32 * combined_scale + min;
+                    dst[2] = Squares32x1::compute_yz(y2, y3) as f32 * combined_scale + min;
+                    dst[3] = Squares32x1::compute_yz(y3, z3) as f32 * combined_scale + min;
                     y0 = y0.wrapping_add(k4);
                     y1 = y1.wrapping_add(k4);
                     y2 = y2.wrapping_add(k4);
@@ -3278,7 +3281,7 @@ pub extern "C" fn squares32_rand_f32s(
                 let mut yr = y0;
                 for dst in rem.iter_mut() {
                     let zr = yr.wrapping_add(k);
-                    *dst = Squares32::compute_yz(yr, zr) as f32 * combined_scale + min;
+                    *dst = Squares32x1::compute_yz(yr, zr) as f32 * combined_scale + min;
                     yr = yr.wrapping_add(k);
                 }
             });
@@ -3300,7 +3303,7 @@ pub struct Squares32x8 {
 #[cfg(target_arch = "x86_64")]
 impl Squares32x8 {
     /// Creates a new `Squares32x4` instance.
-    #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx512f")]
     pub unsafe fn new(seed: u32) -> Self {
         let mut k = [0u64; SQUARES32x8];
         let mut seedgen = SplitMix64::new(seed as u64 | 1);
@@ -3310,18 +3313,15 @@ impl Squares32x8 {
 
         unsafe {
             Self {
-                c: _mm512_set1_epi64(0),
+                c: _mm512_setr_epi64(0, 1, 2, 3, 4, 5, 6, 7),
                 k: _mm512_loadu_si512(k.as_ptr() as *const _),
             }
         }
     }
 
     #[inline(always)]
-    pub(crate) unsafe fn compute_yz(y: __m512i, z: __m512i) -> [u32; 8] {
+    pub(crate) unsafe fn compute_yz(y: __m512i, z: __m512i) -> __m256i {
         unsafe {
-            // let y = _mm512_loadu_epi64(y.as_ptr() as *const _);
-            // let z = _mm512_loadu_epi64(z.as_ptr() as *const _);
-
             // x = y.wrapping_mul(y).wrapping_add(y);
             let mut x = _mm512_add_epi64(_mm512_mullo_epi64(y, y), y);
             // x = x.rotate_left(32);
@@ -3340,29 +3340,616 @@ impl Squares32x8 {
             // (x.wrapping_mul(x).wrapping_add(z) >> 32) as u32
             x = _mm512_srli_epi64(_mm512_add_epi64(_mm512_mullo_epi64(x, x), z), 32);
 
-            let dst_v = _mm512_cvtepi64_epi32(x);
-            let mut dst = [0u32; SQUARES32x8];
-            _mm256_storeu_si256(dst.as_mut_ptr() as *mut _, dst_v);
-
-            dst
+            _mm512_cvtepi64_epi32(x)
         }
     }
 
     #[inline(always)]
-    pub(crate) unsafe fn compute(c: u64, k: u64) -> [u32; SQUARES32x8] {
+    pub(crate) unsafe fn compute(c: __m512i, k: __m512i) -> __m256i {
         unsafe {
-            let c = _mm512_add_epi64(
-                _mm512_set1_epi64(c as i64),
-                _mm512_setr_epi64(0, 1, 2, 3, 4, 5, 6, 7), // r: reverse
-            );
-            let key_vec = _mm512_set1_epi64(k as i64);
-            let y_vec = _mm512_mullo_epi64(c, key_vec);
-            let z_vec = _mm512_add_epi64(y_vec, key_vec);
-
-            let dst = Self::compute_yz(y_vec, z_vec);
-            dst
+            let y_v = _mm512_mullo_epi64(c, k);
+            let z_v = _mm512_add_epi64(y_v, k);
+            Self::compute_yz(y_v, z_v)
         }
     }
+
+    #[target_feature(enable = "avx512f")]
+    pub unsafe fn nextu(&mut self) -> [u32; SQUARES32x8] {
+        unsafe {
+            let v = Self::compute(self.c, self.k);
+            self.c = _mm512_add_epi64(self.c, _mm512_set1_epi64(8));
+            let mut out = [0u32; SQUARES32x8];
+            _mm256_storeu_si256(out.as_mut_ptr() as *mut _, v);
+            out
+        }
+    }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32x8_new(seed: u32) -> *mut Squares32x8 {
+    unsafe { Box::into_raw(Box::new(Squares32x8::new(seed))) }
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32x8_free(ptr: *mut Squares32x8) {
+    if !ptr.is_null() {
+        unsafe { drop(Box::from_raw(ptr)) };
+    }
+}
+#[allow(non_upper_case_globals)]
+const SQUARES32x8_PAR_CHUNK: usize = 4096;
+
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32x8_next_u32s(ptr: *mut Squares32x8, out: *mut u32, count: usize) {
+    if count == 0 {
+        return;
+    }
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let mut c_arr = [0u64; SQUARES32x8];
+        _mm512_storeu_si512(c_arr.as_mut_ptr() as *mut _, rng.c);
+        let c0 = c_arr[0];
+        let k = rng.k;
+        let lane_offsets = _mm512_setr_epi64(0, 1, 2, 3, 4, 5, 6, 7);
+        let k_step = _mm512_set1_epi64(SQUARES32x8 as i64);
+        let k_step2 = _mm512_set1_epi64((SQUARES32x8 * 2) as i64);
+        let k_step3 = _mm512_set1_epi64((SQUARES32x8 * 3) as i64);
+        let k_step4 = _mm512_set1_epi64((SQUARES32x8 * 4) as i64);
+
+        buffer
+            .par_chunks_mut(SQUARES32x8_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                squares32x8_next_u32s_chunk(
+                    chunk_idx,
+                    chunk,
+                    c0,
+                    k,
+                    lane_offsets,
+                    k_step,
+                    k_step2,
+                    k_step3,
+                    k_step4,
+                );
+            });
+
+        let num_generated = count as u64;
+        for i in 0..SQUARES32x8 {
+            c_arr[i] = c_arr[i].wrapping_add(num_generated);
+        }
+        rng.c = _mm512_loadu_si512(c_arr.as_ptr() as *const _);
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx512f,avx512dq")]
+unsafe fn squares32x8_next_u32s_chunk(
+    chunk_idx: usize,
+    chunk: &mut [u32],
+    c0: u64,
+    k: core::arch::x86_64::__m512i,
+    lane_offsets: core::arch::x86_64::__m512i,
+    k_step: core::arch::x86_64::__m512i,
+    k_step2: core::arch::x86_64::__m512i,
+    k_step3: core::arch::x86_64::__m512i,
+    k_step4: core::arch::x86_64::__m512i,
+) {
+    unsafe {
+        let c_start = c0.wrapping_add((chunk_idx * SQUARES32x8_PAR_CHUNK) as u64);
+        let mut c_vec = _mm512_add_epi64(_mm512_set1_epi64(c_start as i64), lane_offsets);
+
+        let is_aligned = (chunk.as_ptr() as usize) & 63 == 0;
+        let mut chunks32 = chunk.chunks_exact_mut(SQUARES32x8 * 4);
+
+        if is_aligned {
+            for dst in chunks32.by_ref() {
+                let v0 = Squares32x8::compute(c_vec, k);
+                let v1 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step), k);
+                let v2 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step2), k);
+                let v3 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step3), k);
+
+                let res01 = _mm512_inserti64x4::<1>(_mm512_castsi256_si512(v0), v1);
+                let res23 = _mm512_inserti64x4::<1>(_mm512_castsi256_si512(v2), v3);
+
+                _mm512_stream_si512(dst.as_mut_ptr() as *mut _, res01);
+                _mm512_stream_si512(dst[16..].as_mut_ptr() as *mut _, res23);
+
+                c_vec = _mm512_add_epi64(c_vec, k_step4);
+            }
+        } else {
+            for dst in chunks32.by_ref() {
+                let v0 = Squares32x8::compute(c_vec, k);
+                let v1 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step), k);
+                let v2 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step2), k);
+                let v3 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step3), k);
+
+                let res01 = _mm512_inserti64x4::<1>(_mm512_castsi256_si512(v0), v1);
+                let res23 = _mm512_inserti64x4::<1>(_mm512_castsi256_si512(v2), v3);
+
+                _mm512_storeu_si512(dst.as_mut_ptr() as *mut _, res01);
+                _mm512_storeu_si512(dst[16..].as_mut_ptr() as *mut _, res23);
+
+                c_vec = _mm512_add_epi64(c_vec, k_step4);
+            }
+        }
+
+        let rem = chunks32.into_remainder();
+        let mut rem_chunks8 = rem.chunks_exact_mut(SQUARES32x8);
+        for dst in rem_chunks8.by_ref() {
+            let v = Squares32x8::compute(c_vec, k);
+            _mm256_storeu_si256(dst.as_mut_ptr() as *mut _, v);
+            c_vec = _mm512_add_epi64(c_vec, k_step);
+        }
+        let final_rem = rem_chunks8.into_remainder();
+        if !final_rem.is_empty() {
+            let v = Squares32x8::compute(c_vec, k);
+            let mut tmp = [0u32; SQUARES32x8];
+            _mm256_storeu_si256(tmp.as_mut_ptr() as *mut _, v);
+            for j in 0..final_rem.len() {
+                final_rem[j] = tmp[j];
+            }
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32x8_next_f32s(ptr: *mut Squares32x8, out: *mut f32, count: usize) {
+    if count == 0 {
+        return;
+    }
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let mut c_arr = [0u64; SQUARES32x8];
+        _mm512_storeu_si512(c_arr.as_mut_ptr() as *mut _, rng.c);
+        let c0 = c_arr[0];
+        let k = rng.k;
+        let lane_offsets = _mm512_setr_epi64(0, 1, 2, 3, 4, 5, 6, 7);
+        let k_step = _mm512_set1_epi64(SQUARES32x8 as i64);
+        let k_step2 = _mm512_set1_epi64((SQUARES32x8 * 2) as i64);
+        let k_step3 = _mm512_set1_epi64((SQUARES32x8 * 3) as i64);
+        let k_step4 = _mm512_set1_epi64((SQUARES32x8 * 4) as i64);
+
+        buffer
+            .par_chunks_mut(SQUARES32x8_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                squares32x8_next_f32s_chunk(
+                    chunk_idx,
+                    chunk,
+                    c0,
+                    k,
+                    lane_offsets,
+                    k_step,
+                    k_step2,
+                    k_step3,
+                    k_step4,
+                );
+            });
+
+        let num_generated = count as u64;
+        for i in 0..SQUARES32x8 {
+            c_arr[i] = c_arr[i].wrapping_add(num_generated);
+        }
+        rng.c = _mm512_loadu_si512(c_arr.as_ptr() as *const _);
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx512f,avx512dq")]
+unsafe fn squares32x8_next_f32s_chunk(
+    chunk_idx: usize,
+    chunk: &mut [f32],
+    c0: u64,
+    k: core::arch::x86_64::__m512i,
+    lane_offsets: core::arch::x86_64::__m512i,
+    k_step: core::arch::x86_64::__m512i,
+    k_step2: core::arch::x86_64::__m512i,
+    k_step3: core::arch::x86_64::__m512i,
+    k_step4: core::arch::x86_64::__m512i,
+) {
+    unsafe {
+        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
+        let vscale = _mm512_set1_ps(SCALE);
+        let c_start = c0.wrapping_add((chunk_idx * SQUARES32x8_PAR_CHUNK) as u64);
+        let mut c_vec = _mm512_add_epi64(_mm512_set1_epi64(c_start as i64), lane_offsets);
+
+        let is_aligned = (chunk.as_ptr() as usize) & 63 == 0;
+        let mut chunks32 = chunk.chunks_exact_mut(SQUARES32x8 * 4);
+
+        for dst in chunks32.by_ref() {
+            let v0 = Squares32x8::compute(c_vec, k);
+            let v1 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step), k);
+            let v2 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step2), k);
+            let v3 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step3), k);
+
+            let res01 = _mm512_cvtepu32_ps(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(v0), v1));
+            let res23 = _mm512_cvtepu32_ps(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(v2), v3));
+
+            let f01 = _mm512_mul_ps(res01, vscale);
+            let f23 = _mm512_mul_ps(res23, vscale);
+
+            if is_aligned {
+                _mm512_stream_ps(dst.as_mut_ptr(), f01);
+                _mm512_stream_ps(dst[16..].as_mut_ptr(), f23);
+            } else {
+                _mm512_storeu_ps(dst.as_mut_ptr(), f01);
+                _mm512_storeu_ps(dst[16..].as_mut_ptr(), f23);
+            }
+
+            c_vec = _mm512_add_epi64(c_vec, k_step4);
+        }
+
+        let rem = chunks32.into_remainder();
+        let mut rem_chunks8 = rem.chunks_exact_mut(SQUARES32x8);
+        for dst in rem_chunks8.by_ref() {
+            let v = Squares32x8::compute(c_vec, k);
+            let mut result = [0u32; SQUARES32x8];
+            _mm256_storeu_si256(result.as_mut_ptr() as *mut _, v);
+            for j in 0..SQUARES32x8 {
+                dst[j] = result[j] as f32 * SCALE;
+            }
+            c_vec = _mm512_add_epi64(c_vec, k_step);
+        }
+        let final_rem = rem_chunks8.into_remainder();
+        if !final_rem.is_empty() {
+            let v = Squares32x8::compute(c_vec, k);
+            let mut tmp = [0u32; SQUARES32x8];
+            _mm256_storeu_si256(tmp.as_mut_ptr() as *mut _, v);
+            for j in 0..final_rem.len() {
+                final_rem[j] = tmp[j] as f32 * SCALE;
+            }
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32x8_rand_i32s(
+    ptr: *mut Squares32x8,
+    out: *mut i32,
+    count: usize,
+    min: i32,
+    max: i32,
+) {
+    if count == 0 {
+        return;
+    }
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let mut c_arr = [0u64; SQUARES32x8];
+        _mm512_storeu_si512(c_arr.as_mut_ptr() as *mut _, rng.c);
+        let c0 = c_arr[0];
+        let k = rng.k;
+        let range = (max as i64 - min as i64 + 1) as u64;
+        let lane_offsets = _mm512_setr_epi64(0, 1, 2, 3, 4, 5, 6, 7);
+        let k_step = _mm512_set1_epi64(SQUARES32x8 as i64);
+        let k_step2 = _mm512_set1_epi64((SQUARES32x8 * 2) as i64);
+        let k_step3 = _mm512_set1_epi64((SQUARES32x8 * 3) as i64);
+        let k_step4 = _mm512_set1_epi64((SQUARES32x8 * 4) as i64);
+
+        buffer
+            .par_chunks_mut(SQUARES32x8_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                squares32x8_rand_i32s_chunk(
+                    chunk_idx,
+                    chunk,
+                    c0,
+                    k,
+                    range,
+                    min,
+                    lane_offsets,
+                    k_step,
+                    k_step2,
+                    k_step3,
+                    k_step4,
+                );
+            });
+
+        let num_generated = count as u64;
+        for i in 0..SQUARES32x8 {
+            c_arr[i] = c_arr[i].wrapping_add(num_generated);
+        }
+        rng.c = _mm512_loadu_si512(c_arr.as_ptr() as *const _);
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx512f,avx512dq")]
+unsafe fn squares32x8_rand_i32s_chunk(
+    chunk_idx: usize,
+    chunk: &mut [i32],
+    c0: u64,
+    k: core::arch::x86_64::__m512i,
+    range: u64,
+    min: i32,
+    lane_offsets: core::arch::x86_64::__m512i,
+    k_step: core::arch::x86_64::__m512i,
+    k_step2: core::arch::x86_64::__m512i,
+    k_step3: core::arch::x86_64::__m512i,
+    k_step4: core::arch::x86_64::__m512i,
+) {
+    unsafe {
+        let c_start = c0.wrapping_add((chunk_idx * SQUARES32x8_PAR_CHUNK) as u64);
+        let mut c_vec = _mm512_add_epi64(_mm512_set1_epi64(c_start as i64), lane_offsets);
+        let vrange = _mm512_set1_epi64(range as i64);
+        let vmin = _mm512_set1_epi32(min);
+
+        let is_aligned = (chunk.as_ptr() as usize) & 63 == 0;
+        let mut chunks32 = chunk.chunks_exact_mut(SQUARES32x8 * 4);
+
+        for dst in chunks32.by_ref() {
+            let v0 = Squares32x8::compute(c_vec, k);
+            let v1 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step), k);
+            let v2 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step2), k);
+            let v3 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step3), k);
+
+            #[inline(always)]
+            unsafe fn pack_convert(
+                v0: core::arch::x86_64::__m256i,
+                v1: core::arch::x86_64::__m256i,
+                vrange: core::arch::x86_64::__m512i,
+                vmin: core::arch::x86_64::__m512i,
+            ) -> core::arch::x86_64::__m512i {
+                unsafe {
+                    let l_u64 = _mm512_cvtepu32_epi64(v0);
+                    let h_u64 = _mm512_cvtepu32_epi64(v1);
+
+                    let res_l = _mm512_srli_epi64(_mm512_mul_epu32(l_u64, vrange), 32);
+                    let res_h = _mm512_srli_epi64(_mm512_mul_epu32(h_u64, vrange), 32);
+
+                    let packed_l = _mm512_cvtepi64_epi32(res_l);
+                    let packed_h = _mm512_cvtepi64_epi32(res_h);
+
+                    let res = _mm512_inserti64x4::<1>(_mm512_castsi256_si512(packed_l), packed_h);
+                    _mm512_add_epi32(res, vmin)
+                }
+            }
+
+            let res01 = pack_convert(v0, v1, vrange, vmin);
+            let res23 = pack_convert(v2, v3, vrange, vmin);
+
+            if is_aligned {
+                _mm512_stream_si512(dst.as_mut_ptr() as *mut _, res01);
+                _mm512_stream_si512(dst[16..].as_mut_ptr() as *mut _, res23);
+            } else {
+                _mm512_storeu_si512(dst.as_mut_ptr() as *mut _, res01);
+                _mm512_storeu_si512(dst[16..].as_mut_ptr() as *mut _, res23);
+            }
+
+            c_vec = _mm512_add_epi64(c_vec, k_step4);
+        }
+
+        let rem = chunks32.into_remainder();
+        let mut rem_chunks8 = rem.chunks_exact_mut(SQUARES32x8);
+        for dst in rem_chunks8.by_ref() {
+            let v = Squares32x8::compute(c_vec, k);
+            let mut result = [0u32; SQUARES32x8];
+            _mm256_storeu_si256(result.as_mut_ptr() as *mut _, v);
+            for j in 0..SQUARES32x8 {
+                dst[j] = ((result[j] as u64 * range) >> 32) as i32 + min;
+            }
+            c_vec = _mm512_add_epi64(c_vec, k_step);
+        }
+        let final_rem = rem_chunks8.into_remainder();
+        if !final_rem.is_empty() {
+            let v = Squares32x8::compute(c_vec, k);
+            let mut tmp = [0u32; SQUARES32x8];
+            _mm256_storeu_si256(tmp.as_mut_ptr() as *mut _, v);
+            for j in 0..final_rem.len() {
+                final_rem[j] = ((tmp[j] as u64 * range) >> 32) as i32 + min;
+            }
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32x8_rand_f32s(
+    ptr: *mut Squares32x8,
+    out: *mut f32,
+    count: usize,
+    min: f32,
+    max: f32,
+) {
+    if count == 0 {
+        return;
+    }
+    unsafe {
+        let rng = &mut *ptr;
+        let buffer = from_raw_parts_mut(out, count);
+        let mut c_arr = [0u64; SQUARES32x8];
+        _mm512_storeu_si512(c_arr.as_mut_ptr() as *mut _, rng.c);
+        let c0 = c_arr[0];
+        let k = rng.k;
+        let combined_scale = (max - min) * (1.0f32 / (u32::MAX as f32 + 1.0));
+        let lane_offsets = _mm512_setr_epi64(0, 1, 2, 3, 4, 5, 6, 7);
+        let k_step = _mm512_set1_epi64(SQUARES32x8 as i64);
+        let k_step2 = _mm512_set1_epi64((SQUARES32x8 * 2) as i64);
+        let k_step3 = _mm512_set1_epi64((SQUARES32x8 * 3) as i64);
+        let k_step4 = _mm512_set1_epi64((SQUARES32x8 * 4) as i64);
+
+        buffer
+            .par_chunks_mut(SQUARES32x8_PAR_CHUNK)
+            .enumerate()
+            .for_each(|(chunk_idx, chunk)| {
+                squares32x8_rand_f32s_chunk(
+                    chunk_idx,
+                    chunk,
+                    c0,
+                    k,
+                    combined_scale,
+                    min,
+                    lane_offsets,
+                    k_step,
+                    k_step2,
+                    k_step3,
+                    k_step4,
+                );
+            });
+
+        let num_generated = count as u64;
+        for i in 0..SQUARES32x8 {
+            c_arr[i] = c_arr[i].wrapping_add(num_generated);
+        }
+        rng.c = _mm512_loadu_si512(c_arr.as_ptr() as *const _);
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx512f,avx512dq")]
+unsafe fn squares32x8_rand_f32s_chunk(
+    chunk_idx: usize,
+    chunk: &mut [f32],
+    c0: u64,
+    k: core::arch::x86_64::__m512i,
+    combined_scale: f32,
+    min: f32,
+    lane_offsets: core::arch::x86_64::__m512i,
+    k_step: core::arch::x86_64::__m512i,
+    k_step2: core::arch::x86_64::__m512i,
+    k_step3: core::arch::x86_64::__m512i,
+    k_step4: core::arch::x86_64::__m512i,
+) {
+    unsafe {
+        let c_start = c0.wrapping_add((chunk_idx * SQUARES32x8_PAR_CHUNK) as u64);
+        let mut c_vec = _mm512_add_epi64(_mm512_set1_epi64(c_start as i64), lane_offsets);
+        let vscale = _mm512_set1_ps(combined_scale);
+        let vmin = _mm512_set1_ps(min);
+
+        let is_aligned = (chunk.as_ptr() as usize) & 63 == 0;
+        let mut chunks32 = chunk.chunks_exact_mut(SQUARES32x8 * 4);
+
+        for dst in chunks32.by_ref() {
+            let v0 = Squares32x8::compute(c_vec, k);
+            let v1 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step), k);
+            let v2 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step2), k);
+            let v3 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step3), k);
+
+            let res01 = _mm512_cvtepu32_ps(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(v0), v1));
+            let res23 = _mm512_cvtepu32_ps(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(v2), v3));
+
+            let f01 = _mm512_add_ps(_mm512_mul_ps(res01, vscale), vmin);
+            let f23 = _mm512_add_ps(_mm512_mul_ps(res23, vscale), vmin);
+
+            if is_aligned {
+                _mm512_stream_ps(dst.as_mut_ptr(), f01);
+                _mm512_stream_ps(dst[16..].as_mut_ptr(), f23);
+            } else {
+                _mm512_storeu_ps(dst.as_mut_ptr(), f01);
+                _mm512_storeu_ps(dst[16..].as_mut_ptr(), f23);
+            }
+
+            c_vec = _mm512_add_epi64(c_vec, k_step4);
+        }
+
+        let rem = chunks32.into_remainder();
+        let mut rem_chunks8 = rem.chunks_exact_mut(SQUARES32x8);
+        for dst in rem_chunks8.by_ref() {
+            let v = Squares32x8::compute(c_vec, k);
+            let mut result = [0u32; SQUARES32x8];
+            _mm256_storeu_si256(result.as_mut_ptr() as *mut _, v);
+            for j in 0..SQUARES32x8 {
+                dst[j] = result[j] as f32 * combined_scale + min;
+            }
+            c_vec = _mm512_add_epi64(c_vec, k_step);
+        }
+        let final_rem = rem_chunks8.into_remainder();
+        if !final_rem.is_empty() {
+            let v = Squares32x8::compute(c_vec, k);
+            let mut tmp = [0u32; SQUARES32x8];
+            _mm256_storeu_si256(tmp.as_mut_ptr() as *mut _, v);
+            for j in 0..final_rem.len() {
+                final_rem[j] = tmp[j] as f32 * combined_scale + min;
+            }
+        }
+    }
+}
+
+// -- Squares32 --
+
+#[cfg(target_arch = "x86_64")]
+pub type Squares32 = core::ffi::c_void;
+
+#[cfg(not(target_arch = "x86_64"))]
+pub type Squares32 = core::ffi::c_void;
+
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32_new(seed: u32) -> *mut Squares32 {
+    dispatch_simd!(Squares32, philox32x4_new, philox32x4x4_new, seed)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32_free(ptr: *mut Squares32) {
+    dispatch_simd!(
+        Squares32x8,
+        Squares32x1,
+        squares32x1_free,
+        squares32x8_free,
+        ptr
+    )
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32_next_u32s(ptr: *mut Squares32, out: *mut u32, count: usize) {
+    dispatch_simd!(
+        Squares32x8,
+        Squares32x1,
+        squares32x1_next_u32s,
+        squares32x8_next_u32s,
+        ptr,
+        out,
+        count
+    )
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32_next_f32s(ptr: *mut Squares32, out: *mut f32, count: usize) {
+    dispatch_simd!(
+        Squares32x8,
+        Squares32x1,
+        squares32x1_next_f32s,
+        squares32x8_next_f32s,
+        ptr,
+        out,
+        count
+    )
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32_rand_i32s(
+    ptr: *mut Squares32,
+    out: *mut i32,
+    count: usize,
+    min: i32,
+    max: i32,
+) {
+    dispatch_simd!(
+        Squares32x8,
+        Squares32x1,
+        squares32x1_rand_i32s,
+        squares32x8_rand_i32s,
+        ptr,
+        out,
+        count,
+        min,
+        max
+    )
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn squares32_rand_f32s(
+    ptr: *mut Squares32,
+    out: *mut f32,
+    count: usize,
+    min: f32,
+    max: f32,
+) {
+    dispatch_simd!(
+        Squares32x8,
+        Squares32x1,
+        squares32x1_rand_f32s,
+        squares32x8_rand_f32s,
+        ptr,
+        out,
+        count,
+        min,
+        max
+    )
 }
 
 #[cfg(test)]
@@ -3473,7 +4060,7 @@ mod tests {
 
     #[test]
     fn squares32_works() {
-        let mut rng = Squares32::new(1);
+        let mut rng = Squares32x1::new(1);
         assert_eq!(rng.nextu(), 1225738608);
         assert_eq!(rng.nextf(), 0.9183048);
     }
@@ -3481,14 +4068,12 @@ mod tests {
     #[test]
     fn squares32x8_works() {
         unsafe {
-            let mut seedgen = SplitMix64::new(1);
-            let results = Squares32x8::compute(0, seedgen.nextu());
-
+            let mut rng = Squares32x8::new(1);
             assert_eq!(
-                results,
+                rng.nextu(),
                 [
-                    1225738608, 3944088997, 2344576009, 896386238, 1754778585, 90946642,
-                    1788108373, 3630939197
+                    1225738608, 3081786017, 2002165410, 1518623550, 443612158, 1744152856,
+                    1924491776, 1460635941
                 ]
             );
         }

@@ -3,9 +3,10 @@ use std::time::Instant;
 use urng::rng32::{
     Philox32x4, Philox32x4x4, philox32_free, philox32_new, philox32_next_u32s, philox32x4_free,
     philox32x4_new, philox32x4_next_u32s, philox32x4x4_free, philox32x4x4_new,
-    philox32x4x4_next_u32s, squares32_free, squares32_new, squares32_next_u32s, threefry32x2_free,
-    threefry32x2_new, threefry32x2_next_u32s, threefry32x4_free, threefry32x4_new,
-    threefry32x4_next_u32s,
+    philox32x4x4_next_u32s, squares32_free, squares32_new, squares32_next_u32s, squares32x1_free,
+    squares32x1_new, squares32x1_next_u32s, squares32x8_free, squares32x8_new,
+    squares32x8_next_u32s, threefry32x2_free, threefry32x2_new, threefry32x2_next_u32s,
+    threefry32x4_free, threefry32x4_new, threefry32x4_next_u32s,
 };
 
 // 32x4(scalar) vs 32x4x4(vector)
@@ -19,6 +20,9 @@ use urng::rng32::{
 // Philox32x4 CABI(rayon)   : 5.77 GS
 // Philox32 CABI(rayon)     : 6.80 GS
 // Threefry32x4 CABI(rayon) : 5.35 GS
+// Squares32x1 CABI(rayon)  : 5.45 GS
+// Squares32x8 CABI(rayon)  : 6.71 GS
+// Squares32 CABI(rayon)    : 6.53 GS
 const N: usize = 500_000_000;
 
 const G: f64 = 1_000_000_000f64;
@@ -32,6 +36,8 @@ fn main() {
     benchmark_throughput_philox32_cabi(N);
     benchmark_throughput_threefry32_cabi(N);
     benchmark_throughput_threefry32x2_cabi(N);
+    benchmark_throughput_squares32x1_cabi(N);
+    benchmark_throughput_squares32x8_cabi(N);
     benchmark_throughput_squares32_cabi(N);
 }
 
@@ -115,6 +121,28 @@ fn benchmark_throughput_threefry32x2_cabi(n: usize) {
     let throughput = n as f64 / duration.as_secs_f64() / G;
     println!("Threefry32x2 CABI Throughput: {:.2} GS", throughput);
     threefry32x2_free(ptr);
+}
+
+fn benchmark_throughput_squares32x1_cabi(n: usize) {
+    let mut buffer = vec![0u32; n];
+    let ptr = squares32x1_new(0);
+    let start = Instant::now();
+    squares32x1_next_u32s(ptr, buffer.as_mut_ptr(), n);
+    let duration = start.elapsed();
+    let throughput = n as f64 / duration.as_secs_f64() / G;
+    println!("Squares32x1 CABI Throughput: {:.2} GS", throughput);
+    squares32x1_free(ptr);
+}
+
+fn benchmark_throughput_squares32x8_cabi(n: usize) {
+    let mut buffer = vec![0u32; n];
+    let ptr = squares32x8_new(0);
+    let start = Instant::now();
+    squares32x8_next_u32s(ptr, buffer.as_mut_ptr(), n);
+    let duration = start.elapsed();
+    let throughput = n as f64 / duration.as_secs_f64() / G;
+    println!("Squares32x8 CABI Throughput: {:.2} GS", throughput);
+    squares32x8_free(ptr);
 }
 
 fn benchmark_throughput_squares32_cabi(n: usize) {
