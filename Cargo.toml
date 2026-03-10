@@ -19,6 +19,7 @@ csbindgen = "1.9.7"
 
 [dev-dependencies]
 colored = "3.1.1"
+criterion = "0.5"
 
 [dependencies]
 wide = "0.7.33"
