@@ -1,5 +1,5 @@
-[<img alt="crates.io" src="https://img.shields.io/crates/v/urng.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/urng)
-[<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-urng-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/urng)
+[`<img alt="crates.io" src="https://img.shields.io/crates/v/urng.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">`](https://crates.io/crates/urng)
+[`<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-urng-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">`](https://docs.rs/urng)
 
 # Universal RNG
 
@@ -12,7 +12,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.2.6"
+urng = "0.2.7"
 ```
 
 ## Supported Generators
@@ -23,13 +23,13 @@ All generators implement either the `Rng32` or `Rng64` trait, providing a unifie
 
 Output `u32` natively.
 
-| Struct         | Algorithm        | Period / State   | Description                               |
-| -------------- | ---------------- | ---------------- | ----------------------------------------- |
+| Struct           | Algorithm        | Period / State     | Description                               |
+| ---------------- | ---------------- | ------------------ | ----------------------------------------- |
 | `Mt19937`      | Mersenne Twister | $2^{19937}-1$    | Standard reliable generator.              |
 | `Sfmt19937`    | SFMT             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.      |
 | `Pcg32`        | PCG-XSH-RR       | $2^{64}$         | Fast, statistically good, small state.    |
-| `Philox32x4`   | Philox 4x32      | -                | Counter-based, suitable for parallel use. |
-| `Philox32x4x4` | Philox 4x4x32    | -                | Counter-based, feature for AVX512.        |
+| `Philox32x4`   | Philox 4x32      | -                  | Counter-based, suitable for parallel use. |
+| `Philox32x4x4` | Philox 4x4x32    | -                  | Counter-based, feature for AVX512.        |
 | `SplitMix32`   | SplitMix32       | $2^{32}$         | Fast, used for initializing other states. |
 | `Xorwow`       | XORWOW           | $2^{192}-2^{32}$ | Used in NVIDIA cuRAND.                    |
 | `Xorshift32`   | Xorshift         | $2^{32}-1$       | Very simple and fast.                     |
@@ -39,19 +39,19 @@ Output `u32` natively.
 
 Output `u64` natively.
 
-| Struct         | Algorithm           | Period / State   | Description                               |
-| -------------- | ------------------- | ---------------- | ----------------------------------------- |
-| `Xoshiro256Pp` | xoshiro256++        | $2^{256}-1$      | **Recommended** all-purpose generator.    |
-| `Xoshiro256Ss` | xoshiro256\*\*      | $2^{256}-1$      | **Recommended** all-purpose generator.    |
-| `SplitMix64`   | SplitMix64          | $2^{64}$         | Fast, used for initializing other states. |
-| `Sfc64`        | SFC64               | $2^{256}$ approx | Small Fast Chaotic PRNG.                  |
-| `Mt1993764`    | Mersenne Twister 64 | $2^{19937}-1$    | 64-bit variant of MT.                     |
-| `Sfmt1993764`  | SFMT 64             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.      |
-| `Philox64`     | Philox 2x64         | -                | Counter-based.                            |
-| `Xorshift64`   | Xorshift            | $2^{64}-1$       | Simple and fast.                          |
-| `TwistedGFSR`  | TGFSR               | $2^{800}$ approx | Generalized Feedback Shift Register.      |
-| `Cet64`        | CET                 | -                | Custom experimental generator.            |
-| `Lcg64`        | LCG                 | $m$              | Linear Congruential Generator.            |
+| Struct           | Algorithm           | Period / State     | Description                                  |
+| ---------------- | ------------------- | ------------------ | -------------------------------------------- |
+| `Xoshiro256Pp` | xoshiro256++        | $2^{256}-1$      | **Recommended** all-purpose generator. |
+| `Xoshiro256Ss` | xoshiro256\*\*      | $2^{256}-1$      | **Recommended** all-purpose generator. |
+| `SplitMix64`   | SplitMix64          | $2^{64}$         | Fast, used for initializing other states.    |
+| `Sfc64`        | SFC64               | $2^{256}$ approx | Small Fast Chaotic PRNG.                     |
+| `Mt1993764`    | Mersenne Twister 64 | $2^{19937}-1$    | 64-bit variant of MT.                        |
+| `Sfmt1993764`  | SFMT 64             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.         |
+| `Philox64`     | Philox 2x64         | -                  | Counter-based.                               |
+| `Xorshift64`   | Xorshift            | $2^{64}-1$       | Simple and fast.                             |
+| `TwistedGFSR`  | TGFSR               | $2^{800}$ approx | Generalized Feedback Shift Register.         |
+| `Cet64`        | CET                 | -                  | Custom experimental generator.               |
+| `Lcg64`        | LCG                 | $m$              | Linear Congruential Generator.               |
 
 ### Other (`urng::rng128`)
 

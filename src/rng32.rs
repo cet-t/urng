@@ -1844,11 +1844,10 @@ unsafe fn philox32x4x4_rand_f32s_chunk(
 
 // -- Philox32 --
 
-#[cfg(target_arch = "x86_64")]
-pub type Philox32 = core::ffi::c_void;
-
-#[cfg(not(target_arch = "x86_64"))]
-pub type Philox32 = core::ffi::c_void;
+/// Opaque handle for the Philox32 RNG.
+/// Dispatched at runtime to AVX-512 (`Philox32x4x4`) or scalar (`Philox32x4`) implementation.
+#[repr(C)]
+pub struct Philox32([u8; 0]);
 
 #[unsafe(no_mangle)]
 pub extern "C" fn philox32_new(seed: u32) -> *mut Philox32 {

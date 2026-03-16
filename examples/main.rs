@@ -1,5 +1,6 @@
 ﻿use std::hint::black_box;
 use std::time::Instant;
+use thousands::Separable;
 use urng::rng32::{
     Philox32x4, Philox32x4x4, philox32_free, philox32_new, philox32_next_u32s, philox32x4_free,
     philox32x4_new, philox32x4_next_u32s, philox32x4x4_free, philox32x4x4_new,
@@ -21,14 +22,17 @@ use urng::rng32::{
 // Philox32 CABI(rayon)     : 6.80 GS
 // Threefry32x4 CABI(rayon) : 5.35 GS
 // Squares32x1 CABI(rayon)  : 5.45 GS
-// Squares32x8 CABI(rayon)  : 6.71 GS
-// Squares32 CABI(rayon)    : 6.53 GS
+// Squares32x8 CABI(rayon)  : 6.74 GS
+// Squares32 CABI(rayon)    : 6.67 GS
 const N: usize = 500_000_000;
 
 const G: f64 = 1_000_000_000f64;
 
 fn main() {
-    println!("Benchmarking Random Number Generators (N = {})", N);
+    println!(
+        "Benchmarking Random Number Generators (N = {})",
+        N.separate_with_commas()
+    );
     benchmark_throughput_philox32x4x4(N);
     benchmark_throughput_philox32x4(N);
     benchmark_throughput_philox32x4x4_cabi(N);

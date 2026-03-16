@@ -41,10 +41,20 @@ pub mod rng128;
 /// A weighted random selection structure using a Binary Search Tree (BST) approach.
 pub mod bst;
 
-/// A weighted random selection structure using an Alias Method approach.
+#[cfg(feature = "sampler")]
+/// Weighted random selection traits (`Sampler32`, `Sampler64`).
 pub mod sampler;
 
+#[cfg(feature = "sampler")]
+/// Weighted random selection for 32-bit RNGs (`Bst32`, `Alias32`).
+pub mod sampler32;
+
+#[cfg(feature = "sampler")]
+/// Weighted random selection for 64-bit RNGs (`Bst64`, `Alias64`).
 pub mod sampler64;
+
+#[cfg(feature = "seedgen")]
+pub mod seedgen;
 
 #[macro_use]
 pub mod macros;
