@@ -1,4 +1,27 @@
-use crate::rng::{Rng32, Rng64};
+//! Hardware-noise-based seed generators.
+//!
+//! [`SeedGen32`] and [`SeedGen64`] mix hardware noise (RDSEED/RDRAND on x86/x86_64)
+//! with an existing RNG to produce high-quality seed values.
+//! Falls back to a timestamp-based noise source on platforms without those instructions.
+//!
+//! Enabled by the `seedgen` crate feature.
+//!
+//! # Examples
+//!
+//! ```
+//! use urng::seedgen::SeedGen32;
+//! use urng::rng32::SplitMix32;
+//!
+//! let mut rng = SplitMix32::new(0);
+//! let mut sg = SeedGen32::new(&mut rng, 0);
+//! let (raw, processed): (u32, u32) = sg.next_seed_pair();
+//! assert_eq!(raw <= u32::MAX, true);
+//! ```
+
+use crate::{
+    rng::{Rng32, Rng64},
+    wrap,
+};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[cfg(target_arch = "x86_64")]
@@ -19,12 +42,30 @@ const FALLBACK_MULTIPLIER_64: u64 = 0x2545_f491_4f6c_dd1d;
 
 // ── SeedGen32 ──────────────────────────────────────────────
 
+/// Hardware-noise-assisted 32-bit seed generator.
+///
+/// Wraps an existing [`Rng32`] and mixes hardware noise (RDSEED/RDRAND on x86/x86_64,
+/// timestamp fallback elsewhere) into a Murmur3-style hash to produce reproducibly
+/// high-entropy seed values.
+///
+/// # Examples
+///
+/// ```
+/// use urng::seedgen::SeedGen32;
+/// use urng::rng32::SplitMix32;
+///
+/// let mut rng = SplitMix32::new(12345);
+/// let mut sg = SeedGen32::new(&mut rng, 0);
+/// let (raw, seed): (u32, u32) = sg.next_seed_pair();
+/// assert_eq!(raw <= u32::MAX, true);
+/// ```
 pub struct SeedGen32<'a, R: Rng32> {
     rng: &'a mut R,
     seed: u32,
 }
 
 impl<'a, R: Rng32> SeedGen32<'a, R> {
+    /// Creates a new `SeedGen32` wrapping `rng` with the given initial `seed`.
     pub fn new(rng: &'a mut R, seed: u32) -> Self {
         Self { rng, seed }
     }
@@ -42,14 +83,14 @@ impl<'a, R: Rng32> SeedGen32<'a, R> {
 
     fn process(&mut self, raw: u32) -> u32 {
         let rng_mix = self.rng.randi(0, i32::MAX) as u32;
-        let mut value = raw ^ rng_mix;
-        value = value.wrapping_add(self.seed);
-        value = value.wrapping_add(SEED_MIX_INCREMENT);
+        let mut value = wrap!(raw ^ rng_mix);
+        value += self.seed;
+        value += SEED_MIX_INCREMENT;
         value ^= value >> 16;
-        value = value.wrapping_mul(SEED_MIX_MULTIPLIER);
+        value *= SEED_MIX_MULTIPLIER;
         value ^= value >> 13;
-        self.seed = value;
-        value
+        self.seed = value.0;
+        value.0
     }
 
     fn noise(&self) -> u32 {
@@ -59,12 +100,30 @@ impl<'a, R: Rng32> SeedGen32<'a, R> {
 
 // ── SeedGen64 ──────────────────────────────────────────────
 
+/// Hardware-noise-assisted 64-bit seed generator.
+///
+/// Like [`SeedGen32`] but produces 64-bit seed values.
+/// On x86_64 uses native RDSEED64/RDRAND64; on x86 (32-bit) combines two 32-bit
+/// samples; on other platforms falls back to a timestamp-based mix.
+///
+/// # Examples
+///
+/// ```
+/// use urng::seedgen::SeedGen64;
+/// use urng::rng64::SplitMix64;
+///
+/// let mut rng = SplitMix64::new(12345);
+/// let mut sg = SeedGen64::new(&mut rng, 0);
+/// let (raw, seed): (u64, u64) = sg.next_seed_pair();
+/// assert_eq!(raw <= u64::MAX, true);
+/// ```
 pub struct SeedGen64<'a, R: Rng64> {
     rng: &'a mut R,
     seed: u64,
 }
 
 impl<'a, R: Rng64> SeedGen64<'a, R> {
+    /// Creates a new `SeedGen64` wrapping `rng` with the given initial `seed`.
     pub fn new(rng: &'a mut R, seed: u64) -> Self {
         Self { rng, seed }
     }
@@ -83,14 +142,14 @@ impl<'a, R: Rng64> SeedGen64<'a, R> {
 
     fn process(&mut self, raw: u64) -> u64 {
         let rng_mix = self.rng.randi(0, i64::MAX) as u64;
-        let mut value = raw ^ rng_mix;
-        value = value.wrapping_add(self.seed);
-        value = value.wrapping_add(SEED_MIX_INCREMENT_64);
+        let mut value = wrap!(raw ^ rng_mix);
+        value += self.seed;
+        value += SEED_MIX_INCREMENT_64;
         value ^= value >> 33;
-        value = value.wrapping_mul(SEED_MIX_MULTIPLIER_64);
+        value += SEED_MIX_MULTIPLIER_64;
         value ^= value >> 29;
-        self.seed = value;
-        value
+        self.seed = value.0;
+        value.0
     }
 
     fn noise(&self) -> u64 {
@@ -104,17 +163,13 @@ fn hardware_noise32() -> Option<u32> {
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     {
         if std::arch::is_x86_feature_detected!("rdseed") {
-            unsafe {
-                if let Some(v) = rdseed32_once() {
-                    return Some(v);
-                }
+            if let Some(v) = unsafe { rdseed32_once() } {
+                return Some(v);
             }
         }
         if std::arch::is_x86_feature_detected!("rdrand") {
-            unsafe {
-                if let Some(v) = rdrand32_once() {
-                    return Some(v);
-                }
+            if let Some(v) = unsafe { rdrand32_once() } {
+                return Some(v);
             }
         }
     }
@@ -126,17 +181,13 @@ fn hardware_noise64() -> Option<u64> {
     #[cfg(target_arch = "x86_64")]
     {
         if std::arch::is_x86_feature_detected!("rdseed") {
-            unsafe {
-                if let Some(v) = rdseed64_once() {
-                    return Some(v);
-                }
+            if let Some(v) = unsafe { rdseed64_once() } {
+                return Some(v);
             }
         }
         if std::arch::is_x86_feature_detected!("rdrand") {
-            unsafe {
-                if let Some(v) = rdrand64_once() {
-                    return Some(v);
-                }
+            if let Some(v) = unsafe { rdrand64_once() } {
+                return Some(v);
             }
         }
     }

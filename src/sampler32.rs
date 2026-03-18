@@ -3,6 +3,19 @@ use crate::sampler::Sampler32;
 
 // --- Bst32 ---
 
+/// Weighted sampler using cumulative sums and binary search (O(log n) sample, O(n) build).
+///
+/// # Examples
+///
+/// ```
+/// use urng::sampler::Sampler32;
+/// use urng::sampler32::Bst32;
+/// use urng::rng32::Mt19937;
+///
+/// let mut rng = Mt19937::new(1);
+/// let mut sampler = Bst32::new(&mut rng, &[1.0f32, 9.0]);
+/// assert_eq!(sampler.sample(), 1);
+/// ```
 #[derive(Debug)]
 pub struct Bst32<'a, R: Rng32 + 'a> {
     rng: &'a mut R,
@@ -47,7 +60,25 @@ impl<'a, R: Rng32 + 'a> Sampler32<'a, R> for Bst32<'a, R> {
 
 // --- Alias32 ---
 
-/// Walker's Alias Method: O(1) sample, O(n) build.
+/// Weighted sampler using Walker's Alias Method (O(1) sample, O(n) build).
+///
+/// Preferred over [`Bst32`] when sampling repeatedly from the same weight distribution.
+///
+/// # Examples
+///
+/// ```
+/// use urng::sampler::Sampler32;
+/// use urng::sampler32::Alias32;
+/// use urng::rng32::Mt19937;
+///
+/// let mut rng = Mt19937::new(1);
+/// let mut sampler = Alias32::new(&mut rng, &[1.0f32, 9.0]);
+/// assert_eq!(sampler.sample(), 1);
+///
+/// // Update weights
+/// sampler.weights(&[5.0, 5.0]);
+/// assert!(sampler.sample() < 2);
+/// ```
 #[derive(Debug)]
 pub struct Alias32<'a, R: Rng32 + 'a> {
     rng: &'a mut R,

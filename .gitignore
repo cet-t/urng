@@ -1,4 +1,6 @@
 /target
 .vscode/
 .VSCodeCounter/
+.cargo/
 .claude/
+.github/

@@ -25,12 +25,19 @@ const UPPER_MASK: u64 = 0xFFFFFFFF80000000;
 const LOWER_MASK: u64 = 0x7FFFFFFF;
 
 impl Mt1993764 {
-    /// Creates a new `Mt1993764` instance.
+    /// Creates a new `Mt1993764` instance seeded via `SplitMix64`.
     ///
-    /// # Arguments
+    /// # Examples
     ///
-    /// * `seed` - The initial seed value.
-    /// * `warm` - The number of initial iterations to skip (warm-up).
+    /// ```
+    /// use urng::rng64::Mt1993764;
+    ///
+    /// let mut rng = Mt1993764::new(1);
+    /// assert_eq!(rng.nextu(), 9822250072823399003);
+    /// assert_eq!(rng.nextf(), 0.8926985632057756);
+    /// let i = rng.randi(0, 100);
+    /// assert!(i >= 0 && i <= 100);
+    /// ```
     pub fn new(seed: u64) -> Self {
         let mut mt = [0u64; N];
         let mut seedgen = SplitMix64::new(seed);
@@ -130,16 +137,21 @@ impl Rng64 for Mt1993764 {
     }
 }
 
+/// Creates a new heap-allocated `Mt1993764` and returns a raw pointer to it.
+/// The caller is responsible for freeing it with [`mt1993764_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn mt1993764_new(seed: u64) -> *mut Mt1993764 {
     Box::into_raw(Box::new(Mt1993764::new(seed)))
 }
+/// Frees a `Mt1993764` instance previously created by [`mt1993764_new`].
+/// Does nothing if `ptr` is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn mt1993764_free(ptr: *mut Mt1993764) {
     if !ptr.is_null() {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+/// Fills `out[0..count]` with raw `u64` random values.
 #[unsafe(no_mangle)]
 pub extern "C" fn mt1993764_next_u64s(ptr: *mut Mt1993764, out: *mut u64, count: usize) {
     unsafe {
@@ -150,6 +162,7 @@ pub extern "C" fn mt1993764_next_u64s(ptr: *mut Mt1993764, out: *mut u64, count:
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[0, 1)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn mt1993764_next_f64s(ptr: *mut Mt1993764, out: *mut f64, count: usize) {
     unsafe {
@@ -160,6 +173,7 @@ pub extern "C" fn mt1993764_next_f64s(ptr: *mut Mt1993764, out: *mut f64, count:
         }
     }
 }
+/// Fills `out[0..count]` with `i64` values uniformly distributed in `[min, max]`.
 #[unsafe(no_mangle)]
 pub extern "C" fn mt1993764_rand_i64s(
     ptr: *mut Mt1993764,
@@ -176,6 +190,7 @@ pub extern "C" fn mt1993764_rand_i64s(
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[min, max)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn mt1993764_rand_f64s(
     ptr: *mut Mt1993764,
@@ -217,7 +232,21 @@ const SFMT_PARITY3: u32 = 0x00000000;
 const SFMT_PARITY4: u32 = 0x13c9e684;
 
 impl Sfmt1993764 {
-    /// Creates a new `Sfmt` instance.
+    /// Creates a new `Sfmt1993764` instance seeded via `SplitMix64`.
+    ///
+    /// The state is period-certified after initialisation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use urng::rng64::Sfmt1993764;
+    ///
+    /// let mut rng = Sfmt1993764::new(1);
+    /// assert_eq!(rng.nextu(), 16435431249378271195);
+    /// assert_eq!(rng.nextf(), 0.914246861393214);
+    /// let i = rng.randi(0, 100);
+    /// assert!(i >= 0 && i <= 100);
+    /// ```
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
 
@@ -396,16 +425,21 @@ impl Rng64 for Sfmt1993764 {
     }
 }
 
+/// Creates a new heap-allocated `Sfmt1993764` and returns a raw pointer to it.
+/// The caller is responsible for freeing it with [`sfmt1993764_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn sfmt1993764_new(seed: u64) -> *mut Sfmt1993764 {
     Box::into_raw(Box::new(Sfmt1993764::new(seed)))
 }
+/// Frees a `Sfmt1993764` instance previously created by [`sfmt1993764_new`].
+/// Does nothing if `ptr` is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfmt1993764_free(ptr: *mut Sfmt1993764) {
     if !ptr.is_null() {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+/// Fills `out[0..count]` with raw `u64` random values.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfmt1993764_next_u64s(ptr: *mut Sfmt1993764, out: *mut u64, count: usize) {
     unsafe {
@@ -416,6 +450,7 @@ pub extern "C" fn sfmt1993764_next_u64s(ptr: *mut Sfmt1993764, out: *mut u64, co
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[0, 1)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfmt1993764_next_f64s(ptr: *mut Sfmt1993764, out: *mut f64, count: usize) {
     unsafe {
@@ -426,6 +461,7 @@ pub extern "C" fn sfmt1993764_next_f64s(ptr: *mut Sfmt1993764, out: *mut f64, co
         }
     }
 }
+/// Fills `out[0..count]` with `i64` values uniformly distributed in `[min, max]`.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfmt1993764_rand_i64s(
     ptr: *mut Sfmt1993764,
@@ -442,6 +478,7 @@ pub extern "C" fn sfmt1993764_rand_i64s(
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[min, max)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfmt_rand_f64s(
     ptr: *mut Sfmt1993764,
@@ -567,16 +604,22 @@ impl Rng64 for TwistedGFSR {
     }
 }
 
+/// Creates a new heap-allocated `TwistedGFSR` using the built-in default seed array.
+/// The `_seed` argument is currently unused. The caller must free the result with
+/// [`twisted_gfsr_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn twisted_gfsr_new(_seed: u64) -> *mut TwistedGFSR {
     Box::into_raw(Box::new(TwistedGFSR::new(TwistedGFSR::new_seed())))
 }
+/// Frees a `TwistedGFSR` instance previously created by [`twisted_gfsr_new`].
+/// Does nothing if `ptr` is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn twisted_gfsr_free(ptr: *mut TwistedGFSR) {
     if !ptr.is_null() {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+/// Fills `out[0..count]` with raw `u64` random values.
 #[unsafe(no_mangle)]
 pub extern "C" fn twisted_gfsr_next_u64s(ptr: *mut TwistedGFSR, out: *mut u64, count: usize) {
     unsafe {
@@ -587,6 +630,7 @@ pub extern "C" fn twisted_gfsr_next_u64s(ptr: *mut TwistedGFSR, out: *mut u64, c
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[0, 1)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn twisted_gfsr_next_f64s(ptr: *mut TwistedGFSR, out: *mut f64, count: usize) {
     unsafe {
@@ -597,6 +641,7 @@ pub extern "C" fn twisted_gfsr_next_f64s(ptr: *mut TwistedGFSR, out: *mut f64, c
         }
     }
 }
+/// Fills `out[0..count]` with `i64` values uniformly distributed in `[min, max]`.
 #[unsafe(no_mangle)]
 pub extern "C" fn twisted_gfsr_rand_i64s(
     ptr: *mut TwistedGFSR,
@@ -613,6 +658,7 @@ pub extern "C" fn twisted_gfsr_rand_i64s(
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[min, max)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn twisted_gfsr_rand_f64s(
     ptr: *mut TwistedGFSR,
@@ -674,23 +720,27 @@ impl Lcg64 {
         rng
     }
 
+    /// Generates the next raw `u64` value via the LCG recurrence.
     #[inline]
     pub fn nextu(&mut self) -> u64 {
         self.x = wrap!((self.a * self.x.0 + self.b) % self.m);
         self.x.0
     }
 
+    /// Generates the next `f64` value in `[0, 1)`.
     #[inline]
     pub fn nextf(&mut self) -> f64 {
         self.nextu() as f64 * self.r
     }
 
+    /// Generates a random `i64` value in the range `[min, max]`.
     #[inline]
     pub fn randi(&mut self, min: i64, max: i64) -> i64 {
         let range = (max as i128 - min as i128 + 1) as u128;
         ((self.nextu() as u128 * range) >> 64) as i64 + min
     }
 
+    /// Generates a random `f64` value in the range `[min, max)`.
     #[inline]
     pub fn randf(&mut self, min: f64, max: f64) -> f64 {
         let range = max - min;
@@ -698,6 +748,7 @@ impl Lcg64 {
         (self.nextu() as f64 * scale) + min
     }
 
+    /// Returns a random element from a slice.
     #[inline]
     pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         let index = self.randi(0, choices.len() as i64 - 1);
@@ -722,11 +773,15 @@ impl Rng64 for Lcg64 {
     }
 }
 
+/// Creates a new heap-allocated `Lcg64` with the given parameters and warm-up count.
+/// The caller is responsible for freeing it with [`lcg64_free`].
 #[allow(deprecated)]
 #[unsafe(no_mangle)]
 pub extern "C" fn lcg64_new(x: u64, a: u64, b: u64, m: u64, warm: usize) -> *mut Lcg64 {
     Box::into_raw(Box::new(Lcg64::new(x, a, b, m, warm)))
 }
+/// Frees a `Lcg64` instance previously created by [`lcg64_new`].
+/// Does nothing if `ptr` is null.
 #[allow(deprecated)]
 #[unsafe(no_mangle)]
 pub extern "C" fn lcg64_free(ptr: *mut Lcg64) {
@@ -734,6 +789,7 @@ pub extern "C" fn lcg64_free(ptr: *mut Lcg64) {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+/// Fills `out[0..count]` with raw `u64` random values.
 #[allow(deprecated)]
 #[unsafe(no_mangle)]
 pub extern "C" fn lcg64_next_u64s(ptr: *mut Lcg64, out: *mut u64, count: usize) {
@@ -745,6 +801,7 @@ pub extern "C" fn lcg64_next_u64s(ptr: *mut Lcg64, out: *mut u64, count: usize) 
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[0, 1)`.
 #[allow(deprecated)]
 #[unsafe(no_mangle)]
 pub extern "C" fn lcg64_next_f64s(ptr: *mut Lcg64, out: *mut f64, count: usize) {
@@ -756,6 +813,7 @@ pub extern "C" fn lcg64_next_f64s(ptr: *mut Lcg64, out: *mut f64, count: usize) 
         }
     }
 }
+/// Fills `out[0..count]` with `i64` values uniformly distributed in `[min, max]`.
 #[allow(deprecated)]
 #[unsafe(no_mangle)]
 pub extern "C" fn lcg64_rand_i64s(
@@ -773,6 +831,7 @@ pub extern "C" fn lcg64_rand_i64s(
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[min, max)`.
 #[allow(deprecated)]
 #[unsafe(no_mangle)]
 pub extern "C" fn lcg64_rand_f64s(
@@ -896,10 +955,14 @@ impl Rng64 for Philox64 {
     }
 }
 
+/// Creates a new heap-allocated `Philox64` and returns a raw pointer to it.
+/// The caller is responsible for freeing it with [`philox64_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn philox64_new(seed: u64) -> *mut Philox64 {
     Box::into_raw(Box::new(Philox64::new(seed)))
 }
+/// Frees a `Philox64` instance previously created by [`philox64_new`].
+/// Does nothing if `ptr` is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn philox64_free(ptr: *mut Philox64) {
     if !ptr.is_null() {
@@ -909,6 +972,7 @@ pub extern "C" fn philox64_free(ptr: *mut Philox64) {
 /// Parallel batch size for Philox64 (elements per thread task).
 const PHILOX64_PAR_CHUNK: usize = 4096;
 
+/// Fills `out[0..count]` with raw `u64` random values using parallel counter-based generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn philox64_next_u64s(ptr: *mut Philox64, out: *mut u64, count: usize) {
     unsafe {
@@ -966,6 +1030,7 @@ pub extern "C" fn philox64_next_u64s(ptr: *mut Philox64, out: *mut u64, count: u
     }
 }
 
+/// Fills `out[0..count]` with `f64` values in `[0, 1)` using parallel counter-based generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn philox64_next_f64s(ptr: *mut Philox64, out: *mut f64, count: usize) {
     unsafe {
@@ -1023,6 +1088,7 @@ pub extern "C" fn philox64_next_f64s(ptr: *mut Philox64, out: *mut f64, count: u
         }
     }
 }
+/// Fills `out[0..count]` with `i64` values in `[min, max]` using parallel counter-based generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn philox64_rand_i64s(
     ptr: *mut Philox64,
@@ -1086,6 +1152,7 @@ pub extern "C" fn philox64_rand_i64s(
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values in `[min, max)` using parallel counter-based generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn philox64_rand_f64s(
     ptr: *mut Philox64,
@@ -1452,11 +1519,15 @@ unsafe fn sfc64_fill_rf64_avx(chunk: &mut [f64], seed: u64, min: f64, max: f64) 
     }
 }
 
+/// Creates a new heap-allocated `Sfc64` and returns a raw pointer to it.
+/// The caller is responsible for freeing it with [`sfc64_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn sfc64_new(seed: u64) -> *mut Sfc64 {
     Box::into_raw(Box::new(Sfc64::new(seed)))
 }
 
+/// Frees a `Sfc64` instance previously created by [`sfc64_new`].
+/// Does nothing if `ptr` is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfc64_free(ptr: *mut Sfc64) {
     if !ptr.is_null() {
@@ -1466,6 +1537,8 @@ pub extern "C" fn sfc64_free(ptr: *mut Sfc64) {
 
 const SFC64_PAR_CHUNK: usize = 4096;
 
+/// Fills `out[0..count]` with raw `u64` random values.
+/// Uses AVX2 SIMD lanes in parallel chunks on x86_64.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfc64_next_u64s(ptr: *mut Sfc64, out: *mut u64, count: usize) {
     unsafe {
@@ -1493,6 +1566,8 @@ pub extern "C" fn sfc64_next_u64s(ptr: *mut Sfc64, out: *mut u64, count: usize) 
     }
 }
 
+/// Fills `out[0..count]` with `f64` values in `[0, 1)`.
+/// Uses AVX2 SIMD lanes in parallel chunks on x86_64.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfc64_next_f64s(ptr: *mut Sfc64, out: *mut f64, count: usize) {
     unsafe {
@@ -1520,6 +1595,8 @@ pub extern "C" fn sfc64_next_f64s(ptr: *mut Sfc64, out: *mut f64, count: usize) 
     }
 }
 
+/// Fills `out[0..count]` with `i64` values uniformly distributed in `[min, max]`.
+/// Uses AVX2 SIMD lanes in parallel chunks on x86_64.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfc64_rand_i64s(
     ptr: *mut Sfc64,
@@ -1553,6 +1630,8 @@ pub extern "C" fn sfc64_rand_i64s(
     }
 }
 
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[min, max)`.
+/// Uses AVX2 SIMD lanes in parallel chunks on x86_64.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfc64_rand_f64s(
     ptr: *mut Sfc64,
@@ -1659,16 +1738,21 @@ impl Rng64 for Xorshift64 {
     }
 }
 
+/// Creates a new heap-allocated `Xorshift64` and returns a raw pointer to it.
+/// The caller is responsible for freeing it with [`xorshift64_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift64_new(seed: u64) -> *mut Xorshift64 {
     Box::into_raw(Box::new(Xorshift64::new(seed)))
 }
+/// Frees a `Xorshift64` instance previously created by [`xorshift64_new`].
+/// Does nothing if `ptr` is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift64_free(ptr: *mut Xorshift64) {
     if !ptr.is_null() {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+/// Fills `out[0..count]` with raw `u64` random values.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift64_next_u64s(ptr: *mut Xorshift64, out: *mut u64, count: usize) {
     unsafe {
@@ -1679,6 +1763,7 @@ pub extern "C" fn xorshift64_next_u64s(ptr: *mut Xorshift64, out: *mut u64, coun
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[0, 1)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift64_next_f64s(ptr: *mut Xorshift64, out: *mut f64, count: usize) {
     unsafe {
@@ -1689,6 +1774,7 @@ pub extern "C" fn xorshift64_next_f64s(ptr: *mut Xorshift64, out: *mut f64, coun
         }
     }
 }
+/// Fills `out[0..count]` with `i64` values uniformly distributed in `[min, max]`.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift64_rand_i64s(
     ptr: *mut Xorshift64,
@@ -1705,6 +1791,7 @@ pub extern "C" fn xorshift64_rand_i64s(
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[min, max)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift64_rand_f64s(
     ptr: *mut Xorshift64,
@@ -1750,6 +1837,20 @@ impl Cet64 {
         }
     }
 
+    /// Generates the next random `u64` value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use urng::rng64::Cet64;
+    ///
+    /// let mut rng = Cet64::new(1);
+    /// assert_eq!(rng.nextu(), 15169567334506313593);
+    /// let i = rng.randi(0, 100);
+    /// assert!(i >= 0 && i <= 100);
+    /// let f = rng.randf(0.0, 1.0);
+    /// assert!(f >= 0.0 && f < 1.0);
+    /// ```
     #[inline]
     pub fn nextu(&mut self) -> u64 {
         let [mut a, mut b, mut c, mut d] = self.v;
@@ -1766,11 +1867,13 @@ impl Cet64 {
         (((a ^ b) ^ (c ^ d)) ^ wrap!(182)).0
     }
 
+    /// Generates the next `f64` value in `[0, 1)`.
     #[inline]
     pub fn nextf(&mut self) -> f64 {
         self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
     }
 
+    /// Generates a random `i64` value in the range `[min, max]`.
     #[inline]
     pub fn randi(&mut self, min: i64, max: i64) -> i64 {
         let range = (max as i128 - min as i128 + 1) as u128;
@@ -1778,6 +1881,7 @@ impl Cet64 {
         ((x as u128 * range) >> 64) as i64 + min
     }
 
+    /// Generates a random `f64` value in the range `[min, max)`.
     #[inline]
     pub fn randf(&mut self, min: f64, max: f64) -> f64 {
         let range = max - min;
@@ -1785,6 +1889,7 @@ impl Cet64 {
         (self.nextu() as f64 * scale) + min
     }
 
+    /// Returns a random element from a slice.
     #[inline]
     pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         let index = self.randi(0, choices.len() as i64 - 1);
@@ -1807,16 +1912,21 @@ impl Rng64 for Cet64 {
     }
 }
 
+/// Creates a new heap-allocated `Cet64` and returns a raw pointer to it.
+/// The caller is responsible for freeing it with [`cet64_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn cet64_new(seed: u64) -> *mut Cet64 {
     Box::into_raw(Box::new(Cet64::new(seed)))
 }
+/// Frees a `Cet64` instance previously created by [`cet64_new`].
+/// Does nothing if `ptr` is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn cet64_free(ptr: *mut Cet64) {
     if !ptr.is_null() {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+/// Fills `out[0..count]` with raw `u64` random values.
 #[unsafe(no_mangle)]
 pub extern "C" fn cet64_next_u64s(ptr: *mut Cet64, out: *mut u64, count: usize) {
     unsafe {
@@ -1827,6 +1937,7 @@ pub extern "C" fn cet64_next_u64s(ptr: *mut Cet64, out: *mut u64, count: usize) 
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[0, 1)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn cet64_next_f64s(ptr: *mut Cet64, out: *mut f64, count: usize) {
     unsafe {
@@ -1837,6 +1948,7 @@ pub extern "C" fn cet64_next_f64s(ptr: *mut Cet64, out: *mut f64, count: usize) 
         }
     }
 }
+/// Fills `out[0..count]` with `i64` values uniformly distributed in `[min, max]`.
 #[unsafe(no_mangle)]
 pub extern "C" fn cet64_rand_i64s(
     ptr: *mut Cet64,
@@ -1853,6 +1965,7 @@ pub extern "C" fn cet64_rand_i64s(
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values uniformly distributed in `[min, max)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn cet64_rand_f64s(
     ptr: *mut Cet64,
@@ -1880,8 +1993,8 @@ pub extern "C" fn cet64_rand_f64s(
 /// ```
 /// use urng::rng64::Xoshiro256Pp;
 ///
-/// let mut rng = Xoshiro256Pp::new(12345);
-/// let val = rng.nextu();
+/// let mut rng = Xoshiro256Pp::new(1);
+/// assert_eq!(rng.nextu(), 14971601782005023387);
 /// ```
 #[repr(C)]
 pub struct Xoshiro256Pp {
@@ -1889,7 +2002,19 @@ pub struct Xoshiro256Pp {
 }
 
 impl Xoshiro256Pp {
-    /// Creates a new `Xoshiro256Pp` instance.
+    /// Creates a new `Xoshiro256Pp` instance seeded via `SplitMix64`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use urng::rng64::Xoshiro256Pp;
+    ///
+    /// let mut rng = Xoshiro256Pp::new(1);
+    /// assert_eq!(rng.nextu(), 14971601782005023387);
+    /// assert_eq!(rng.nextf(), 0.7471047161582187);
+    /// let i = rng.randi(0, 100);
+    /// assert!(i >= 0 && i <= 100);
+    /// ```
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
@@ -1919,22 +2044,26 @@ impl Xoshiro256Pp {
         res.0
     }
 
+    /// Generates the next `f64` value in `[0, 1)`.
     pub fn nextf(&mut self) -> f64 {
         self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
     }
 
+    /// Generates a random `i64` value in the range `[min, max]`.
     pub fn randi(&mut self, min: i64, max: i64) -> i64 {
         let range = (max as i128 - min as i128 + 1) as u128;
         let x = self.nextu();
         ((x as u128 * range) >> 64) as i64 + min
     }
 
+    /// Generates a random `f64` value in the range `[min, max)`.
     pub fn randf(&mut self, min: f64, max: f64) -> f64 {
         let range = max - min;
         let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
         (self.nextu() as f64 * scale) + min
     }
 
+    /// Returns a random element from a slice.
     pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         let index = self.randi(0, choices.len() as i64 - 1);
         &choices[index as usize]
@@ -1956,10 +2085,14 @@ impl Rng64 for Xoshiro256Pp {
     }
 }
 
+/// Creates a new heap-allocated `Xoshiro256Pp` and returns a raw pointer to it.
+/// The caller is responsible for freeing it with [`xoshiro256pp_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256pp_new(seed: u64) -> *mut Xoshiro256Pp {
     Box::into_raw(Box::new(Xoshiro256Pp::new(seed)))
 }
+/// Frees a `Xoshiro256Pp` instance previously created by [`xoshiro256pp_new`].
+/// Does nothing if `ptr` is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256pp_free(ptr: *mut Xoshiro256Pp) {
     if !ptr.is_null() {
@@ -1968,6 +2101,7 @@ pub extern "C" fn xoshiro256pp_free(ptr: *mut Xoshiro256Pp) {
 }
 const XOSHIRO256PP_PAR_CHUNK: usize = 4096;
 
+/// Fills `out[0..count]` with raw `u64` random values using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256pp_next_u64s(ptr: *mut Xoshiro256Pp, out: *mut u64, count: usize) {
     unsafe {
@@ -1989,6 +2123,7 @@ pub extern "C" fn xoshiro256pp_next_u64s(ptr: *mut Xoshiro256Pp, out: *mut u64, 
             });
     }
 }
+/// Fills `out[0..count]` with `f64` values in `[0, 1)` using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256pp_next_f64s(ptr: *mut Xoshiro256Pp, out: *mut f64, count: usize) {
     unsafe {
@@ -2010,6 +2145,7 @@ pub extern "C" fn xoshiro256pp_next_f64s(ptr: *mut Xoshiro256Pp, out: *mut f64, 
             });
     }
 }
+/// Fills `out[0..count]` with `i64` values in `[min, max]` using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256pp_rand_i64s(
     ptr: *mut Xoshiro256Pp,
@@ -2037,6 +2173,7 @@ pub extern "C" fn xoshiro256pp_rand_i64s(
             });
     }
 }
+/// Fills `out[0..count]` with `f64` values in `[min, max)` using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256pp_rand_f64s(
     ptr: *mut Xoshiro256Pp,
@@ -2075,8 +2212,8 @@ pub extern "C" fn xoshiro256pp_rand_f64s(
 /// ```
 /// use urng::rng64::Xoshiro256Ss;
 ///
-/// let mut rng = Xoshiro256Ss::new(12345);
-/// let val = rng.nextu();
+/// let mut rng = Xoshiro256Ss::new(1);
+/// assert_eq!(rng.nextu(), 12966619160104079557);
 /// ```
 #[repr(C)]
 pub struct Xoshiro256Ss {
@@ -2084,7 +2221,19 @@ pub struct Xoshiro256Ss {
 }
 
 impl Xoshiro256Ss {
-    /// Creates a new `Xoshiro256Ss` instance.
+    /// Creates a new `Xoshiro256Ss` instance seeded via `SplitMix64`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use urng::rng64::Xoshiro256Ss;
+    ///
+    /// let mut rng = Xoshiro256Ss::new(1);
+    /// assert_eq!(rng.nextu(), 12966619160104079557);
+    /// assert_eq!(rng.nextf(), 0.520436619938857);
+    /// let i = rng.randi(0, 100);
+    /// assert!(i >= 0 && i <= 100);
+    /// ```
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
@@ -2114,22 +2263,26 @@ impl Xoshiro256Ss {
         res.0
     }
 
+    /// Generates the next `f64` value in `[0, 1)`.
     pub fn nextf(&mut self) -> f64 {
         self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
     }
 
+    /// Generates a random `i64` value in the range `[min, max]`.
     pub fn randi(&mut self, min: i64, max: i64) -> i64 {
         let range = (max as i128 - min as i128 + 1) as u128;
         let x = self.nextu();
         ((x as u128 * range) >> 64) as i64 + min
     }
 
+    /// Generates a random `f64` value in the range `[min, max)`.
     pub fn randf(&mut self, min: f64, max: f64) -> f64 {
         let range = max - min;
         let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
         (self.nextu() as f64 * scale) + min
     }
 
+    /// Returns a random element from a slice.
     pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         let index = self.randi(0, choices.len() as i64 - 1);
         &choices[index as usize]
@@ -2148,10 +2301,14 @@ impl Rng64 for Xoshiro256Ss {
     }
 }
 
+/// Creates a new heap-allocated `Xoshiro256Ss` and returns a raw pointer to it.
+/// The caller is responsible for freeing it with [`xoshiro256ss_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256ss_new(seed: u64) -> *mut Xoshiro256Ss {
     Box::into_raw(Box::new(Xoshiro256Ss::new(seed)))
 }
+/// Frees a `Xoshiro256Ss` instance previously created by [`xoshiro256ss_new`].
+/// Does nothing if `ptr` is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256ss_free(ptr: *mut Xoshiro256Ss) {
     if !ptr.is_null() {
@@ -2160,6 +2317,7 @@ pub extern "C" fn xoshiro256ss_free(ptr: *mut Xoshiro256Ss) {
 }
 const XOSHIRO256SS_PAR_CHUNK: usize = 4096;
 
+/// Fills `out[0..count]` with raw `u64` random values using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256ss_next_u64s(ptr: *mut Xoshiro256Ss, out: *mut u64, count: usize) {
     unsafe {
@@ -2181,6 +2339,7 @@ pub extern "C" fn xoshiro256ss_next_u64s(ptr: *mut Xoshiro256Ss, out: *mut u64, 
             });
     }
 }
+/// Fills `out[0..count]` with `f64` values in `[0, 1)` using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256ss_next_f64s(ptr: *mut Xoshiro256Ss, out: *mut f64, count: usize) {
     unsafe {
@@ -2202,6 +2361,7 @@ pub extern "C" fn xoshiro256ss_next_f64s(ptr: *mut Xoshiro256Ss, out: *mut f64, 
             });
     }
 }
+/// Fills `out[0..count]` with `i64` values in `[min, max]` using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256ss_rand_i64s(
     ptr: *mut Xoshiro256Ss,
@@ -2229,6 +2389,7 @@ pub extern "C" fn xoshiro256ss_rand_i64s(
             });
     }
 }
+/// Fills `out[0..count]` with `f64` values in `[min, max)` using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn xoshiro256ss_rand_f64s(
     ptr: *mut Xoshiro256Ss,
@@ -2267,8 +2428,8 @@ pub extern "C" fn xoshiro256ss_rand_f64s(
 /// ```
 /// use urng::rng64::SplitMix64;
 ///
-/// let mut rng = SplitMix64::new(12345);
-/// let val = rng.nextu();
+/// let mut rng = SplitMix64::new(1);
+/// assert_eq!(rng.nextu(), 10451216379200822465);
 /// ```
 #[repr(align(64))]
 pub struct SplitMix64 {
@@ -2277,12 +2438,23 @@ pub struct SplitMix64 {
 
 impl SplitMix64 {
     /// Creates a new `SplitMix64` instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use urng::rng64::SplitMix64;
+    ///
+    /// let mut rng = SplitMix64::new(1);
+    /// assert_eq!(rng.nextu(), 10451216379200822465);
+    /// assert_eq!(rng.nextf(), 0.7457817572627012);
+    /// let i = rng.randi(0, 100);
+    /// assert!(i >= 0 && i <= 100);
+    /// ```
     pub fn new(seed: u64) -> Self {
         Self { s: wrap!(seed | 1) }
     }
 
-    /// Generates the next random `u64` value.
-    /// Computes SplitMix64 output from a specific state value.
+    /// Computes the SplitMix64 output for a given raw state word (pure, stateless).
     #[inline]
     pub fn compute(mut z: u64) -> u64 {
         z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
@@ -2297,17 +2469,20 @@ impl SplitMix64 {
         Self::compute(self.s.0)
     }
 
+    /// Generates the next `f64` value in `[0, 1)`.
     #[inline]
     pub fn nextf(&mut self) -> f64 {
         self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
     }
 
+    /// Generates a random `i64` value in the range `[min, max]`.
     #[inline]
     pub fn randi(&mut self, min: i64, max: i64) -> i64 {
         let range = (max as i128 - min as i128 + 1) as u128;
         ((self.nextu() as u128 * range) >> 64) as i64 + min
     }
 
+    /// Generates a random `f64` value in the range `[min, max)`.
     #[inline]
     pub fn randf(&mut self, min: f64, max: f64) -> f64 {
         let range = max - min;
@@ -2315,6 +2490,7 @@ impl SplitMix64 {
         (self.nextu() as f64 * scale) + min
     }
 
+    /// Returns a random element from a slice.
     pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         let index = self.randi(0, choices.len() as i64 - 1);
         &choices[index as usize]
@@ -2335,10 +2511,14 @@ impl Rng64 for SplitMix64 {
     }
 }
 
+/// Creates a new heap-allocated `SplitMix64` and returns a raw pointer to it.
+/// The caller is responsible for freeing it with [`splitmix64_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix64_new(seed: u64) -> *mut SplitMix64 {
     Box::into_raw(Box::new(SplitMix64::new(seed)))
 }
+/// Frees a `SplitMix64` instance previously created by [`splitmix64_new`].
+/// Does nothing if `ptr` is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix64_free(ptr: *mut SplitMix64) {
     if !ptr.is_null() {
@@ -2347,6 +2527,7 @@ pub extern "C" fn splitmix64_free(ptr: *mut SplitMix64) {
 }
 const SPLITMIX64_PAR_CHUNK: usize = 4096;
 
+/// Fills `out[0..count]` with raw `u64` random values using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix64_next_u64s(ptr: *mut SplitMix64, out: *mut u64, count: usize) {
     unsafe {
@@ -2372,6 +2553,7 @@ pub extern "C" fn splitmix64_next_u64s(ptr: *mut SplitMix64, out: *mut u64, coun
             .wrapping_add((count as u64).wrapping_mul(0x9E3779B97F4A7C15));
     }
 }
+/// Fills `out[0..count]` with `f64` values in `[0, 1)` using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix64_next_f64s(ptr: *mut SplitMix64, out: *mut f64, count: usize) {
     unsafe {
@@ -2398,6 +2580,7 @@ pub extern "C" fn splitmix64_next_f64s(ptr: *mut SplitMix64, out: *mut f64, coun
             .wrapping_add((count as u64).wrapping_mul(0x9E3779B97F4A7C15));
     }
 }
+/// Fills `out[0..count]` with `i64` values in `[min, max]` using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix64_rand_i64s(
     ptr: *mut SplitMix64,
@@ -2431,6 +2614,7 @@ pub extern "C" fn splitmix64_rand_i64s(
             .wrapping_add((count as u64).wrapping_mul(0x9E3779B97F4A7C15));
     }
 }
+/// Fills `out[0..count]` with `f64` values in `[min, max)` using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix64_rand_f64s(
     ptr: *mut SplitMix64,
@@ -2633,16 +2817,21 @@ impl Threefish256 {
     }
 }
 
+/// Creates a new heap-allocated `Threefish256` and returns a raw pointer to it.
+/// The caller is responsible for freeing it with [`threefish256_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn threefish256_new(seed: u64) -> *mut Threefish256 {
     Box::into_raw(Box::new(Threefish256::new(seed)))
 }
+/// Frees a `Threefish256` instance previously created by [`threefish256_new`].
+/// Does nothing if `ptr` is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefish256_free(ptr: *mut Threefish256) {
     if !ptr.is_null() {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+/// Fills `out[0..count]` with raw `u64` random values, producing 4 values per cipher block.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefish256_next_u64s(ptr: *mut Threefish256, out: *mut u64, count: usize) {
     unsafe {
@@ -2657,6 +2846,7 @@ pub extern "C" fn threefish256_next_u64s(ptr: *mut Threefish256, out: *mut u64, 
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values in `[0, 1)`, producing 4 values per cipher block.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefish256_next_f64s(ptr: *mut Threefish256, out: *mut f64, count: usize) {
     unsafe {
@@ -2671,6 +2861,7 @@ pub extern "C" fn threefish256_next_f64s(ptr: *mut Threefish256, out: *mut f64, 
         }
     }
 }
+/// Fills `out[0..count]` with `i64` values in `[min, max]`, producing 4 values per cipher block.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefish256_rand_i64s(
     ptr: *mut Threefish256,
@@ -2691,6 +2882,7 @@ pub extern "C" fn threefish256_rand_i64s(
         }
     }
 }
+/// Fills `out[0..count]` with `f64` values in `[min, max)`, producing 4 values per cipher block.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefish256_rand_f64s(
     ptr: *mut Threefish256,

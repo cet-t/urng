@@ -24,8 +24,10 @@ pub fn __get_seed() -> u128 {
 /// ```
 /// use urng::next;
 ///
-/// let val_u32 = next!(mt32u);
-/// let val_f32 = next!(xor32f);
+/// let val_u32: u32 = next!(mt32u);
+/// assert!(val_u32 <= u32::MAX);
+/// let val_f32: f32 = next!(xor32f);
+/// assert!(val_f32 >= 0.0 && val_f32 < 1.0);
 /// ```
 macro_rules! next {
     // --- 32-bit output variants ---
@@ -130,7 +132,9 @@ macro_rules! next {
 /// use urng::rand;
 ///
 /// let val_i32 = rand!(xor32i; 1, 100);
+/// assert!(val_i32 >= 1 && val_i32 <= 100);
 /// let val_f64 = rand!(mt64f; 0.5, 1.5);
+/// assert!(val_f64 >= 0.5 && val_f64 < 1.5);
 /// ```
 macro_rules! rand {
     // --- 32-bit output variants ---
@@ -267,7 +271,7 @@ macro_rules! wrap {
 ///
 /// let mut rng = urng::rng64::Mt1993764::new(1);
 /// let index = search!(&mut rng, [1.0, 9.0]);
-/// assert!(index == Some(0) || index == Some(1));
+/// assert_eq!(index, Some(1));
 /// ```
 macro_rules! search {
     ($rng:expr, $weights:expr) => {
@@ -276,6 +280,20 @@ macro_rules! search {
 }
 
 #[macro_export]
+/// Randomly selects an item based on weights using a binary search approach.
+///
+/// Returns `Option<&T>`. Returns `None` if slices are empty or of unequal length.
+///
+/// # Examples
+///
+/// ```
+/// use urng::choice;
+///
+/// let mut rng = urng::rng64::Sfc64::new(1);
+/// let items  = ["rare", "common"];
+/// let result = choice!(&mut rng, [1.0, 9.0], items);
+/// assert_eq!(result, Some(&"common"));
+/// ```
 macro_rules! choice {
     ($rng:expr, $weights:expr, $items:expr) => {
         $crate::bst::choice($rng, &$weights, &$items)
@@ -304,6 +322,11 @@ mod tests {
 }
 
 #[macro_export]
+/// Dispatches to an AVX-512 optimized path on x86_64 when available, otherwise falls back.
+///
+/// Two forms:
+/// - `dispatch_simd!(RetType, fallback_fn, avx512_fn, seed)` — allocate and return a raw pointer.
+/// - `dispatch_simd!(Avx512T, FallbackT, fallback_fn, avx512_fn, ptr [, args])` — operate in-place.
 macro_rules! dispatch_simd {
     ($ret_type:ty, $fallback_fn:ident, $avx512_fn:ident, $seed:expr) => {{
         #[cfg(target_arch = "x86_64")]

@@ -5,7 +5,19 @@ use std::slice::from_raw_parts_mut;
 
 /// A 128-bit Xorshift random number generator.
 ///
-/// This generator produces 32-bit output with 128-bit internal state.
+/// Produces 32-bit output from a 128-bit internal state.
+/// Period: 2^128 - 1.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng128::Xorshift128;
+///
+/// let mut rng = Xorshift128::new([1, 2, 3, 4]);
+/// assert_eq!(rng.nextu(), 10284);
+/// assert_eq!(rng.nextf(), 2.8738286e-6_f32);
+/// assert!(rng.randi(1, 100) >= 1);
+/// ```
 #[repr(C)]
 pub struct Xorshift128 {
     x: [u32; 4],
@@ -13,6 +25,8 @@ pub struct Xorshift128 {
 
 impl Xorshift128 {
     /// Creates a new `Xorshift128` instance.
+    ///
+    /// Each seed element is OR-ed with 1 to prevent an all-zero state.
     pub fn new(seed: [u32; 4]) -> Self {
         Self {
             x: [seed[0] | 1, seed[1] | 1, seed[2] | 1, seed[3] | 1],

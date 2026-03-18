@@ -3,6 +3,19 @@ use crate::sampler::Sampler64;
 
 // --- Bst64 ---
 
+/// Weighted sampler using cumulative sums and binary search (O(log n) sample, O(n) build).
+///
+/// # Examples
+///
+/// ```
+/// use urng::sampler::Sampler64;
+/// use urng::sampler64::Bst64;
+/// use urng::rng64::Mt1993764;
+///
+/// let mut rng = Mt1993764::new(1);
+/// let mut sampler = Bst64::new(&mut rng, &[1.0f64, 2.0, 4.0, 8.0]);
+/// assert_eq!(sampler.sample(), 3);
+/// ```
 #[derive(Debug)]
 pub struct Bst64<'a, R: Rng64 + 'a> {
     rng: &'a mut R,
@@ -47,7 +60,25 @@ impl<'a, R: Rng64 + 'a> Sampler64<'a, R> for Bst64<'a, R> {
 
 // --- Alias64 ---
 
-/// Walker's Alias Method: O(1) sample, O(n) build.
+/// Weighted sampler using Walker's Alias Method (O(1) sample, O(n) build).
+///
+/// Preferred over [`Bst64`] when sampling repeatedly from the same weight distribution.
+///
+/// # Examples
+///
+/// ```
+/// use urng::sampler::Sampler64;
+/// use urng::sampler64::Alias64;
+/// use urng::rng64::Mt1993764;
+///
+/// let mut rng = Mt1993764::new(1);
+/// let mut sampler = Alias64::new(&mut rng, &[1.0f64, 2.0, 4.0, 8.0]);
+/// assert_eq!(sampler.sample(), 0);
+///
+/// // Update weights
+/// sampler.weights(&[1.0, 1.0, 1.0, 1.0]);
+/// assert!(sampler.sample() < 4);
+/// ```
 #[derive(Debug)]
 pub struct Alias64<'a, R: Rng64 + 'a> {
     rng: &'a mut R,
