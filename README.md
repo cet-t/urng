@@ -12,50 +12,100 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.2.7"
+urng = "0.2.8"
 ```
 
 ## Supported Generators
 
-All generators implement either the `Rng32` or `Rng64` trait, providing a unified interface.
+Most generators implement either the `Rng32` or `Rng64` trait, providing a unified interface.
+SIMD generators have their own bulk-generation API and are listed separately.
 
 ### 32-bit Generators (`urng::rng32`)
 
-Output `u32` natively.
+Implement `Rng32`, output `u32` natively.
 
-| Struct           | Algorithm        | Period / State     | Description                               |
-| ---------------- | ---------------- | ------------------ | ----------------------------------------- |
+| Struct         | Algorithm        | Period / State   | Description                               |
+| -------------- | ---------------- | ---------------- | ----------------------------------------- |
 | `Mt19937`      | Mersenne Twister | $2^{19937}-1$    | Standard reliable generator.              |
 | `Sfmt19937`    | SFMT             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.      |
 | `Pcg32`        | PCG-XSH-RR       | $2^{64}$         | Fast, statistically good, small state.    |
-| `Philox32x4`   | Philox 4x32      | -                  | Counter-based, suitable for parallel use. |
-| `Philox32x4x4` | Philox 4x4x32    | -                  | Counter-based, feature for AVX512.        |
+| `Philox32x4`   | Philox 4x32      | -                | Counter-based, suitable for parallel use. |
 | `SplitMix32`   | SplitMix32       | $2^{32}$         | Fast, used for initializing other states. |
 | `Xorwow`       | XORWOW           | $2^{192}-2^{32}$ | Used in NVIDIA cuRAND.                    |
 | `Xorshift32`   | Xorshift         | $2^{32}-1$       | Very simple and fast.                     |
 | `Lcg32`        | LCG              | $m$              | Linear Congruential Generator.            |
+| `Threefry32x4` | Threefry 4x32    | -                | Counter-based (Random123 family).         |
+| `Threefry32x2` | Threefry 2x32    | -                | Counter-based (Random123 family).         |
+| `Squares32`    | Squares          | -                | Counter-based (Widynski).                 |
 
 ### 64-bit Generators (`urng::rng64`)
 
-Output `u64` natively.
+Implement `Rng64`, output `u64` natively.
 
-| Struct           | Algorithm           | Period / State     | Description                                  |
-| ---------------- | ------------------- | ------------------ | -------------------------------------------- |
-| `Xoshiro256Pp` | xoshiro256++        | $2^{256}-1$      | **Recommended** all-purpose generator. |
-| `Xoshiro256Ss` | xoshiro256\*\*      | $2^{256}-1$      | **Recommended** all-purpose generator. |
-| `SplitMix64`   | SplitMix64          | $2^{64}$         | Fast, used for initializing other states.    |
-| `Sfc64`        | SFC64               | $2^{256}$ approx | Small Fast Chaotic PRNG.                     |
-| `Mt1993764`    | Mersenne Twister 64 | $2^{19937}-1$    | 64-bit variant of MT.                        |
-| `Sfmt1993764`  | SFMT 64             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.         |
-| `Philox64`     | Philox 2x64         | -                  | Counter-based.                               |
-| `Xorshift64`   | Xorshift            | $2^{64}-1$       | Simple and fast.                             |
-| `TwistedGFSR`  | TGFSR               | $2^{800}$ approx | Generalized Feedback Shift Register.         |
-| `Cet64`        | CET                 | -                  | Custom experimental generator.               |
-| `Lcg64`        | LCG                 | $m$              | Linear Congruential Generator.               |
+| Struct         | Algorithm           | Period / State   | Description                               |
+| -------------- | ------------------- | ---------------- | ----------------------------------------- |
+| `Xoshiro256Pp` | xoshiro256++        | $2^{256}-1$      | **Recommended** all-purpose generator.    |
+| `Xoshiro256Ss` | xoshiro256\*\*      | $2^{256}-1$      | **Recommended** all-purpose generator.    |
+| `SplitMix64`   | SplitMix64          | $2^{64}$         | Fast, used for initializing other states. |
+| `Sfc64`        | SFC64               | $2^{256}$ approx | Small Fast Chaotic PRNG.                  |
+| `Mt1993764`    | Mersenne Twister 64 | $2^{19937}-1$    | 64-bit variant of MT.                     |
+| `Sfmt1993764`  | SFMT 64             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.      |
+| `Philox64`     | Philox 2x64         | -                | Counter-based.                            |
+| `Xorshift64`   | Xorshift            | $2^{64}-1$       | Simple and fast.                          |
+| `TwistedGFSR`  | TGFSR               | $2^{800}$ approx | Generalized Feedback Shift Register.      |
+| `Cet64`        | CET                 | -                | Custom experimental generator.            |
+| `Lcg64`        | LCG                 | $m$              | Linear Congruential Generator.            |
+| `Threefish256` | Threefish-256       | -                | Counter-based, 256-bit block cipher PRNG. |
 
 ### Other (`urng::rng128`)
 
 - `Xorshift128`: 128-bit state Xorshift, implements `Rng32` (outputs `u32`).
+
+### SIMD Generators
+
+These generators do not implement `Rng32`/`Rng64` and instead expose a bulk-generation API.
+
+#### AVX-512 (`avx512f`)
+
+| Struct           | Algorithm         | Output    | Description                              |
+| ---------------- | ----------------- | --------- | ---------------------------------------- |
+| `Pcg32x8`        | PCG-XSH-RR x8     | 8× `u32`  | 8 independent PCG32 streams in parallel. |
+| `Philox32x4x4`   | Philox 4x32 x4    | 16× `u32` | Counter-based, 4 Philox4x32 streams.     |
+| `SplitMix32x16`  | SplitMix32 x16    | 16× `u32` | 16 independent SplitMix32 streams.       |
+| `Squares32x8`    | Squares x8        | 8× `u32`  | 8 counters processed in parallel.        |
+| `Xoshiro256Ssx2` | xoshiro256\*\* x2 | 2× `u64`  | 2 independent xoshiro256** streams.      |
+
+#### AVX2
+
+| Struct    | Algorithm | Output   | Description                  |
+| --------- | --------- | -------- | ---------------------------- |
+| `Sfc64x4` | SFC64 x4  | 4× `u64` | 4 independent SFC64 streams. |
+
+## Sampler
+
+> Requires the `sampler` feature.
+
+Weighted random index selection. Two implementations are provided for each bit-width, both implementing the `Sampler32` / `Sampler64` trait (`urng::sampler`).
+
+| Struct    | Module            | Algorithm      | Build | Sample   | Description                                    |
+| --------- | ----------------- | -------------- | ----- | -------- | ---------------------------------------------- |
+| `Bst32`   | `urng::sampler32` | Cumulative BST | O(n)  | O(log n) | Binary-search over cumulative weights (`f32`). |
+| `Alias32` | `urng::sampler32` | Walker's Alias | O(n)  | O(1)     | Preferred for repeated sampling (`f32`).       |
+| `Bst64`   | `urng::sampler64` | Cumulative BST | O(n)  | O(log n) | Binary-search over cumulative weights (`f64`). |
+| `Alias64` | `urng::sampler64` | Walker's Alias | O(n)  | O(1)     | Preferred for repeated sampling (`f64`).       |
+
+## SeedGen
+
+> Requires the `seedgen` feature.
+
+Hardware-noise-assisted seed generation. Wraps an existing `Rng32`/`Rng64` and mixes in hardware noise (RDSEED/RDRAND on x86/x86_64, timestamp fallback elsewhere) via a Murmur3-style hash.
+
+| Struct      | Module          | Input RNG | Output            | Description                             |
+| ----------- | --------------- | --------- | ----------------- | --------------------------------------- |
+| `SeedGen32` | `urng::seedgen` | `Rng32`   | `(u32, u32)` pair | 32-bit hardware-noise-assisted seeding. |
+| `SeedGen64` | `urng::seedgen` | `Rng64`   | `(u64, u64)` pair | 64-bit hardware-noise-assisted seeding. |
+
+`next_seed_pair()` returns `(raw, processed)` — the raw hardware value and the mixed seed.
 
 ## Usage Examples
 
@@ -129,9 +179,9 @@ fn main() {
 }
 ```
 
-## C API
+## C ABI
 
-This crate exports a C-compatible FFI generic interface. Each generator has corresponding:
+This crate exports a C-compatible ABI generic interface. Each generator has corresponding:
 
 - `_new`
 - `_free`
