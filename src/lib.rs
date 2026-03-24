@@ -32,8 +32,12 @@ pub mod rng;
 /// Consolidated 32-bit random number generators.
 pub mod rng32;
 
+pub mod cabi32;
+
 /// Consolidated 64-bit random number generators.
 pub mod rng64;
+
+pub mod cabi64;
 
 /// Consolidated 128-bit random number generators.
 pub mod rng128;

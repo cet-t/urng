@@ -4,7 +4,7 @@ use thousands::Separable;
 #[rustfmt::skip]
 #[allow(unused_imports)]
 use urng::{
-    rng32::{
+    cabi32::{
         mt19937_free, mt19937_new, mt19937_next_u32s, 
         pcg32_free, pcg32_new, pcg32_next_u32s,
         pcg32simd_free, pcg32simd_new, pcg32simd_next_u32s, 
@@ -22,7 +22,7 @@ use urng::{
         threefry32x2_free, threefry32x2_new, threefry32x2_next_u32s, 
         threefry32x4_free, threefry32x4_new, threefry32x4_next_u32s,
     },
-    rng64::{
+    cabi64::{
         mt1993764_free, mt1993764_new, mt1993764_next_u64s, 
         philox64_free, philox64_new, philox64_next_u64s, 
         sfmt1993764_free, sfmt1993764_new, sfmt1993764_next_u64s,
