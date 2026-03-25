@@ -40,7 +40,39 @@ fn strip_struct_fields(content: &str) -> String {
     result
 }
 
+fn update_readme_version() -> Result<(), Box<dyn std::error::Error>> {
+    let version = std::env::var("CARGO_PKG_VERSION")?;
+    let readme_path = "./README.md";
+    let content = std::fs::read_to_string(readme_path)?;
+    let updated = regex_replace_version(&content, &version);
+    if updated != content {
+        std::fs::write(readme_path, updated)?;
+    }
+    Ok(())
+}
+
+fn regex_replace_version(content: &str, version: &str) -> String {
+    let mut result = String::with_capacity(content.len());
+    let prefix = "urng = \"";
+    for line in content.lines() {
+        if let Some(start) = line.find(prefix) {
+            let after = &line[start + prefix.len()..];
+            if let Some(end) = after.find('"') {
+                let new_line = format!("{}{}{}{}", &line[..start + prefix.len()], version, "\"", &after[end + 1..]);
+                result.push_str(&new_line);
+                result.push('\n');
+                continue;
+            }
+        }
+        result.push_str(line);
+        result.push('\n');
+    }
+    result
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    update_readme_version()?;
+
     let cs_path = "./target/release/RngNative.cs";
 
     csbindgen::Builder::default()
