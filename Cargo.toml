@@ -5,6 +5,7 @@ edition = "2024"
 license = "MIT"
 authors = ["cet"]
 description = "Universal Random Number Generator"
+repository = "https://github.com/cet-t/urng"
 
 [profile.release]
 opt-level = 3
