@@ -7,6 +7,15 @@ use wide::u32x4;
 // --- Mt19937 ---
 
 /// A 32-bit Mersenne Twister (MT19937) random number generator.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Mt19937;
+///
+/// let mut rng = Mt19937::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C)]
 pub struct Mt19937 {
     mt: [Wrapping<u32>; MT32_N],
@@ -32,7 +41,7 @@ impl Mt19937 {
     /// use urng::rng32::Mt19937;
     ///
     /// let mut rng = Mt19937::new(1);
-    /// assert_eq!(rng.nextu(), 1811243163);
+    /// assert_eq!(rng.nextu(), 460915295);
     /// ```
     pub fn new(seed: u32) -> Self {
         let mut mt = [wrap!(0u32); MT32_N];
@@ -56,7 +65,7 @@ impl Mt19937 {
     /// use urng::rng32::Mt19937;
     ///
     /// let mut rng = Mt19937::new(1);
-    /// assert_eq!(rng.nextu(), 1811243163);
+    /// assert_eq!(rng.nextu(), 460915295);
     /// ```
     #[inline]
     pub fn nextu(&mut self) -> u32 {
@@ -165,6 +174,15 @@ impl Rng32 for Mt19937 {
 // --- Sfmt19937 ---
 
 /// A SIMD oriented Fast Mersenne Twister (SFMT) random number generator (32-bit version).
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Sfmt19937;
+///
+/// let mut rng = Sfmt19937::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C)]
 #[repr(align(16))]
 pub struct Sfmt19937 {

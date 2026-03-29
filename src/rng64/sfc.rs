@@ -10,6 +10,15 @@ use std::arch::x86_64::*;
 ///
 /// All hot-path methods use `#[inline(always)]` to ensure the 4 state variables
 /// (a, b, c, counter) remain pinned in CPU registers throughout batch loops.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::Sfc64;
+///
+/// let mut rng = Sfc64::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 pub struct Sfc64 {
     a: u64,
@@ -93,6 +102,17 @@ impl Rng64 for Sfc64 {
 ///
 /// Packs 4 independent SFC64 states into `__m256i` registers.
 /// Each `next4u()` call produces 4 random `u64` values simultaneously.
+///
+/// # Examples
+///
+/// ```ignore
+/// use urng::rng64::Sfc64x4;
+///
+/// let mut rng = unsafe { Sfc64x4::new([1, 2, 3, 4]) };
+/// let mut out = [0u64; 4];
+/// unsafe { rng.next4u(out.as_mut_ptr()) };
+/// assert_eq!(out.len(), 4);
+/// ```
 #[cfg(target_arch = "x86_64")]
 #[repr(C, align(64))]
 pub struct Sfc64x4 {

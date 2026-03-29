@@ -5,6 +5,15 @@ use std::arch::x86_64::*;
 // --- Squares32 ---
 
 /// The Squares random number generator (32-bit output version by Bernard Widynski).
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Squares32;
+///
+/// let mut rng = Squares32::new(1);
+/// let _ = rng.nextu();
+/// ```
 pub struct Squares32 {
     pub(crate) c: u64,
     pub(crate) k: u64,
@@ -94,6 +103,27 @@ pub const SQUARES32x8: usize = 8;
 
 /// A high-throughput Squares random number generator utilizing AVX-512 SIMD instructions.
 /// This implementation processes 8 counters in parallel and is highly optimized with 4-way unrolling.
+///
+/// # Examples
+///
+/// ```ignore
+/// use urng::rng32::Squares32x8;
+///
+/// let mut rng = unsafe { Squares32x8::new(1) };
+/// let vals = unsafe { rng.nextu() };
+/// assert_eq!(vals.len(), 8);
+/// ```
+/// A high-throughput Squares32 implementation using AVX-512 SIMD.
+///
+/// # Examples
+///
+/// ```ignore
+/// use urng::rng32::Squares32x8;
+///
+/// let mut rng = unsafe { Squares32x8::new(1) };
+/// let vals = unsafe { rng.nextu() };
+/// assert_eq!(vals.len(), 8);
+/// ```
 #[cfg(target_arch = "x86_64")]
 #[repr(C)]
 #[repr(align(64))]
@@ -175,6 +205,24 @@ impl Squares32x8 {
 
 /// Opaque handle for the Squares32 RNG.
 /// Dispatched at runtime to AVX-512 (`Squares32x8`) or scalar (`Squares32`) implementation.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Squares32Simd;
+///
+/// let _ = core::mem::size_of::<Squares32Simd>();
+/// ```
+/// Opaque handle for the Squares32 RNG.
+/// Dispatched at runtime to AVX-512 (`Squares32x8`) or scalar (`Squares32`) implementation.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Squares32Simd;
+///
+/// let _ = core::mem::size_of::<Squares32Simd>();
+/// ```
 #[repr(C)]
 pub struct Squares32Simd([u8; 0]);
 

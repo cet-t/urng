@@ -8,6 +8,15 @@ use std::num::Wrapping;
 ///
 /// This generator produces pseudo-random numbers using the recurrence relation:
 /// X(n+1) = (a * X(n) + b) % M
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::Lcg64;
+///
+/// let mut rng = Lcg64::new(8, 13, 5, 24);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 #[deprecated(since = "0.2.4", note = "Use Xoshiro256++/** instead.")]
 pub struct Lcg64 {

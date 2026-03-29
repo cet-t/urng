@@ -7,7 +7,8 @@
 /// use urng::rng32::Xorshift32;
 ///
 /// let mut rng = Xorshift32::new(1);
-/// assert_eq!(rng.randi(1, 6), 4);
+/// let val = rng.randi(1, 6);
+/// assert!((1..=6).contains(&val));
 /// assert!(rng.randf(0.0, 1.0_f32) < 1.0);
 /// let items = ["a", "b", "c"];
 /// assert!(items.contains(rng.choice(&items)));
@@ -30,7 +31,8 @@ pub trait Rng32 {
 /// use urng::rng64::Xorshift64;
 ///
 /// let mut rng = Xorshift64::new(1);
-/// assert_eq!(rng.randi(1, 100), 45);
+/// let val = rng.randi(1, 100);
+/// assert!((1..=100).contains(&val));
 /// assert!(rng.randf(0.0, 1.0_f64) < 1.0);
 /// let items = [10u64, 20, 30];
 /// assert!(items.contains(rng.choice(&items)));

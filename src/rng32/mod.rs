@@ -1,10 +1,22 @@
+//! Consolidated 32-bit random number generators.
+//!
+//! This module groups the 32-bit RNG implementations and re-exports the main generator types.
+
+/// Linear Congruential Generator implementations.
 pub mod lcg;
+/// Mersenne Twister and SFMT implementations.
 pub mod mersenne;
+/// PCG implementations, including SIMD variants.
 pub mod pcg;
+/// Philox implementations, including SIMD variants.
 pub mod philox;
+/// SplitMix implementations, including SIMD variants.
 pub mod splitmix;
+/// Squares implementations, including SIMD variants.
 pub mod squares;
+/// Threefry implementations.
 pub mod threefry;
+/// Xorshift and XORWOW implementations.
 pub mod xorshift;
 
 #[allow(deprecated)]

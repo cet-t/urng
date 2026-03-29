@@ -6,6 +6,15 @@ use crate::rng64::SplitMix64;
 /// A Philox 2x64 random number generator.
 ///
 /// This is a counter-based RNG suitable for parallel applications.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::Philox64;
+///
+/// let mut rng = Philox64::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 pub struct Philox64 {
     pub(crate) c: [u64; 2],

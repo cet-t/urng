@@ -7,6 +7,15 @@ use std::num::Wrapping;
 ///
 /// This generator produces pseudo-random numbers using the recurrence relation:
 /// X(n+1) = (a * X(n) + b) % M
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Lcg32;
+///
+/// let mut rng = Lcg32::new(8, 13, 5, 24);
+/// let _ = rng.nextu();
+/// ```
 #[deprecated(since = "0.2.4", note = "Use Xoshiro256++/** instead.")]
 #[repr(C)]
 pub struct Lcg32 {

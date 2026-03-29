@@ -3,6 +3,17 @@ use crate::rng64::SplitMix64;
 use crate::wrap;
 use std::num::Wrapping;
 
+/// AVX-512 vectorized xoshiro256++ variant producing 2 `u64` values per call.
+///
+/// # Examples
+///
+/// ```ignore
+/// use urng::rng64::Xoshiro256Ssx2;
+///
+/// let mut rng = unsafe { Xoshiro256Ssx2::new(1) };
+/// let vals = rng.nextu();
+/// assert_eq!(vals.len(), 2);
+/// ```
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 
@@ -108,6 +119,7 @@ impl Rng64 for Xoshiro256Pp {
     }
 }
 
+/// AVX-512 vectorized xoshiro256++ variant producing 2 `u64` values per call.
 #[cfg(target_arch = "x86_64")]
 #[repr(C, align(64))]
 pub struct Xoshiro256Ssx2 {
@@ -115,6 +127,7 @@ pub struct Xoshiro256Ssx2 {
 }
 
 impl Xoshiro256Ssx2 {
+    /// Creates a new `Xoshiro256Ssx2` instance.
     #[cfg(target_arch = "x86_64")]
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
@@ -129,6 +142,7 @@ impl Xoshiro256Ssx2 {
         }
     }
 
+    /// Generates the next 2 random `u64` values.
     #[cfg(target_arch = "x86_64")]
     #[inline(always)]
     pub fn nextu(&mut self) -> [u64; 2] {

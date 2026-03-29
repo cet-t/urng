@@ -90,6 +90,8 @@ impl Rng32 for Xorshift128 {
     }
 }
 
+/// Creates a new heap-allocated `Xorshift128` and returns a raw pointer to it.
+/// The caller is responsible for freeing it with [`xorshift128_free`].
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift128_new(
     seed1: u32,
@@ -99,12 +101,15 @@ pub extern "C" fn xorshift128_new(
 ) -> *mut Xorshift128 {
     Box::into_raw(Box::new(Xorshift128::new([seed1, seed2, seed3, seed4])))
 }
+/// Frees a `Xorshift128` instance previously created by [`xorshift128_new`].
+/// Does nothing if `ptr` is null.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift128_free(ptr: *mut Xorshift128) {
     if !ptr.is_null() {
         unsafe { drop(Box::from_raw(ptr)) };
     }
 }
+/// Fills `out[0..count]` with raw `u32` values from the generator.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift128_next_u32s(ptr: *mut Xorshift128, out: *mut u32, count: usize) {
     unsafe {
@@ -115,6 +120,7 @@ pub extern "C" fn xorshift128_next_u32s(ptr: *mut Xorshift128, out: *mut u32, co
         }
     }
 }
+/// Fills `out[0..count]` with `f32` values in `[0, 1)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift128_next_f32s(ptr: *mut Xorshift128, out: *mut f32, count: usize) {
     unsafe {
@@ -125,6 +131,7 @@ pub extern "C" fn xorshift128_next_f32s(ptr: *mut Xorshift128, out: *mut f32, co
         }
     }
 }
+/// Fills `out[0..count]` with `i32` values in `[min, max]`.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift128_rand_i32s(
     ptr: *mut Xorshift128,
@@ -141,6 +148,7 @@ pub extern "C" fn xorshift128_rand_i32s(
         }
     }
 }
+/// Fills `out[0..count]` with `f32` values in `[min, max)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn xorshift128_rand_f32s(
     ptr: *mut Xorshift128,

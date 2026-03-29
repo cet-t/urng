@@ -7,6 +7,15 @@ use std::arch::x86_64::*;
 ///
 /// Fast 32-bit finalizer-based PRNG commonly used to seed other generators.
 /// Uses a single 32-bit state word advanced by the golden-ratio constant.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::SplitMix32;
+///
+/// let mut rng = SplitMix32::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C)]
 pub struct SplitMix32 {
     state: Wrapping<u32>,
@@ -120,6 +129,27 @@ pub const SPLITMIX32x16_PAR_CHUNK: usize = 8192;
 pub const SPLITMIX32_GAMMA: u32 = 0x9E37_79B9;
 
 /// AVX-512 implementation of SplitMix32 producing 16 values per step.
+///
+/// # Examples
+///
+/// ```ignore
+/// use urng::rng32::SplitMix32x16;
+///
+/// let mut rng = unsafe { SplitMix32x16::new(1) };
+/// let vals = unsafe { rng.nextu() };
+/// assert_eq!(vals.len(), 16);
+/// ```
+/// AVX-512 implementation of SplitMix32 producing 16 values per step.
+///
+/// # Examples
+///
+/// ```ignore
+/// use urng::rng32::SplitMix32x16;
+///
+/// let mut rng = unsafe { SplitMix32x16::new(1) };
+/// let vals = unsafe { rng.nextu() };
+/// assert_eq!(vals.len(), 16);
+/// ```
 #[cfg(target_arch = "x86_64")]
 #[repr(C, align(64))]
 pub struct SplitMix32x16 {
@@ -128,6 +158,7 @@ pub struct SplitMix32x16 {
 
 #[cfg(target_arch = "x86_64")]
 impl SplitMix32x16 {
+    /// Creates a new `SplitMix32x16` instance.
     #[target_feature(enable = "avx512f")]
     pub unsafe fn new(seed: u32) -> Self {
         let base = seed | 1;
@@ -141,6 +172,7 @@ impl SplitMix32x16 {
     }
 
     #[target_feature(enable = "avx512f")]
+    /// Computes the SplitMix32 output for 16 lanes at once.
     pub unsafe fn compute(state: __m512i) -> __m512i {
         let c1 = _mm512_set1_epi32(0x85EB_CA6Bu32 as i32);
         let c2 = _mm512_set1_epi32(0xC2B2_AE35u32 as i32);
@@ -154,6 +186,7 @@ impl SplitMix32x16 {
     }
 
     #[target_feature(enable = "avx512f")]
+    /// Generates the next 16 random `u32` values.
     pub unsafe fn nextu(&mut self) -> [u32; SPLITMIX32x16] {
         let v = unsafe { Self::compute(self.state) };
         self.state = _mm512_add_epi32(
@@ -170,6 +203,14 @@ impl SplitMix32x16 {
 
 /// Opaque handle for the SplitMix32 RNG.
 /// Dispatched at runtime to AVX-512 (`SplitMix32x16`) or scalar (`SplitMix32`) implementation.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::SplitMix32Simd;
+///
+/// let _ = core::mem::size_of::<SplitMix32Simd>();
+/// ```
 #[repr(C)]
 pub struct SplitMix32Simd([u8; 0]);
 

@@ -3,6 +3,15 @@ use crate::rng::Rng64;
 // --- TwistedGFSR ---
 
 /// A Twisted Generalized Feedback Shift Register (TGFSR) generator.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::TwistedGFSR;
+///
+/// let mut rng = TwistedGFSR::new(TwistedGFSR::new_seed());
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 pub struct TwistedGFSR {
     seed: [u64; N_GFSR],

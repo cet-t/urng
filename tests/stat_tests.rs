@@ -103,8 +103,13 @@ fn gen_arr2u64<F: FnMut() -> [u64; 2]>(mut f: F) -> impl FnMut() -> f64 {
     let mut buf = [0u64; 2];
     let mut i = 2usize;
     move || {
-        if i >= 2 { buf = f(); i = 0; }
-        let v = buf[i] as f64 * SCALE; i += 1; v
+        if i >= 2 {
+            buf = f();
+            i = 0;
+        }
+        let v = buf[i] as f64 * SCALE;
+        i += 1;
+        v
     }
 }
 
@@ -191,47 +196,92 @@ macro_rules! do_scatter {
     (s32$algo:ident, $rng:expr) => {{
         let mut r = $rng;
         let mut f = || r.nextu() as f64 * (1.0 / (u32::MAX as f64 + 1.0));
-        scatter::plot(stringify!($algo), &mut f, SCATTER_N, &scatter_path(stringify!($algo)))?;
+        scatter::plot(
+            stringify!($algo),
+            &mut f,
+            SCATTER_N,
+            &scatter_path(stringify!($algo)),
+        )?;
     }};
     (s64$algo:ident, $rng:expr) => {{
         let mut r = $rng;
         let mut f = || r.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0));
-        scatter::plot(stringify!($algo), &mut f, SCATTER_N, &scatter_path(stringify!($algo)))?;
+        scatter::plot(
+            stringify!($algo),
+            &mut f,
+            SCATTER_N,
+            &scatter_path(stringify!($algo)),
+        )?;
     }};
     (arr2f32 $algo:ident, $rng:expr) => {{
         let mut r = $rng;
         let mut f = gen_arr2f32(move || r.nextf());
-        scatter::plot(stringify!($algo), &mut f, SCATTER_N, &scatter_path(stringify!($algo)))?;
+        scatter::plot(
+            stringify!($algo),
+            &mut f,
+            SCATTER_N,
+            &scatter_path(stringify!($algo)),
+        )?;
     }};
     (arr4f32 $algo:ident, $rng:expr) => {{
         let mut r = $rng;
         let mut f = gen_arr4f32(move || r.nextf());
-        scatter::plot(stringify!($algo), &mut f, SCATTER_N, &scatter_path(stringify!($algo)))?;
+        scatter::plot(
+            stringify!($algo),
+            &mut f,
+            SCATTER_N,
+            &scatter_path(stringify!($algo)),
+        )?;
     }};
     (arr2u64 $algo:ident, $rng:expr) => {{
         let mut r = $rng;
         let mut f = gen_arr2u64(move || r.nextu());
-        scatter::plot(stringify!($algo), &mut f, SCATTER_N, &scatter_path(stringify!($algo)))?;
+        scatter::plot(
+            stringify!($algo),
+            &mut f,
+            SCATTER_N,
+            &scatter_path(stringify!($algo)),
+        )?;
     }};
     (arr4f64 $algo:ident, $rng:expr) => {{
         let mut r = $rng;
         let mut f = gen_arr4f64(move || r.nextf());
-        scatter::plot(stringify!($algo), &mut f, SCATTER_N, &scatter_path(stringify!($algo)))?;
+        scatter::plot(
+            stringify!($algo),
+            &mut f,
+            SCATTER_N,
+            &scatter_path(stringify!($algo)),
+        )?;
     }};
     (nf64 $algo:ident, $rng:expr) => {{
         let mut r = $rng;
         let mut f = || r.nextf();
-        scatter::plot(stringify!($algo), &mut f, SCATTER_N, &scatter_path(stringify!($algo)))?;
+        scatter::plot(
+            stringify!($algo),
+            &mut f,
+            SCATTER_N,
+            &scatter_path(stringify!($algo)),
+        )?;
     }};
 }
 
 macro_rules! rng_ctor {
-    (TwistedGFSR) => { TwistedGFSR::new(TwistedGFSR::new_seed()) };
+    (TwistedGFSR) => {
+        TwistedGFSR::new(TwistedGFSR::new_seed())
+    };
     // seed=0 is degenerate for some generators; use seed=1.
-    (Pcg32)      => { Pcg32::new(1) };
-    (Xorshift32) => { Xorshift32::new(1) };
-    (Xorwow)     => { Xorwow::new(1) };
-    ($a:ident)   => { $a::new(0) };
+    (Pcg32) => {
+        Pcg32::new(1)
+    };
+    (Xorshift32) => {
+        Xorshift32::new(1)
+    };
+    (Xorwow) => {
+        Xorwow::new(1)
+    };
+    ($a:ident) => {
+        $a::new(0)
+    };
 }
 
 macro_rules! reg {

@@ -1,12 +1,25 @@
 use crate::{rng::Rng64, rng64::SplitMix64, wrap};
 use std::num::Wrapping;
 
+/// A xoshiro128++ random number generator.
+///
+/// This is a fast 128-bit-state generator with good statistical quality.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::xoroshiro::Xoroshiro128Pp;
+///
+/// let mut rng = Xoroshiro128Pp::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C)]
 pub struct Xoroshiro128Pp {
     s: [Wrapping<u64>; 2],
 }
 
 impl Xoroshiro128Pp {
+    /// Creates a new `Xoroshiro128Pp` instance.
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed | 1);
         Self {
@@ -14,6 +27,7 @@ impl Xoroshiro128Pp {
         }
     }
 
+    /// Generates the next random `u64` value.
     #[inline]
     pub fn nextu(&mut self) -> u64 {
         let s0 = self.s[0];
@@ -32,6 +46,7 @@ impl Xoroshiro128Pp {
         result.0
     }
 
+    /// Applies the jump function for advancing by $2^{64}$ steps.
     #[inline]
     pub fn jump(&mut self) {
         const JUMP: [u64; 2] = [0x2bd7a6a6e99c2ddc, 0x0992ccaf6a6fca05];
@@ -57,6 +72,7 @@ impl Xoroshiro128Pp {
         self.s = wrap![s0, s1];
     }
 
+    /// Applies the long-jump function for advancing by $2^{96}$ steps.
     #[inline]
     pub fn long_jump(&mut self) {
         const LONG_JUMP: [u64; 2] = [0x360fd5f2cf8d5d99, 0x9c6e6877736c46e3];
@@ -85,17 +101,20 @@ impl Xoroshiro128Pp {
         self.s = wrap![s0, s1];
     }
 
+    /// Generates the next random `f64` value in the range `[0, 1)`.
     #[inline]
     pub fn nextf(&mut self) -> f64 {
         self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
     }
 
+    /// Generates a random `i64` value in the range `[min, max]`.
     #[inline]
     pub fn randi(&mut self, min: i64, max: i64) -> i64 {
         let range = (max as i128 - min as i128 + 1) as u128;
         ((self.nextu() as u128 * range) >> 64) as i64 + min
     }
 
+    /// Generates a random `f64` value in the range `[min, max)`.
     #[inline]
     pub fn randf(&mut self, min: f64, max: f64) -> f64 {
         let range = max - min;
@@ -103,6 +122,7 @@ impl Xoroshiro128Pp {
         (self.nextu() as f64 * scale) + min
     }
 
+    /// Returns a random element from a slice.
     #[inline]
     pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         let index = self.randi(0, choices.len() as i64 - 1);
@@ -125,12 +145,25 @@ impl Rng64 for Xoroshiro128Pp {
     }
 }
 
+/// A xoshiro128** random number generator.
+///
+/// This is a fast 128-bit-state generator with good statistical properties.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::xoroshiro::Xoroshiro128Ss;
+///
+/// let mut rng = Xoroshiro128Ss::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C)]
 pub struct Xoroshiro128Ss {
     s: [Wrapping<u64>; 2],
 }
 
 impl Xoroshiro128Ss {
+    /// Creates a new `Xoroshiro128Ss` instance.
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed | 1);
         Self {
@@ -138,6 +171,7 @@ impl Xoroshiro128Ss {
         }
     }
 
+    /// Generates the next random `u64` value.
     #[inline]
     pub fn nextu(&mut self) -> u64 {
         let s0 = self.s[0];
@@ -151,6 +185,7 @@ impl Xoroshiro128Ss {
         result.0
     }
 
+    /// Applies the jump function for advancing by $2^{64}$ steps.
     #[inline]
     pub fn jump(&mut self) {
         const JUMP: [u64; 2] = [0xdf900294d8f554a5, 0x170865df4b3201fc];
@@ -176,6 +211,7 @@ impl Xoroshiro128Ss {
         self.s = wrap![s0, s1];
     }
 
+    /// Applies the long-jump function for advancing by $2^{96}$ steps.
     #[inline]
     pub fn long_jump(&mut self) {
         const LONG_JUMP: [u64; 2] = [0xd2a98b26625eee7b, 0xdddf9b1090aa7ac1];
@@ -204,17 +240,20 @@ impl Xoroshiro128Ss {
         self.s = wrap![s0, s1];
     }
 
+    /// Generates the next random `f64` value in the range `[0, 1)`.
     #[inline]
     pub fn nextf(&mut self) -> f64 {
         self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
     }
 
+    /// Generates a random `i64` value in the range `[min, max]`.
     #[inline]
     pub fn randi(&mut self, min: i64, max: i64) -> i64 {
         let range = (max as i128 - min as i128 + 1) as u128;
         ((self.nextu() as u128 * range) >> 64) as i64 + min
     }
 
+    /// Generates a random `f64` value in the range `[min, max)`.
     #[inline]
     pub fn randf(&mut self, min: f64, max: f64) -> f64 {
         let range = max - min;
@@ -222,6 +261,7 @@ impl Xoroshiro128Ss {
         (self.nextu() as f64 * scale) + min
     }
 
+    /// Returns a random element from a slice.
     #[inline]
     pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         let index = self.randi(0, choices.len() as i64 - 1);

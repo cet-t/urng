@@ -6,6 +6,15 @@ use wide::u32x4;
 // --- Mt1993764 ---
 
 /// A 64-bit Mersenne Twister (MT19937-64) random number generator.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::Mt1993764;
+///
+/// let mut rng = Mt1993764::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 pub struct Mt1993764 {
     mt: [u64; N],
@@ -134,6 +143,15 @@ impl Rng64 for Mt1993764 {
 // --- Sfmt1993764 ---
 
 /// A SIMD oriented Fast Mersenne Twister (SFMT) random number generator.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::Sfmt1993764;
+///
+/// let mut rng = Sfmt1993764::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 pub struct Sfmt1993764 {
     state: [u32x4; SFMT_N],

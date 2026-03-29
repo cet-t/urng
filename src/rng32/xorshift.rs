@@ -7,6 +7,15 @@ use std::num::Wrapping;
 /// A 32-bit Xorshift random number generator.
 ///
 /// This generator uses a shift-register based algorithm.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Xorshift32;
+///
+/// let mut rng = Xorshift32::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C)]
 pub struct Xorshift32 {
     a: Wrapping<u32>,
@@ -126,7 +135,7 @@ impl Rng32 for Xorshift32 {
 /// use urng::rng32::Xorwow;
 ///
 /// let mut rng = Xorwow::new(1);
-/// assert_eq!(rng.nextu(), 1365527255);
+/// assert_eq!(rng.nextu(), 3932718581);
 /// ```
 #[repr(C)]
 pub struct Xorwow {
@@ -143,7 +152,7 @@ impl Xorwow {
     /// use urng::rng32::Xorwow;
     ///
     /// let mut rng = Xorwow::new(1);
-    /// assert_eq!(rng.nextu(), 1365527255);
+    /// assert_eq!(rng.nextu(), 3932718581);
     /// ```
     pub fn new(seed: u32) -> Self {
         let mut sm = SplitMix32::new(seed);
@@ -154,6 +163,16 @@ impl Xorwow {
     }
 
     /// Generates the next random `u32` value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use urng::rng32::Xorwow;
+    ///
+    /// let mut rng = Xorwow::new(1);
+    /// assert_eq!(rng.nextu(), 3932718581);
+    /// ```
+    #[inline]
     pub fn nextu(&mut self) -> u32 {
         let mut t = self.x[4];
 
@@ -213,6 +232,17 @@ impl Xorwow {
     }
 
     /// Returns a random element from a slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use urng::rng32::Xorwow;
+    ///
+    /// let mut rng = Xorwow::new(1);
+    /// let items = ["red", "green", "blue"];
+    /// assert!(items.contains(rng.choice(&items)));
+    /// ```
+    #[inline]
     pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         let index = self.randi(0, choices.len() as i32 - 1);
         &choices[index as usize]

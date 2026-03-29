@@ -1,13 +1,28 @@
+//! Consolidated 64-bit random number generators.
+//!
+//! This module groups the 64-bit RNG implementations and re-exports the main generator types.
+
+/// Cellular automaton and custom experimental generators.
 pub mod cet;
+/// Linear Congruential Generator implementations.
 pub mod lcg;
+/// Mersenne Twister and SFMT implementations.
 pub mod mersenne;
+/// Philox implementations.
 pub mod philox;
+/// Small Fast Chaotic generator implementations.
 pub mod sfc;
+/// SplitMix implementations.
 pub mod splitmix;
+/// Threefish implementation.
 pub mod threefish;
+/// Twisted Generalized Feedback Shift Register implementation.
 pub mod twisted_gfsr;
+/// Xoroshiro implementations.
 pub mod xoroshiro;
+/// Xorshift implementations.
 pub mod xorshift;
+/// Xoshiro implementations.
 pub mod xoshiro;
 
 pub use cet::Cet64;

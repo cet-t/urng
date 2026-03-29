@@ -3,12 +3,12 @@ use std::io::Write;
 
 /// Result of a chi-square uniformity test.
 pub struct TestResult {
-    pub name:   String,
-    pub n:      usize,
-    pub bins:   usize,
-    pub chi2:   f64,
-    pub df:     f64,
-    pub z:      f64,
+    pub name: String,
+    pub n: usize,
+    pub bins: usize,
+    pub chi2: f64,
+    pub df: f64,
+    pub z: f64,
     pub passed: bool,
 }
 
@@ -51,14 +51,7 @@ pub fn log(results: &[TestResult], path: &str) -> Result<()> {
 
     let header = format!(
         "\n{}\n{:-<60}\n{:<24} {:>10}  {:>8}  {:>8}  {}\n{:-<60}",
-        "=== Chi-Square Uniformity Test ===",
-        "",
-        "Algorithm",
-        "χ²",
-        "z-score",
-        "df",
-        "Verdict",
-        ""
+        "=== Chi-Square Uniformity Test ===", "", "Algorithm", "χ²", "z-score", "df", "Verdict", ""
     );
     println!("{}", header);
 

@@ -7,6 +7,15 @@ const THREEFRY32_C240: u32 = 0x1BD11BDA;
 ///
 /// This is a counter-based RNG using a reduced-round (20 rounds) Threefish cipher
 /// with 32-bit words and 4 output values per block.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Threefry32x4;
+///
+/// let mut rng = Threefry32x4::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 pub struct Threefry32x4 {
     pub(crate) c: [u32; 4],
@@ -25,7 +34,7 @@ impl Threefry32x4 {
     /// use urng::rng32::Threefry32x4;
     ///
     /// let mut rng = Threefry32x4::new(1);
-    /// assert_eq!(rng.nextu(), [12519260, 3511377784, 3358857301, 2366592296]);
+    /// assert_eq!(rng.nextu(), [215661891, 4046822497, 3522917133, 3418596171]);
     /// ```
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
@@ -53,8 +62,8 @@ impl Threefry32x4 {
     /// # Arguments
     ///
     /// * `c`  - 4-word counter (the plaintext block).
-    /// * `k`  - 5-word key schedule (k[4] = parity word).
-    /// * `tw` - 3-word tweak schedule (tw[2] = tw[0] ^ tw[1]).
+    /// * `k`  - 5-word key schedule (k\[4\] = parity word).
+    /// * `tw` - 3-word tweak schedule (tw\[2\] = tw\[0\] ^ tw\[1\]).
     #[inline(always)]
     pub fn compute(c: [u32; 4], k: &[u32; 5], tw: &[u32; 3]) -> [u32; 4] {
         let mut v = c;
@@ -200,6 +209,15 @@ impl Threefry32x4 {
 ///
 /// Counter-based PRNG using a reduced-round (20 rounds) Threefish cipher
 /// with 32-bit words and 2 output values per block.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Threefry32x2;
+///
+/// let mut rng = Threefry32x2::new(1);
+/// let _ = rng.nextu();
+/// ```
 pub struct Threefry32x2 {
     pub(crate) c: [u32; 2],
     pub(crate) k: [u32; 3],
@@ -216,7 +234,7 @@ impl Threefry32x2 {
     /// use urng::rng32::Threefry32x2;
     ///
     /// let mut rng = Threefry32x2::new(1);
-    /// assert_eq!(rng.nextu(), [1748843679, 2574680703]);
+    /// assert_eq!(rng.nextu(), [3732229352, 2044399418]);
     /// ```
     #[inline]
     pub fn new(seed: u32) -> Self {

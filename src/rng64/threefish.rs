@@ -18,6 +18,15 @@ const THREEFISH_R_256: [[u32; 2]; 8] = [
 ];
 
 /// A Threefish-256 random number generator.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::Threefish256;
+///
+/// let mut rng = Threefish256::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 pub struct Threefish256 {
     c: [u64; 4],

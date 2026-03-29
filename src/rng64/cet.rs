@@ -7,6 +7,15 @@ use std::num::Wrapping;
 ///
 /// This generator uses a 4-cell cellular automaton state and a Weyl counter.
 /// It is designed for high performance and quality.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::Cet64;
+///
+/// let mut rng = Cet64::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C)]
 pub struct Cet64 {
     k: Wrapping<u64>,

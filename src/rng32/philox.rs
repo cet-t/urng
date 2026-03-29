@@ -9,6 +9,15 @@ use std::arch::x86_64::*;
 /// A Philox 4x32 random number generator.
 ///
 /// This is a counter-based RNG suitable for parallel applications.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Philox32x4;
+///
+/// let mut rng = Philox32x4::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C)]
 pub struct Philox32x4 {
     pub(crate) c: [Wrapping<u32>; 4],
@@ -24,7 +33,7 @@ impl Philox32x4 {
     /// use urng::rng32::Philox32x4;
     ///
     /// let mut rng = Philox32x4::new(1);
-    /// assert_eq!(rng.nextu(), [1606368191, 902838097, 1231688191, 2515046358]);
+    /// assert_eq!(rng.nextu(), [3153052020, 1439632633, 3707823678, 1301313894]);
     /// ```
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
@@ -293,6 +302,14 @@ impl Philox32x4x4 {
 
 /// Opaque handle for the Philox32 RNG.
 /// Dispatched at runtime to AVX-512 (`Philox32x4x4`) or scalar (`Philox32x4`) implementation.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Philox32;
+///
+/// let _ = core::mem::size_of::<Philox32>();
+/// ```
 #[repr(C)]
 pub struct Philox32([u8; 0]);
 

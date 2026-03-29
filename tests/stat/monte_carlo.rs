@@ -3,12 +3,12 @@ use std::io::Write;
 
 /// Result of a Monte Carlo pi estimation.
 pub struct TestResult {
-    pub name:      String,
-    pub n_pairs:   usize,
-    pub pi_est:    f64,
-    pub error:     f64,
+    pub name: String,
+    pub n_pairs: usize,
+    pub pi_est: f64,
+    pub error: f64,
     pub error_pct: f64,
-    pub passed:    bool,
+    pub passed: bool,
 }
 
 /// Estimate π using Monte Carlo method.

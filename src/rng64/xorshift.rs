@@ -6,6 +6,15 @@ use crate::rng64::SplitMix64;
 /// A 64-bit Xorshift random number generator.
 ///
 /// This generator uses a shift-register based algorithm.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng64::Xorshift64;
+///
+/// let mut rng = Xorshift64::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C)]
 pub struct Xorshift64 {
     a: u64,

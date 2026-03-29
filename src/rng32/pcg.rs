@@ -8,6 +8,15 @@ use std::arch::x86_64::*;
 /// A PCG (Permuted Congruential Generator) random number generator.
 ///
 /// This implementation uses the PCG-XSH-RR algorithm with 64-bit state and 32-bit output.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Pcg32;
+///
+/// let mut rng = Pcg32::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C)]
 pub struct Pcg32 {
     state: Wrapping<u64>,
@@ -124,6 +133,17 @@ pub const PCG32X8_PAR_CHUNK: usize = 131_072;
 pub const PCG32X8_PAR_CHUNK_BLOCKS: u64 = (PCG32X8_PAR_CHUNK / PCG32X8_LANE) as u64;
 pub const PCG32_MULT: u64 = 6364136223846793005;
 
+/// AVX-512 implementation of PCG32 producing 8 values per step.
+///
+/// # Examples
+///
+/// ```ignore
+/// use urng::rng32::Pcg32x8;
+///
+/// let mut rng = unsafe { Pcg32x8::new(1) };
+/// let vals = unsafe { rng.nextu() };
+/// assert_eq!(vals.len(), 8);
+/// ```
 #[cfg(target_arch = "x86_64")]
 #[repr(C, align(64))]
 pub struct Pcg32x8 {
@@ -208,6 +228,14 @@ impl Pcg32x8 {
 
 /// Opaque handle for the Pcg32 RNG.
 /// Dispatched at runtime to AVX-512 (`Pcg32x8`) or scalar (`Pcg32`) implementation.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::Pcg32Simd;
+///
+/// let _ = core::mem::size_of::<Pcg32Simd>();
+/// ```
 #[repr(C)]
 pub struct Pcg32Simd([u8; 0]);
 
