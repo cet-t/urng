@@ -21,6 +21,10 @@ use urng::{
         squares32x8_free, squares32x8_new, squares32x8_next_u32s, 
         threefry32x2_free, threefry32x2_new, threefry32x2_next_u32s, 
         threefry32x4_free, threefry32x4_new, threefry32x4_next_u32s,
+        xoshiro128pp_free, xoshiro128pp_new, xoshiro128pp_next_u32s,
+        xoshiro128ppx16_free, xoshiro128ppx16_new, xoshiro128ppx16_next_u32s,
+        xoshiro128ss_free, xoshiro128ss_new, xoshiro128ss_next_u32s,
+        xoshiro128ssx16_free, xoshiro128ssx16_new, xoshiro128ssx16_next_u32s,
     },
     cabi64::{
         mt1993764_free, mt1993764_new, mt1993764_next_u64s, 
@@ -50,6 +54,9 @@ use urng::{
 // splitmix32simd  : 6.68 GS/s
 // mt19937         : 0.84 GS/s
 // sfmt19937       : 0.88 GS/s
+// xoshiro128pp    : 0.81 GS/s
+// xoshiro128ppx16 : 6.82 GS/s
+// xoshiro128ssx16 : 6.80 GS/s
 // philox64        : 3.01 GS/s
 // splitmix64      : 3.17 GS/s
 // mt1993764       : 0.58 GS/s
@@ -139,6 +146,17 @@ fn main() {
     );
     bench32!(mt19937_new, mt19937_next_u32s, mt19937_free);
     bench32!(sfmt19937_new, sfmt19937_next_u32s, sfmt19937_free);
+    bench32!(xoshiro128pp_new, xoshiro128pp_next_u32s, xoshiro128pp_free);
+    bench32!(
+        xoshiro128ppx16_new,
+        xoshiro128ppx16_next_u32s,
+        xoshiro128ppx16_free
+    );
+    bench32!(
+        xoshiro128ssx16_new,
+        xoshiro128ssx16_next_u32s,
+        xoshiro128ssx16_free
+    );
 
     bench64!(philox64_new, philox64_next_u64s, philox64_free);
     bench64!(splitmix64_new, splitmix64_next_u64s, splitmix64_free);

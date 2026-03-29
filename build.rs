@@ -91,6 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .input_extern_file("src/rng32/xorshift.rs")
         .input_extern_file("src/rng32/threefry.rs")
         .input_extern_file("src/rng32/squares.rs")
+        .input_extern_file("src/rng32/xoshiro.rs")
         // cabi32 C ABI bindings
         .input_extern_file("src/cabi32/mersenne.rs")
         .input_extern_file("src/cabi32/lcg.rs")
@@ -100,6 +101,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .input_extern_file("src/cabi32/splitmix.rs")
         .input_extern_file("src/cabi32/threefry.rs")
         .input_extern_file("src/cabi32/squares.rs")
+        .input_extern_file("src/cabi32/xoshiro.rs")
         // rng64 algorithm implementations (struct definitions)
         .input_extern_file("src/rng64/splitmix.rs")
         .input_extern_file("src/rng64/mersenne.rs")
@@ -111,6 +113,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .input_extern_file("src/rng64/cet.rs")
         .input_extern_file("src/rng64/xoshiro.rs")
         .input_extern_file("src/rng64/threefish.rs")
+        .input_extern_file("src/rng64/xoroshiro.rs")
         // cabi64 C ABI bindings
         .input_extern_file("src/cabi64/mersenne.rs")
         .input_extern_file("src/cabi64/twisted_gfsr.rs")
@@ -123,6 +126,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .input_extern_file("src/cabi64/splitmix.rs")
         .input_extern_file("src/cabi64/threefish.rs")
         .input_extern_file("src/rng128/xorshift.rs")
+        .input_extern_file("src/cabi64/xoroshiro.rs")
         .csharp_dll_name("urng")
         .generate_csharp_file(cs_path)?;
 

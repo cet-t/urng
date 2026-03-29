@@ -16,6 +16,8 @@ pub mod splitmix;
 pub mod threefish;
 /// Twisted GFSR C ABI exports.
 pub mod twisted_gfsr;
+/// Xoroshiro C ABI exports.
+pub mod xoroshiro;
 /// Xorshift C ABI exports.
 pub mod xorshift;
 /// Xoshiro C ABI exports.
@@ -29,5 +31,6 @@ pub use sfc::*;
 pub use splitmix::*;
 pub use threefish::*;
 pub use twisted_gfsr::*;
+pub use xoroshiro::*;
 pub use xorshift::*;
 pub use xoshiro::*;

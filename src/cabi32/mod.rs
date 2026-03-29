@@ -16,6 +16,8 @@ pub mod squares;
 pub mod threefry;
 /// Xorshift and XORWOW C ABI exports.
 pub mod xorshift;
+/// Xoshiro C ABI exports.
+pub mod xoshiro;
 
 pub use lcg::*;
 pub use mersenne::*;
@@ -25,3 +27,4 @@ pub use splitmix::*;
 pub use squares::*;
 pub use threefry::*;
 pub use xorshift::*;
+pub use xoshiro::*;
