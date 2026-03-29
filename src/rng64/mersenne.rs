@@ -1,6 +1,7 @@
 use crate::rng::Rng64;
 use crate::rng64::SplitMix64;
 use bytemuck;
+use std::ptr;
 use wide::u32x4;
 
 // --- Mt1993764 ---
@@ -67,6 +68,34 @@ impl Mt1993764 {
         y ^= (y << 37) & 0xFFF7EEE000000000;
         y ^= y >> 43;
         y
+    }
+
+    #[inline]
+    pub fn fill_next_u64s(&mut self, out: &mut [u64]) {
+        let mut written = 0;
+        while written < out.len() {
+            if self.mti >= N {
+                self.twist();
+            }
+
+            let idx = self.mti;
+            let available = N - idx;
+            let take = available.min(out.len() - written);
+            let src = &self.mt[idx..idx + take];
+            let dst = &mut out[written..written + take];
+
+            for (d, &y) in dst.iter_mut().zip(src.iter()) {
+                let mut v = y;
+                v ^= (v >> 29) & 0x5555555555555555;
+                v ^= (v << 17) & 0x71D67FFFEDA60000;
+                v ^= (v << 37) & 0xFFF7EEE000000000;
+                v ^= v >> 43;
+                *d = v;
+            }
+
+            self.mti += take;
+            written += take;
+        }
     }
 
     fn twist(&mut self) {
@@ -319,6 +348,31 @@ impl Sfmt1993764 {
         let val = s[self.idx];
         self.idx += 1;
         val
+    }
+
+    #[inline]
+    pub fn fill_next_u64s(&mut self, out: &mut [u64]) {
+        let mut written = 0;
+        while written < out.len() {
+            if self.idx >= SFMT_N * 2 {
+                self.gen_rand_all();
+                self.idx = 0;
+            }
+
+            let available = SFMT_N * 2 - self.idx;
+            let take = available.min(out.len() - written);
+
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    (self.state.as_ptr() as *const u64).add(self.idx),
+                    out.as_mut_ptr().add(written),
+                    take,
+                );
+            }
+
+            self.idx += take;
+            written += take;
+        }
     }
 
     /// Generates the next random `f64` value in the range [0, 1).

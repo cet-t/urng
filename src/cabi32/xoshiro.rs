@@ -249,8 +249,21 @@ unsafe fn xoshiro128ppx16_next_u32s_chunk(rng: &mut Xoshiro128Ppx16, chunk: &mut
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
     let aligned = (out_ptr as usize & 63) == 0;
+    const UNROLL: usize = XOSHIRO128X16_LANES * 4;
 
     if aligned {
+        while remaining >= UNROLL {
+            let v0 = rng.nextu_vec();
+            let v1 = rng.nextu_vec();
+            let v2 = rng.nextu_vec();
+            let v3 = rng.nextu_vec();
+            _mm512_stream_si512(out_ptr as *mut _, v0);
+            _mm512_stream_si512(out_ptr.add(XOSHIRO128X16_LANES) as *mut _, v1);
+            _mm512_stream_si512(out_ptr.add(XOSHIRO128X16_LANES * 2) as *mut _, v2);
+            _mm512_stream_si512(out_ptr.add(XOSHIRO128X16_LANES * 3) as *mut _, v3);
+            out_ptr = out_ptr.add(UNROLL);
+            remaining -= UNROLL;
+        }
         while remaining >= XOSHIRO128X16_LANES {
             let v = rng.nextu_vec();
             _mm512_stream_si512(out_ptr as *mut _, v);
@@ -258,6 +271,18 @@ unsafe fn xoshiro128ppx16_next_u32s_chunk(rng: &mut Xoshiro128Ppx16, chunk: &mut
             remaining -= XOSHIRO128X16_LANES;
         }
     } else {
+        while remaining >= UNROLL {
+            let v0 = rng.nextu_vec();
+            let v1 = rng.nextu_vec();
+            let v2 = rng.nextu_vec();
+            let v3 = rng.nextu_vec();
+            _mm512_storeu_si512(out_ptr as *mut _, v0);
+            _mm512_storeu_si512(out_ptr.add(XOSHIRO128X16_LANES) as *mut _, v1);
+            _mm512_storeu_si512(out_ptr.add(XOSHIRO128X16_LANES * 2) as *mut _, v2);
+            _mm512_storeu_si512(out_ptr.add(XOSHIRO128X16_LANES * 3) as *mut _, v3);
+            out_ptr = out_ptr.add(UNROLL);
+            remaining -= UNROLL;
+        }
         while remaining >= XOSHIRO128X16_LANES {
             let v = rng.nextu_vec();
             _mm512_storeu_si512(out_ptr as *mut _, v);
@@ -519,8 +544,21 @@ unsafe fn xoshiro128ssx16_next_u32s_chunk(rng: &mut Xoshiro128Ssx16, chunk: &mut
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
     let aligned = (out_ptr as usize & 63) == 0;
+    const UNROLL: usize = XOSHIRO128X16_LANES * 4;
 
     if aligned {
+        while remaining >= UNROLL {
+            let v0 = rng.nextu_vec();
+            let v1 = rng.nextu_vec();
+            let v2 = rng.nextu_vec();
+            let v3 = rng.nextu_vec();
+            _mm512_stream_si512(out_ptr as *mut _, v0);
+            _mm512_stream_si512(out_ptr.add(XOSHIRO128X16_LANES) as *mut _, v1);
+            _mm512_stream_si512(out_ptr.add(XOSHIRO128X16_LANES * 2) as *mut _, v2);
+            _mm512_stream_si512(out_ptr.add(XOSHIRO128X16_LANES * 3) as *mut _, v3);
+            out_ptr = out_ptr.add(UNROLL);
+            remaining -= UNROLL;
+        }
         while remaining >= XOSHIRO128X16_LANES {
             let v = rng.nextu_vec();
             _mm512_stream_si512(out_ptr as *mut _, v);
@@ -528,6 +566,18 @@ unsafe fn xoshiro128ssx16_next_u32s_chunk(rng: &mut Xoshiro128Ssx16, chunk: &mut
             remaining -= XOSHIRO128X16_LANES;
         }
     } else {
+        while remaining >= UNROLL {
+            let v0 = rng.nextu_vec();
+            let v1 = rng.nextu_vec();
+            let v2 = rng.nextu_vec();
+            let v3 = rng.nextu_vec();
+            _mm512_storeu_si512(out_ptr as *mut _, v0);
+            _mm512_storeu_si512(out_ptr.add(XOSHIRO128X16_LANES) as *mut _, v1);
+            _mm512_storeu_si512(out_ptr.add(XOSHIRO128X16_LANES * 2) as *mut _, v2);
+            _mm512_storeu_si512(out_ptr.add(XOSHIRO128X16_LANES * 3) as *mut _, v3);
+            out_ptr = out_ptr.add(UNROLL);
+            remaining -= UNROLL;
+        }
         while remaining >= XOSHIRO128X16_LANES {
             let v = rng.nextu_vec();
             _mm512_storeu_si512(out_ptr as *mut _, v);

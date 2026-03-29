@@ -5,3 +5,5 @@
 .claude/
 .github/
 tests/logs/*.png
+tasks/
+sources/

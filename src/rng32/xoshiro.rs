@@ -329,21 +329,31 @@ impl Xoshiro128Ppx16 {
     #[inline]
     #[target_feature(enable = "avx512f")]
     pub unsafe fn nextu_vec(&mut self) -> __m512i {
-        let sum = _mm512_add_epi32(self.s0, self.s3);
+        let s0 = self.s0;
+        let s1 = self.s1;
+        let s2 = self.s2;
+        let s3 = self.s3;
+
+        let sum = _mm512_add_epi32(s0, s3);
         let rot = _mm512_or_si512(_mm512_slli_epi32(sum, 7), _mm512_srli_epi32(sum, 25));
-        let res = _mm512_add_epi32(rot, self.s0);
+        let res = _mm512_add_epi32(rot, s0);
 
-        let t = _mm512_slli_epi32(self.s1, 9);
+        let t = _mm512_slli_epi32(s1, 9);
 
-        self.s2 = _mm512_xor_epi32(self.s2, self.s0);
-        self.s3 = _mm512_xor_epi32(self.s3, self.s1);
-        self.s1 = _mm512_xor_epi32(self.s1, self.s2);
-        self.s0 = _mm512_xor_epi32(self.s0, self.s3);
-        self.s2 = _mm512_xor_epi32(self.s2, t);
-        self.s3 = _mm512_or_si512(
-            _mm512_slli_epi32(self.s3, 11),
-            _mm512_srli_epi32(self.s3, 21),
+        let mut s2_next = _mm512_xor_epi32(s2, s0);
+        let mut s3_next = _mm512_xor_epi32(s3, s1);
+        let s1_next = _mm512_xor_epi32(s1, s2_next);
+        let s0_next = _mm512_xor_epi32(s0, s3_next);
+        s2_next = _mm512_xor_epi32(s2_next, t);
+        s3_next = _mm512_or_si512(
+            _mm512_slli_epi32(s3_next, 11),
+            _mm512_srli_epi32(s3_next, 21),
         );
+
+        self.s0 = s0_next;
+        self.s1 = s1_next;
+        self.s2 = s2_next;
+        self.s3 = s3_next;
 
         res
     }
@@ -499,22 +509,32 @@ impl Xoshiro128Ssx16 {
     #[inline]
     #[target_feature(enable = "avx512f")]
     pub unsafe fn nextu_vec(&mut self) -> __m512i {
+        let s0 = self.s0;
+        let s1 = self.s1;
+        let s2 = self.s2;
+        let s3 = self.s3;
+
         // res = rotl(s1 * 5, 7) * 9, with shift-add instead of mul by constants.
-        let x5 = _mm512_add_epi32(self.s1, _mm512_slli_epi32(self.s1, 2));
+        let x5 = _mm512_add_epi32(s1, _mm512_slli_epi32(s1, 2));
         let rot = _mm512_or_si512(_mm512_slli_epi32(x5, 7), _mm512_srli_epi32(x5, 25));
         let res = _mm512_add_epi32(rot, _mm512_slli_epi32(rot, 3));
 
-        let t = _mm512_slli_epi32(self.s1, 9);
+        let t = _mm512_slli_epi32(s1, 9);
 
-        self.s2 = _mm512_xor_epi32(self.s2, self.s0);
-        self.s3 = _mm512_xor_epi32(self.s3, self.s1);
-        self.s1 = _mm512_xor_epi32(self.s1, self.s2);
-        self.s0 = _mm512_xor_epi32(self.s0, self.s3);
-        self.s2 = _mm512_xor_epi32(self.s2, t);
-        self.s3 = _mm512_or_si512(
-            _mm512_slli_epi32(self.s3, 11),
-            _mm512_srli_epi32(self.s3, 21),
+        let mut s2_next = _mm512_xor_epi32(s2, s0);
+        let mut s3_next = _mm512_xor_epi32(s3, s1);
+        let s1_next = _mm512_xor_epi32(s1, s2_next);
+        let s0_next = _mm512_xor_epi32(s0, s3_next);
+        s2_next = _mm512_xor_epi32(s2_next, t);
+        s3_next = _mm512_or_si512(
+            _mm512_slli_epi32(s3_next, 11),
+            _mm512_srli_epi32(s3_next, 21),
         );
+
+        self.s0 = s0_next;
+        self.s1 = s1_next;
+        self.s2 = s2_next;
+        self.s3 = s3_next;
 
         res
     }

@@ -21,12 +21,13 @@ pub extern "C" fn mt19937_free(ptr: *mut Mt19937) {
 /// Fills the output buffer with the next random `u32` values.
 #[unsafe(no_mangle)]
 pub extern "C" fn mt19937_next_u32s(ptr: *mut Mt19937, out: *mut u32, count: usize) {
+    if count == 0 {
+        return;
+    }
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.nextu();
-        }
+        rng.fill_next_u32s(buffer);
     }
 }
 
@@ -98,12 +99,13 @@ pub extern "C" fn sfmt19937_free(ptr: *mut Sfmt19937) {
 /// Fills the output buffer with the next random `u32` values.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfmt19937_next_u32s(ptr: *mut Sfmt19937, out: *mut u32, count: usize) {
+    if count == 0 {
+        return;
+    }
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.nextu();
-        }
+        rng.fill_next_u32s(buffer);
     }
 }
 

@@ -18,12 +18,13 @@ pub extern "C" fn mt1993764_free(ptr: *mut Mt1993764) {
 /// Fills `out[0..count]` with raw `u64` random values.
 #[unsafe(no_mangle)]
 pub extern "C" fn mt1993764_next_u64s(ptr: *mut Mt1993764, out: *mut u64, count: usize) {
+    if count == 0 {
+        return;
+    }
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
-        }
+        rng.fill_next_u64s(buffer);
     }
 }
 /// Fills `out[0..count]` with `f64` values uniformly distributed in `[0, 1)`.
@@ -89,12 +90,13 @@ pub extern "C" fn sfmt1993764_free(ptr: *mut Sfmt1993764) {
 /// Fills `out[0..count]` with raw `u64` random values.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfmt1993764_next_u64s(ptr: *mut Sfmt1993764, out: *mut u64, count: usize) {
+    if count == 0 {
+        return;
+    }
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
-        }
+        rng.fill_next_u64s(buffer);
     }
 }
 /// Fills `out[0..count]` with `f64` values uniformly distributed in `[0, 1)`.

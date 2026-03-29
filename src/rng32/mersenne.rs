@@ -2,6 +2,7 @@ use crate::rng32::SplitMix32;
 use crate::{rng::Rng32, rng64::SplitMix64, wrap};
 use bytemuck::cast_slice;
 use std::num::Wrapping;
+use std::ptr;
 use wide::u32x4;
 
 // --- Mt19937 ---
@@ -79,6 +80,34 @@ impl Mt19937 {
         y ^= (y << 15).0 & 0xEFC60000;
         y ^= y >> 18;
         y.0
+    }
+
+    #[inline]
+    pub fn fill_next_u32s(&mut self, out: &mut [u32]) {
+        let mut written = 0;
+        while written < out.len() {
+            if self.mti.0 >= MT32_N {
+                self.twist();
+            }
+
+            let idx = self.mti.0;
+            let available = MT32_N - idx;
+            let take = available.min(out.len() - written);
+            let src = &self.mt[idx..idx + take];
+            let dst = &mut out[written..written + take];
+
+            for (d, s) in dst.iter_mut().zip(src.iter()) {
+                let mut y = *s;
+                y ^= y >> 11;
+                y ^= (y << 7).0 & 0x9D2C5680;
+                y ^= (y << 15).0 & 0xEFC60000;
+                y ^= y >> 18;
+                *d = y.0;
+            }
+
+            self.mti += wrap!(take);
+            written += take;
+        }
     }
 
     fn twist(&mut self) {
@@ -349,6 +378,31 @@ impl Sfmt19937 {
         let val = s[self.idx];
         self.idx += 1;
         val
+    }
+
+    #[inline]
+    pub fn fill_next_u32s(&mut self, out: &mut [u32]) {
+        let mut written = 0;
+        while written < out.len() {
+            if self.idx >= SFMT_N * 4 {
+                self.gen_rand_all();
+                self.idx = 0;
+            }
+
+            let available = SFMT_N * 4 - self.idx;
+            let take = available.min(out.len() - written);
+
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    (self.state.as_ptr() as *const u32).add(self.idx),
+                    out.as_mut_ptr().add(written),
+                    take,
+                );
+            }
+
+            self.idx += take;
+            written += take;
+        }
     }
 
     /// Generates the next random `f32` value in the range [0, 1).
