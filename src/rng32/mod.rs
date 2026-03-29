@@ -23,7 +23,10 @@ pub mod xoshiro;
 
 #[allow(deprecated)]
 pub use lcg::Lcg32;
-pub use mersenne::{Mt19937, Sfmt19937};
+pub use mersenne::{
+    Mt19937, Sfmt521, Sfmt1279, Sfmt2203, Sfmt4253, Sfmt11213, Sfmt19937, Sfmt44497, Sfmt86243,
+    Sfmt132049, Sfmt216091,
+};
 pub(crate) use pcg::{PCG32_MULT, PCG32X8_LANE, PCG32X8_PAR_CHUNK, PCG32X8_PAR_CHUNK_BLOCKS};
 pub use pcg::{Pcg32, Pcg32Simd, Pcg32x8};
 pub(crate) use philox::{

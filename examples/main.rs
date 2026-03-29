@@ -12,7 +12,16 @@ use urng::{
         philox32_free, philox32_new, philox32_next_u32s, 
         philox32x4_free, philox32x4_new, philox32x4_next_u32s, 
         philox32x4x4_free, philox32x4x4_new, philox32x4x4_next_u32s, 
+        sfmt11213_free, sfmt11213_new, sfmt11213_next_u32s,
+        sfmt1279_free, sfmt1279_new, sfmt1279_next_u32s,
+        sfmt132049_free, sfmt132049_new, sfmt132049_next_u32s,
         sfmt19937_free, sfmt19937_new, sfmt19937_next_u32s,
+        sfmt216091_free, sfmt216091_new, sfmt216091_next_u32s,
+        sfmt2203_free, sfmt2203_new, sfmt2203_next_u32s,
+        sfmt4253_free, sfmt4253_new, sfmt4253_next_u32s,
+        sfmt44497_free, sfmt44497_new, sfmt44497_next_u32s,
+        sfmt521_free, sfmt521_new, sfmt521_next_u32s,
+        sfmt86243_free, sfmt86243_new, sfmt86243_next_u32s,
         splitmix32_free, splitmix32_new, splitmix32_next_u32s, 
         splitmix32simd_free, splitmix32simd_new, splitmix32simd_next_u32s, 
         splitmix32x16_free, splitmix32x16_new, splitmix32x16_next_u32s, 
@@ -146,6 +155,15 @@ fn main() {
     );
     bench32!(mt19937_new, mt19937_next_u32s, mt19937_free);
     bench32!(sfmt19937_new, sfmt19937_next_u32s, sfmt19937_free);
+    bench32!(sfmt521_new, sfmt521_next_u32s, sfmt521_free);
+    bench32!(sfmt1279_new, sfmt1279_next_u32s, sfmt1279_free);
+    bench32!(sfmt2203_new, sfmt2203_next_u32s, sfmt2203_free);
+    bench32!(sfmt4253_new, sfmt4253_next_u32s, sfmt4253_free);
+    bench32!(sfmt11213_new, sfmt11213_next_u32s, sfmt11213_free);
+    bench32!(sfmt44497_new, sfmt44497_next_u32s, sfmt44497_free);
+    bench32!(sfmt86243_new, sfmt86243_next_u32s, sfmt86243_free);
+    bench32!(sfmt132049_new, sfmt132049_next_u32s, sfmt132049_free);
+    bench32!(sfmt216091_new, sfmt216091_next_u32s, sfmt216091_free);
     bench32!(xoshiro128pp_new, xoshiro128pp_next_u32s, xoshiro128pp_free);
     bench32!(
         xoshiro128ppx16_new,
