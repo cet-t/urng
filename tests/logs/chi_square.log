@@ -1,0 +1,29 @@
+
+=== Chi-Square Uniformity Test ===
+------------------------------------------------------------
+Algorithm                        χ²   z-score        df  Verdict
+------------------------------------------------------------
+SplitMix32                   247.15    -0.347       255  PASS
+Mt19937                      278.46    +1.039       255  PASS
+Sfmt19937                    259.81    +0.213       255  PASS
+Pcg32                        315.45    +2.677       255  PASS
+Philox32x4                   243.21    -0.522       255  PASS
+Xorshift32                   267.74    +0.564       255  PASS
+Xorwow                       240.72    -0.632       255  PASS
+Threefry32x4                 260.16    +0.229       255  PASS
+Threefry32x2                 235.01    -0.885       255  PASS
+Squares32                    239.05    -0.706       255  PASS
+SplitMix64                   257.92    +0.129       255  PASS
+Mt1993764                    221.99    -1.462       255  PASS
+Sfmt1993764                  261.05    +0.268       255  PASS
+Philox64                     240.55    -0.640       255  PASS
+Sfc64                        221.66    -1.476       255  PASS
+Xorshift64                   230.44    -1.088       255  PASS
+Cet64                        263.28    +0.366       255  PASS
+Xoshiro256Pp                 278.75    +1.052       255  PASS
+Xoshiro256Ss                 260.78    +0.256       255  PASS
+TwistedGFSR                  250.19    -0.213       255  PASS
+Threefish256                 245.62    -0.415       255  PASS
+------------------------------------------------------------
+N =   10000000,  bins = 256  (|z| < 3.0 → PASS)
+

@@ -4,3 +4,4 @@
 .cargo/
 .claude/
 .github/
+tests/logs/*.png

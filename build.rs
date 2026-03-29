@@ -58,7 +58,13 @@ fn regex_replace_version(content: &str, version: &str) -> String {
         if let Some(start) = line.find(prefix) {
             let after = &line[start + prefix.len()..];
             if let Some(end) = after.find('"') {
-                let new_line = format!("{}{}{}{}", &line[..start + prefix.len()], version, "\"", &after[end + 1..]);
+                let new_line = format!(
+                    "{}{}{}{}",
+                    &line[..start + prefix.len()],
+                    version,
+                    "\"",
+                    &after[end + 1..]
+                );
                 result.push_str(&new_line);
                 result.push('\n');
                 continue;
@@ -76,11 +82,47 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cs_path = "./target/release/RngNative.cs";
 
     csbindgen::Builder::default()
-        .input_extern_file("src/rng32.rs")
-        .input_extern_file("src/cabi32.rs")
-        .input_extern_file("src/rng64.rs")
-        .input_extern_file("src/cabi64.rs")
-        .input_extern_file("src/rng128.rs")
+        // rng32 algorithm implementations (struct definitions)
+        .input_extern_file("src/rng32/splitmix.rs")
+        .input_extern_file("src/rng32/mersenne.rs")
+        .input_extern_file("src/rng32/lcg.rs")
+        .input_extern_file("src/rng32/pcg.rs")
+        .input_extern_file("src/rng32/philox.rs")
+        .input_extern_file("src/rng32/xorshift.rs")
+        .input_extern_file("src/rng32/threefry.rs")
+        .input_extern_file("src/rng32/squares.rs")
+        // cabi32 C ABI bindings
+        .input_extern_file("src/cabi32/mersenne.rs")
+        .input_extern_file("src/cabi32/lcg.rs")
+        .input_extern_file("src/cabi32/pcg.rs")
+        .input_extern_file("src/cabi32/philox.rs")
+        .input_extern_file("src/cabi32/xorshift.rs")
+        .input_extern_file("src/cabi32/splitmix.rs")
+        .input_extern_file("src/cabi32/threefry.rs")
+        .input_extern_file("src/cabi32/squares.rs")
+        // rng64 algorithm implementations (struct definitions)
+        .input_extern_file("src/rng64/splitmix.rs")
+        .input_extern_file("src/rng64/mersenne.rs")
+        .input_extern_file("src/rng64/twisted_gfsr.rs")
+        .input_extern_file("src/rng64/lcg.rs")
+        .input_extern_file("src/rng64/philox.rs")
+        .input_extern_file("src/rng64/sfc.rs")
+        .input_extern_file("src/rng64/xorshift.rs")
+        .input_extern_file("src/rng64/cet.rs")
+        .input_extern_file("src/rng64/xoshiro.rs")
+        .input_extern_file("src/rng64/threefish.rs")
+        // cabi64 C ABI bindings
+        .input_extern_file("src/cabi64/mersenne.rs")
+        .input_extern_file("src/cabi64/twisted_gfsr.rs")
+        .input_extern_file("src/cabi64/lcg.rs")
+        .input_extern_file("src/cabi64/philox.rs")
+        .input_extern_file("src/cabi64/sfc.rs")
+        .input_extern_file("src/cabi64/xorshift.rs")
+        .input_extern_file("src/cabi64/cet.rs")
+        .input_extern_file("src/cabi64/xoshiro.rs")
+        .input_extern_file("src/cabi64/splitmix.rs")
+        .input_extern_file("src/cabi64/threefish.rs")
+        .input_extern_file("src/rng128/xorshift.rs")
         .csharp_dll_name("urng")
         .generate_csharp_file(cs_path)?;
 

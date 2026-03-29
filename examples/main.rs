@@ -36,18 +36,27 @@ use urng::{
 
 // philox32x4x4    : 6.80 GS/s
 // philox32x4      : 5.40 GS/s
-// philox32        : 6.75 GS/s
+// philox32        : 6.80 GS/s
 // threefry32x4    : 5.28 GS/s
 // threefry32x2    : 4.62 GS/s
 // squares32       : 5.59 GS/s
 // squares32x8     : 6.70 GS/s
 // squares32simd   : 6.72 GS/s
 // pcg32           : 1.06 GS/s
-// pcg32x8         : 6.71 GS/s
-// pcg32simd       : 6.76 GS/s
+// pcg32x8         : 6.82 GS/s
+// pcg32simd       : 6.84 GS/s
 // splitmix32      : 2.33 GS/s
-// splitmix32x16   : 6.72 GS/s
+// splitmix32x16   : 6.80 GS/s
 // splitmix32simd  : 6.68 GS/s
+// mt19937         : 0.84 GS/s
+// sfmt19937       : 0.88 GS/s
+// philox64        : 3.01 GS/s
+// splitmix64      : 3.17 GS/s
+// mt1993764       : 0.58 GS/s
+// sfmt1993764     : 0.53 GS/s
+// xoshiro256pp    : 3.13 GS/s
+// xoshiro256ss    : 3.14 GS/s
+// xoshiro256ssx2  : 3.40 GS/s
 
 const N: usize = 100_000_000;
 const G: f64 = 1_000_000_000f64;
