@@ -2,10 +2,31 @@ use crate::rng64::SplitMix64;
 
 // --- Threefish256 ---
 
-const THREEFISH_NW: usize = 4;
 const THREEFISH_C240: u64 = 0x1BD11BDAA9FC1A22;
 const THREE_FISH_N_ROUNDS: usize = 72;
 const THREEFISH_PI: [usize; 4] = [0, 3, 2, 1];
+
+// key_schedule は s=0..=18 で呼ばれる。% 5 / % 3 をコンパイル時テーブルで排除。
+const KS_N: usize = THREE_FISH_N_ROUNDS / 4 + 1; // 19
+const KS_K_IDX: [[usize; 4]; KS_N] = {
+    let mut t = [[0usize; 4]; KS_N];
+    let mut s = 0;
+    while s < KS_N {
+        t[s] = [s % 5, (s + 1) % 5, (s + 2) % 5, (s + 3) % 5];
+        s += 1;
+    }
+    t
+};
+const KS_TW_IDX: [[usize; 2]; KS_N] = {
+    let mut t = [[0usize; 2]; KS_N];
+    let mut s = 0;
+    while s < KS_N {
+        t[s] = [s % 3, (s + 1) % 3];
+        s += 1;
+    }
+    t
+};
+
 const THREEFISH_R_256: [[u32; 2]; 8] = [
     [14, 16],
     [52, 57],
@@ -41,9 +62,10 @@ impl Threefish256 {
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         let mut k = [0u64; 5];
-        for i in 0..4 {
-            k[i] = seedgen.nextu();
-        }
+        k[0] = seedgen.nextu();
+        k[1] = seedgen.nextu();
+        k[2] = seedgen.nextu();
+        k[3] = seedgen.nextu();
         k[4] = THREEFISH_C240 ^ k[0] ^ k[1] ^ k[2] ^ k[3];
 
         let tw0 = seedgen.nextu();
@@ -67,11 +89,13 @@ impl Threefish256 {
 
     #[inline(always)]
     fn key_schedule(k: &[u64; 5], tw: &[u64; 3], s: usize) -> [u64; 4] {
+        let ki = KS_K_IDX[s];
+        let ti = KS_TW_IDX[s];
         [
-            k[s % (THREEFISH_NW + 1)],
-            k[(s + 1) % (THREEFISH_NW + 1)].wrapping_add(tw[s % 3]),
-            k[(s + 2) % (THREEFISH_NW + 1)].wrapping_add(tw[(s + 1) % 3]),
-            k[(s + 3) % (THREEFISH_NW + 1)].wrapping_add(s as u64),
+            k[ki[0]],
+            k[ki[1]].wrapping_add(tw[ti[0]]),
+            k[ki[2]].wrapping_add(tw[ti[1]]),
+            k[ki[3]].wrapping_add(s as u64),
         ]
     }
 
@@ -81,8 +105,8 @@ impl Threefish256 {
 
         for r in 0..THREE_FISH_N_ROUNDS {
             let mut e = [0u64; 4];
-            if r % 4 == 0 {
-                let ksi = Self::key_schedule(&self.k, &self.tw, r / 4);
+            if (r & 0b011) == 0 {
+                let ksi = Self::key_schedule(&self.k, &self.tw, r >> 2);
                 e[0] = v[0].wrapping_add(ksi[0]);
                 e[1] = v[1].wrapping_add(ksi[1]);
                 e[2] = v[2].wrapping_add(ksi[2]);
@@ -92,7 +116,7 @@ impl Threefish256 {
             }
 
             let mut f = [0u64; 4];
-            let r_sh = THREEFISH_R_256[r % 8];
+            let r_sh = THREEFISH_R_256[r & 0b0111]; // r % 8
             let mx0 = Self::mix(e[0], e[1], r_sh[0]);
             f[0] = mx0[0];
             f[1] = mx0[1];
@@ -144,9 +168,10 @@ impl Threefish256 {
         let out = self.nextu();
         const SCALE: f64 = 1.0 / (u64::MAX as f64 + 1.0);
         let mut dst = [0f64; 4];
-        for i in 0..4 {
-            dst[i] = out[i] as f64 * SCALE;
-        }
+        dst[0] = out[0] as f64 * SCALE;
+        dst[1] = out[1] as f64 * SCALE;
+        dst[2] = out[2] as f64 * SCALE;
+        dst[3] = out[3] as f64 * SCALE;
         dst
     }
 
@@ -155,10 +180,12 @@ impl Threefish256 {
     pub fn randi(&mut self, min: i64, max: i64) -> [i64; 4] {
         let range = (max as i128 - min as i128 + 1) as u128;
         let out = self.nextu();
-        let mut dst = [0i64; 4];
-        for i in 0..4 {
-            dst[i] = ((out[i] as u128 * range) >> 64) as i64 + min;
-        }
+        let dst = [
+            ((out[0] as u128 * range) >> 64) as i64 + min,
+            ((out[1] as u128 * range) >> 64) as i64 + min,
+            ((out[2] as u128 * range) >> 64) as i64 + min,
+            ((out[3] as u128 * range) >> 64) as i64 + min,
+        ];
         dst
     }
 
@@ -168,10 +195,12 @@ impl Threefish256 {
         let range = max - min;
         let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
         let out = self.nextu();
-        let mut dst = [0f64; 4];
-        for i in 0..4 {
-            dst[i] = (out[i] as f64 * scale) + min;
-        }
+        let dst = [
+            (out[0] as f64 * scale) + min,
+            (out[1] as f64 * scale) + min,
+            (out[2] as f64 * scale) + min,
+            (out[3] as f64 * scale) + min,
+        ];
         dst
     }
 }
