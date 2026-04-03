@@ -1,5 +1,5 @@
 use crate::rng32::{
-    Mt19937, Sfmt521, Sfmt1279, Sfmt2203, Sfmt4253, Sfmt11213, Sfmt19937, Sfmt44497, Sfmt86243,
+    Mt19937, Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253, Sfmt11213, Sfmt19937, Sfmt44497, Sfmt86243,
     Sfmt132049, Sfmt216091,
 };
 use std::slice::from_raw_parts_mut;
@@ -244,13 +244,13 @@ macro_rules! impl_sfmt_cabi {
 }
 
 impl_sfmt_cabi!(
-    Sfmt521,
-    sfmt521_new,
-    sfmt521_free,
-    sfmt521_next_u32s,
-    sfmt521_next_f32s,
-    sfmt521_rand_i32s,
-    sfmt521_rand_f32s
+    Sfmt607,
+    sfmt607_new,
+    sfmt607_free,
+    sfmt607_next_u32s,
+    sfmt607_next_f32s,
+    sfmt607_rand_i32s,
+    sfmt607_rand_f32s
 );
 
 impl_sfmt_cabi!(
@@ -264,13 +264,13 @@ impl_sfmt_cabi!(
 );
 
 impl_sfmt_cabi!(
-    Sfmt2203,
-    sfmt2203_new,
-    sfmt2203_free,
-    sfmt2203_next_u32s,
-    sfmt2203_next_f32s,
-    sfmt2203_rand_i32s,
-    sfmt2203_rand_f32s
+    Sfmt2281,
+    sfmt2281_new,
+    sfmt2281_free,
+    sfmt2281_next_u32s,
+    sfmt2281_next_f32s,
+    sfmt2281_rand_i32s,
+    sfmt2281_rand_f32s
 );
 
 impl_sfmt_cabi!(

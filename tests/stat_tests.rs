@@ -341,9 +341,9 @@ fn build_suite() -> Result<Suite> {
     // Note: Lcg32/Lcg64 excluded — plain u32/u64 multiply overflows for large modulus.
     reg!(s32 chi, monte, SplitMix32);
     reg!(s32 chi, monte, Mt19937);
-    reg!(s32 chi, monte, Sfmt521);
+    reg!(s32 chi, monte, Sfmt607);
     reg!(s32 chi, monte, Sfmt1279);
-    reg!(s32 chi, monte, Sfmt2203);
+    reg!(s32 chi, monte, Sfmt2281);
     reg!(s32 chi, monte, Sfmt4253);
     reg!(s32 chi, monte, Sfmt11213);
     reg!(s32 chi, monte, Sfmt19937);

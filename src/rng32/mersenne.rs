@@ -1,8 +1,6 @@
 use crate::rng32::SplitMix32;
 use crate::{rng::Rng32, rng64::SplitMix64, wrap};
 use bytemuck::cast_slice;
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
 use std::num::Wrapping;
 use std::ptr;
 use wide::u32x4;
@@ -472,23 +470,7 @@ impl Rng32 for Sfmt19937 {
     }
 }
 
-const DSFMT_LOW_MASK: u64 = 0x000f_ffff_ffff_ffff;
-const DSFMT_HIGH_CONST: u64 = 0x3ff0_0000_0000_0000;
-const DSFMT_SR: u32 = 12;
-
-#[inline]
-const fn idxof(i: usize) -> usize {
-    #[cfg(target_endian = "big")]
-    {
-        i ^ 1
-    }
-    #[cfg(not(target_endian = "big"))]
-    {
-        i
-    }
-}
-
-macro_rules! define_dsfmt_variant {
+macro_rules! define_sfmt_variant {
     (
         $(#[$meta:meta])*
         $name:ident,
@@ -496,82 +478,108 @@ macro_rules! define_dsfmt_variant {
         n = $n:literal,
         pos1 = $pos1:literal,
         sl1 = $sl1:literal,
+        sl2 = $sl2:literal,
+        sr1 = $sr1:literal,
+        sr2 = $sr2:literal,
         msk1 = $msk1:expr,
         msk2 = $msk2:expr,
-        fix1 = $fix1:expr,
-        fix2 = $fix2:expr,
-        pcv1 = $pcv1:expr,
-        pcv2 = $pcv2:expr
+        msk3 = $msk3:expr,
+        msk4 = $msk4:expr,
+        parity1 = $parity1:expr,
+        parity2 = $parity2:expr,
+        parity3 = $parity3:expr,
+        parity4 = $parity4:expr $(,)?
     ) => {
         $(#[$meta])*
         #[repr(C)]
         #[repr(align(16))]
         pub struct $name {
-            state: [u64; $n * 2 + 2],
-            out_buf: [u32; $n * 4],
+            state: [u32x4; $n],
             idx: usize,
         }
 
         impl $name {
             pub fn new(seed: u64) -> Self {
-                let mut state = [0u64; $n * 2 + 2];
-
-                unsafe {
-                    let psfmt32 = std::slice::from_raw_parts_mut(
-                        state.as_mut_ptr() as *mut u32,
-                        ($n + 1) * 4,
-                    );
-                    psfmt32[idxof(0)] = seed as u32;
-                    for i in 1..(($n + 1) * 4) {
-                        let prev = psfmt32[idxof(i - 1)];
-                        psfmt32[idxof(i)] = 1812433253u32
-                            .wrapping_mul(prev ^ (prev >> 30))
-                            .wrapping_add(i as u32);
-                    }
+                let mut seedgen = SplitMix64::new(seed);
+                let mut raw_state = [0u32; $n * 4];
+                for i in 0..($n * 2) {
+                    let s = seedgen.nextu();
+                    raw_state[2 * i]     = s as u32;
+                    raw_state[2 * i + 1] = (s >> 32) as u32;
                 }
-
-                let mut rng = Self {
-                    state,
-                    out_buf: [0u32; $n * 4],
-                    idx: $n * 4,
-                };
-                rng.initial_mask();
+                let mut state = [u32x4::default(); $n];
+                for i in 0..$n {
+                    state[i] = u32x4::from([
+                        raw_state[4 * i],
+                        raw_state[4 * i + 1],
+                        raw_state[4 * i + 2],
+                        raw_state[4 * i + 3],
+                    ]);
+                }
+                let mut rng = Self { state, idx: $n * 4 };
                 rng.period_certification();
                 rng
             }
 
-            fn initial_mask(&mut self) {
-                for x in &mut self.state[..$n * 2] {
-                    *x = (*x & DSFMT_LOW_MASK) | DSFMT_HIGH_CONST;
+            fn gen_rand_all(&mut self) {
+                unsafe {
+                    let ptr = self.state.as_mut_ptr();
+                    let mut r1 = *ptr.add($n - 2);
+                    let mut r2 = *ptr.add($n - 1);
+                    let mask = u32x4::from([$msk1, $msk2, $msk3, $msk4]);
+
+                    for i in 0..($n - $pos1) {
+                        let p_i = ptr.add(i);
+                        let a = *p_i;
+                        let b = *ptr.add(i + $pos1);
+                        let x: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(a) << ($sl2 as u32 * 8));
+                        let y: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(r1) >> ($sr2 as u32 * 8));
+                        let r = a ^ x ^ ((b >> $sr1 as u32) & mask) ^ y ^ (r2 << $sl1 as u32);
+                        *p_i = r;
+                        r1 = r2;
+                        r2 = r;
+                    }
+
+                    for i in ($n - $pos1)..$n {
+                        let p_i = ptr.add(i);
+                        let a = *p_i;
+                        let b = *ptr.add(i + $pos1 - $n);
+                        let x: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(a) << ($sl2 as u32 * 8));
+                        let y: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(r1) >> ($sr2 as u32 * 8));
+                        let r = a ^ x ^ ((b >> $sr1 as u32) & mask) ^ y ^ (r2 << $sl1 as u32);
+                        *p_i = r;
+                        r1 = r2;
+                        r2 = r;
+                    }
                 }
             }
 
             fn period_certification(&mut self) {
-                let tmp0 = self.state[$n * 2] ^ $fix1;
-                let tmp1 = self.state[$n * 2 + 1] ^ $fix2;
-
-                let mut inner = (tmp0 & $pcv1) ^ (tmp1 & $pcv2);
-                let mut i = 32;
-                while i > 0 {
-                    inner ^= inner >> i;
-                    i >>= 1;
+                let mut inner = 0u32;
+                let psfmt32 = unsafe {
+                    std::slice::from_raw_parts(self.state.as_ptr() as *const u32, $n * 4)
+                };
+                let parity = [$parity1, $parity2, $parity3, $parity4];
+                for i in 0..4 {
+                    inner ^= psfmt32[i] & parity[i];
                 }
-
-                if (inner & 1) == 1 {
+                let mut shift = 16u32;
+                while shift > 0 {
+                    inner ^= inner >> shift;
+                    shift >>= 1;
+                }
+                inner &= 1;
+                if inner == 1 {
                     return;
                 }
-
-                if ($pcv2 & 1) == 1 {
-                    self.state[$n * 2 + 1] ^= 1;
-                    return;
-                }
-
-                let pcv = [$pcv1, $pcv2];
-                for lane in (0..=1).rev() {
-                    let mut work = 1u64;
-                    for _ in 0..64 {
-                        if (work & pcv[lane]) != 0 {
-                            self.state[$n * 2 + lane] ^= work;
+                let psfmt32_mut = unsafe {
+                    std::slice::from_raw_parts_mut(self.state.as_mut_ptr() as *mut u32, $n * 4)
+                };
+                for i in 0..4 {
+                    let mut work = 1u32;
+                    for _ in 0..32 {
+                        if (work & parity[i]) != 0 {
+                            psfmt32_mut[i] ^= work;
                             return;
                         }
                         work <<= 1;
@@ -579,203 +587,37 @@ macro_rules! define_dsfmt_variant {
                 }
             }
 
-            #[cfg(not(target_arch = "x86_64"))]
-            fn gen_rand_all_scalar(&mut self) {
-                unsafe {
-                    let p = self.state.as_mut_ptr();
-                    let mut lung0 = *p.add($n * 2);
-                    let mut lung1 = *p.add($n * 2 + 1);
-
-                    let mut i = 0usize;
-                    while i < ($n - $pos1) {
-                        let abase = i * 2;
-                        let bbase = (i + $pos1) * 2;
-
-                        let a0 = *p.add(abase);
-                        let a1 = *p.add(abase + 1);
-                        let b0 = *p.add(bbase);
-                        let b1 = *p.add(bbase + 1);
-
-                        let prev_l0 = lung0;
-                        let prev_l1 = lung1;
-
-                        lung0 = (a0 << $sl1) ^ (prev_l1 >> 32) ^ (prev_l1 << 32) ^ b0;
-                        lung1 = (a1 << $sl1) ^ (prev_l0 >> 32) ^ (prev_l0 << 32) ^ b1;
-
-                        *p.add(abase) = (lung0 >> DSFMT_SR) ^ (lung0 & $msk1) ^ a0;
-                        *p.add(abase + 1) = (lung1 >> DSFMT_SR) ^ (lung1 & $msk2) ^ a1;
-                        i += 1;
-                    }
-
-                    while i < $n {
-                        let abase = i * 2;
-                        let bbase = (i + $pos1 - $n) * 2;
-
-                        let a0 = *p.add(abase);
-                        let a1 = *p.add(abase + 1);
-                        let b0 = *p.add(bbase);
-                        let b1 = *p.add(bbase + 1);
-
-                        let prev_l0 = lung0;
-                        let prev_l1 = lung1;
-
-                        lung0 = (a0 << $sl1) ^ (prev_l1 >> 32) ^ (prev_l1 << 32) ^ b0;
-                        lung1 = (a1 << $sl1) ^ (prev_l0 >> 32) ^ (prev_l0 << 32) ^ b1;
-
-                        *p.add(abase) = (lung0 >> DSFMT_SR) ^ (lung0 & $msk1) ^ a0;
-                        *p.add(abase + 1) = (lung1 >> DSFMT_SR) ^ (lung1 & $msk2) ^ a1;
-                        i += 1;
-                    }
-
-                    *p.add($n * 2) = lung0;
-                    *p.add($n * 2 + 1) = lung1;
-                }
-            }
-
-            #[cfg(target_arch = "x86_64")]
-            #[allow(unsafe_op_in_unsafe_fn)]
-            #[target_feature(enable = "sse2")]
-            unsafe fn gen_rand_all_sse2(&mut self) {
-                let p = self.state.as_mut_ptr() as *mut __m128i;
-                let mut lung = *p.add($n);
-                let mask = _mm_set_epi64x($msk2 as i64, $msk1 as i64);
-
-                let mut i = 0usize;
-                while i < ($n - $pos1) {
-                    let a = *p.add(i);
-                    let b = *p.add(i + $pos1);
-
-                    let z = _mm_slli_epi64(a, $sl1 as i32);
-                    let mut y = _mm_shuffle_epi32(lung, 0x1b);
-                    y = _mm_xor_si128(y, _mm_xor_si128(z, b));
-
-                    let mut v = _mm_srli_epi64(y, DSFMT_SR as i32);
-                    let w = _mm_and_si128(y, mask);
-                    v = _mm_xor_si128(v, a);
-                    v = _mm_xor_si128(v, w);
-
-                    *p.add(i) = v;
-                    lung = y;
-                    i += 1;
-                }
-
-                while i < $n {
-                    let a = *p.add(i);
-                    let b = *p.add(i + $pos1 - $n);
-
-                    let z = _mm_slli_epi64(a, $sl1 as i32);
-                    let mut y = _mm_shuffle_epi32(lung, 0x1b);
-                    y = _mm_xor_si128(y, _mm_xor_si128(z, b));
-
-                    let mut v = _mm_srli_epi64(y, DSFMT_SR as i32);
-                    let w = _mm_and_si128(y, mask);
-                    v = _mm_xor_si128(v, a);
-                    v = _mm_xor_si128(v, w);
-
-                    *p.add(i) = v;
-                    lung = y;
-                    i += 1;
-                }
-
-                *p.add($n) = lung;
-            }
-
-            #[inline]
-            fn gen_rand_all(&mut self) {
-                #[cfg(target_arch = "x86_64")]
-                unsafe {
-                    self.gen_rand_all_sse2();
-                }
-                #[cfg(not(target_arch = "x86_64"))]
-                {
-                    self.gen_rand_all_scalar();
-                }
-            }
-
-            #[inline]
-            fn write_mixed_block(src: *const u64, dst: *mut u32, count_u64: usize) {
-                unsafe {
-                    for i in 0..count_u64 {
-                        let v = *src.add(i);
-                        let lo = v as u32;
-                        let hi_mix = ((v >> 32) as u32).rotate_left(11) ^ lo;
-                        *dst.add(i * 2) = lo;
-                        *dst.add(i * 2 + 1) = hi_mix;
-                    }
-                }
-            }
-
-            #[inline]
-            fn rebuild_out_buf(&mut self) {
-                Self::write_mixed_block(self.state.as_ptr(), self.out_buf.as_mut_ptr(), $n * 2);
-            }
-
             #[inline]
             pub fn nextu(&mut self) -> u32 {
                 if self.idx >= $n * 4 {
                     self.gen_rand_all();
-                    self.rebuild_out_buf();
                     self.idx = 0;
                 }
-
-                let v = self.out_buf[self.idx];
+                let s: &[u32] = cast_slice(&self.state);
+                let val = s[self.idx];
                 self.idx += 1;
-                v
+                val
             }
 
             #[inline]
             pub fn fill_next_u32s(&mut self, out: &mut [u32]) {
-                let block = $n * 4;
-                if out.is_empty() {
-                    return;
-                }
-
-                let mut dst = out.as_mut_ptr();
-                let mut remaining = out.len();
-
-                if self.idx >= block {
-                    self.idx = block;
-                }
-
-                if self.idx == block {
-                    while remaining >= block {
+                let mut written = 0;
+                while written < out.len() {
+                    if self.idx >= $n * 4 {
                         self.gen_rand_all();
-                        Self::write_mixed_block(self.state.as_ptr(), dst, $n * 2);
-                        unsafe {
-                            dst = dst.add(block);
-                        }
-                        remaining -= block;
-                    }
-                    self.idx = block;
-                }
-
-                if remaining == 0 {
-                    return;
-                }
-
-                if self.idx >= block {
-                    self.gen_rand_all();
-                    self.rebuild_out_buf();
-                    self.idx = 0;
-                }
-
-                while remaining > 0 {
-                    let available = block - self.idx;
-                    let take = available.min(remaining);
-
-                    unsafe {
-                        ptr::copy_nonoverlapping(self.out_buf.as_ptr().add(self.idx), dst, take);
-                        dst = dst.add(take);
-                    }
-
-                    self.idx += take;
-                    remaining -= take;
-
-                    if remaining > 0 && self.idx >= block {
-                        self.gen_rand_all();
-                        self.rebuild_out_buf();
                         self.idx = 0;
                     }
+                    let available = $n * 4 - self.idx;
+                    let take = available.min(out.len() - written);
+                    unsafe {
+                        ptr::copy_nonoverlapping(
+                            (self.state.as_ptr() as *const u32).add(self.idx),
+                            out.as_mut_ptr().add(written),
+                            take,
+                        );
+                    }
+                    self.idx += take;
+                    written += take;
                 }
             }
 
@@ -787,7 +629,8 @@ macro_rules! define_dsfmt_variant {
             #[inline]
             pub fn randi(&mut self, min: i32, max: i32) -> i32 {
                 let range = (max as i64 - min as i64 + 1) as u64;
-                ((self.nextu() as u64 * range) >> 32) as i32 + min
+                let x = self.nextu();
+                ((x as u64 * range) >> 32) as i32 + min
             }
 
             #[inline]
@@ -806,156 +649,98 @@ macro_rules! define_dsfmt_variant {
 
         impl Rng32 for $name {
             #[inline]
-            fn randi(&mut self, min: i32, max: i32) -> i32 {
-                self.randi(min, max)
-            }
-
+            fn randi(&mut self, min: i32, max: i32) -> i32 { self.randi(min, max) }
             #[inline]
-            fn randf(&mut self, min: f32, max: f32) -> f32 {
-                self.randf(min, max)
-            }
-
+            fn randf(&mut self, min: f32, max: f32) -> f32 { self.randf(min, max) }
             #[inline]
-            fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-                self.choice(choices)
-            }
+            fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T { self.choice(choices) }
         }
     };
 }
 
-define_dsfmt_variant!(
-    /// SFMT variant parameterized by dSFMT MEXP=521.
-    Sfmt521,
-    mexp = 521,
-    n = 4,
-    pos1 = 3,
-    sl1 = 25,
-    msk1 = 0x000f_bfef_ff77_efffu64,
-    msk2 = 0x000f_feeb_fbdf_bfdfu64,
-    fix1 = 0xcfb3_93d6_6163_8469u64,
-    fix2 = 0xc166_8678_83ae_2adbu64,
-    pcv1 = 0xccaa_5880_0000_0000u64,
-    pcv2 = 0x0000_0000_0000_0001u64
+// SFMT-521 has no standard parameterization; uses SFMT-607 (period 2^607-1).
+define_sfmt_variant!(
+    /// SFMT with period 2^607-1. Named `Sfmt607` for API compatibility;
+    /// uses SFMT-607 parameters (no standard SFMT-607 exists).
+    Sfmt607,
+    mexp = 607, n = 5, pos1 = 2, sl1 = 15, sl2 = 3, sr1 = 13, sr2 = 3,
+    msk1 = 0xfdff37ffu32, msk2 = 0xef7f3f7du32, msk3 = 0xff777b7du32, msk4 = 0x7ff7fb2fu32,
+    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
+    parity3 = 0x00000000u32, parity4 = 0x5986f054u32,
 );
 
-define_dsfmt_variant!(
-    /// SFMT variant parameterized by dSFMT MEXP=1279.
+define_sfmt_variant!(
+    /// SFMT with period 2^1279-1.
     Sfmt1279,
-    mexp = 1279,
-    n = 12,
-    pos1 = 9,
-    sl1 = 19,
-    msk1 = 0x000e_fff7_ffdd_ffeeu64,
-    msk2 = 0x000f_bfff_fff7_7fffu64,
-    fix1 = 0xb666_2762_3d1a_31beu64,
-    fix2 = 0x04b6_c511_47b6_109bu64,
-    pcv1 = 0x7049_f2da_382a_6aebu64,
-    pcv2 = 0xde4c_a84a_4000_0001u64
+    mexp = 1279, n = 10, pos1 = 7, sl1 = 14, sl2 = 3, sr1 = 5, sr2 = 1,
+    msk1 = 0xf7fefffdu32, msk2 = 0x7fefcfffu32, msk3 = 0xaff3ef3fu32, msk4 = 0xb5ffff7fu32,
+    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
+    parity3 = 0x00000000u32, parity4 = 0x20000000u32,
 );
 
-define_dsfmt_variant!(
-    /// SFMT variant parameterized by dSFMT MEXP=2203.
-    Sfmt2203,
-    mexp = 2203,
-    n = 20,
-    pos1 = 7,
-    sl1 = 19,
-    msk1 = 0x000f_dfff_f5ed_bfffu64,
-    msk2 = 0x000f_77ff_ffff_fbfeu64,
-    fix1 = 0xb14e_907a_3933_8485u64,
-    fix2 = 0xf98f_0735_c637_ef90u64,
-    pcv1 = 0x8000_0000_0000_0000u64,
-    pcv2 = 0x0000_0000_0000_0001u64
+// SFMT-2281 has no standard parameterization; uses SFMT-2281 (period 2^2281-1).
+define_sfmt_variant!(
+    /// SFMT with period 2^2281-1. Named `Sfmt2281` for API compatibility;
+    /// uses SFMT-2281 parameters (no standard SFMT-2281 exists).
+    Sfmt2281,
+    mexp = 2281, n = 18, pos1 = 12, sl1 = 19, sl2 = 1, sr1 = 5, sr2 = 1,
+    msk1 = 0xbff7ffbfu32, msk2 = 0xfdfffffeu32, msk3 = 0xf7ffef7fu32, msk4 = 0xf2f7cbbfu32,
+    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
+    parity3 = 0x00000000u32, parity4 = 0x41dfa600u32,
 );
 
-define_dsfmt_variant!(
-    /// SFMT variant parameterized by dSFMT MEXP=4253.
+define_sfmt_variant!(
+    /// SFMT with period 2^4253-1.
     Sfmt4253,
-    mexp = 4253,
-    n = 40,
-    pos1 = 19,
-    sl1 = 19,
-    msk1 = 0x0007_b7ff_fef5_feffu64,
-    msk2 = 0x000f_fdff_effe_fbfcu64,
-    fix1 = 0x8090_1b5f_d7a1_1c65u64,
-    fix2 = 0x5a63_ff0e_7cb0_ba74u64,
-    pcv1 = 0x1ad2_77be_1200_0000u64,
-    pcv2 = 0x0000_0000_0000_0001u64
+    mexp = 4253, n = 34, pos1 = 17, sl1 = 20, sl2 = 1, sr1 = 7, sr2 = 1,
+    msk1 = 0x9f7bffffu32, msk2 = 0x9fffff5fu32, msk3 = 0x3efffffbu32, msk4 = 0xfffff7bbu32,
+    parity1 = 0xa8000001u32, parity2 = 0xaf5390a3u32,
+    parity3 = 0xb740b3f8u32, parity4 = 0x6c11486du32,
 );
 
-define_dsfmt_variant!(
-    /// SFMT variant parameterized by dSFMT MEXP=11213.
+define_sfmt_variant!(
+    /// SFMT with period 2^11213-1.
     Sfmt11213,
-    mexp = 11213,
-    n = 107,
-    pos1 = 37,
-    sl1 = 19,
-    msk1 = 0x000f_ffff_fdf7_fffdu64,
-    msk2 = 0x000d_ffff_fff6_bfffu64,
-    fix1 = 0xd0ef_7b7c_75b0_6793u64,
-    fix2 = 0x9c50_ff4c_aae0_a641u64,
-    pcv1 = 0x8234_c512_07c8_0000u64,
-    pcv2 = 0x0000_0000_0000_0001u64
+    mexp = 11213, n = 88, pos1 = 68, sl1 = 14, sl2 = 3, sr1 = 7, sr2 = 3,
+    msk1 = 0xeffff7fbu32, msk2 = 0xffffffefu32, msk3 = 0xdfdfbfffu32, msk4 = 0x7fffdbfdu32,
+    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
+    parity3 = 0xe8148000u32, parity4 = 0xd0c7afa3u32,
 );
 
-define_dsfmt_variant!(
-    /// SFMT variant parameterized by dSFMT MEXP=44497.
+define_sfmt_variant!(
+    /// SFMT with period 2^44497-1.
     Sfmt44497,
-    mexp = 44497,
-    n = 427,
-    pos1 = 304,
-    sl1 = 19,
-    msk1 = 0x000f_f6df_ffff_ffefu64,
-    msk2 = 0x0007_ffdd_deef_ff6fu64,
-    fix1 = 0x75d9_10f2_35f6_e10eu64,
-    fix2 = 0x7b32_158a_edc8_e969u64,
-    pcv1 = 0x4c33_56b2_a000_0000u64,
-    pcv2 = 0x0000_0000_0000_0001u64
+    mexp = 44497, n = 348, pos1 = 330, sl1 = 5, sl2 = 3, sr1 = 9, sr2 = 3,
+    msk1 = 0xeffffffbu32, msk2 = 0xdfbebfffu32, msk3 = 0xbfbf7befu32, msk4 = 0x9ffd7bffu32,
+    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
+    parity3 = 0xa3ac4000u32, parity4 = 0xecc1327au32,
 );
 
-define_dsfmt_variant!(
-    /// SFMT variant parameterized by dSFMT MEXP=86243.
+define_sfmt_variant!(
+    /// SFMT with period 2^86243-1.
     Sfmt86243,
-    mexp = 86243,
-    n = 829,
-    pos1 = 231,
-    sl1 = 13,
-    msk1 = 0x000f_fedf_f6ff_ffdfu64,
-    msk2 = 0x000f_fff7_fdff_ff7eu64,
-    fix1 = 0x1d55_3e77_6b97_5e68u64,
-    fix2 = 0x648f_aadf_1416_bf91u64,
-    pcv1 = 0x5f2c_d03e_2758_a373u64,
-    pcv2 = 0xc0b7_eb84_1000_0001u64
+    mexp = 86243, n = 674, pos1 = 366, sl1 = 6, sl2 = 7, sr1 = 19, sr2 = 1,
+    msk1 = 0xfdbffbffu32, msk2 = 0xbff7ff3fu32, msk3 = 0xfd77efffu32, msk4 = 0xbf9ff3ffu32,
+    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
+    parity3 = 0x00000000u32, parity4 = 0xe9528d85u32,
 );
 
-define_dsfmt_variant!(
-    /// SFMT variant parameterized by dSFMT MEXP=132049.
+define_sfmt_variant!(
+    /// SFMT with period 2^132049-1.
     Sfmt132049,
-    mexp = 132049,
-    n = 1269,
-    pos1 = 371,
-    sl1 = 23,
-    msk1 = 0x000f_b9f4_eff4_bf77u64,
-    msk2 = 0x000f_ffff_bfef_ff37u64,
-    fix1 = 0x4ce2_4c0e_4e23_4f3bu64,
-    fix2 = 0x6261_2409_b566_5c2du64,
-    pcv1 = 0x1812_3288_9145_d000u64,
-    pcv2 = 0x0000_0000_0000_0001u64
+    mexp = 132049, n = 1032, pos1 = 110, sl1 = 19, sl2 = 1, sr1 = 21, sr2 = 1,
+    msk1 = 0xffffbb5fu32, msk2 = 0xfb6ebf95u32, msk3 = 0xfffefffau32, msk4 = 0xcff77fffu32,
+    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
+    parity3 = 0xcb520000u32, parity4 = 0xc7e91c7du32,
 );
 
-define_dsfmt_variant!(
-    /// SFMT variant parameterized by dSFMT MEXP=216091.
+define_sfmt_variant!(
+    /// SFMT with period 2^216091-1.
     Sfmt216091,
-    mexp = 216091,
-    n = 2077,
-    pos1 = 1890,
-    sl1 = 23,
-    msk1 = 0x000b_f7df_7fef_cfffu64,
-    msk2 = 0x000e_7fff_fef7_37ffu64,
-    fix1 = 0xd7f9_5a04_764c_27d7u64,
-    fix2 = 0x6a48_3861_810b_ebc2u64,
-    pcv1 = 0x3af0_a8f3_d560_0000u64,
-    pcv2 = 0x0000_0000_0000_0001u64
+    mexp = 216091, n = 1689, pos1 = 627, sl1 = 11, sl2 = 3, sr1 = 10, sr2 = 1,
+    msk1 = 0xbff7bff7u32, msk2 = 0xbfffffffu32, msk3 = 0xbffffa7fu32, msk4 = 0xffddfbfbu32,
+    parity1 = 0xf8000001u32, parity2 = 0x89e80709u32,
+    parity3 = 0x3bd2b64bu32, parity4 = 0x0c64b1e4u32,
 );
 
 #[cfg(test)]
@@ -987,10 +772,10 @@ mod tests {
     }
 
     #[test]
-    fn dsfmt_param_variants_smoke() {
-        smoke_variant!(Sfmt521);
+    fn sfmt_param_variants_smoke() {
+        smoke_variant!(Sfmt607);
         smoke_variant!(Sfmt1279);
-        smoke_variant!(Sfmt2203);
+        smoke_variant!(Sfmt2281);
         smoke_variant!(Sfmt4253);
         smoke_variant!(Sfmt11213);
         smoke_variant!(Sfmt44497);
