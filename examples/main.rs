@@ -73,8 +73,8 @@ use urng::{
 // sfmt132049      : 1.20 GS/s
 // sfmt216091      : 1.19 GS/s
 // xoshiro128pp    : 0.81 GS/s
-// xoshiro128ppx16 : 6.82 GS/s
-// xoshiro128ssx16 : 6.80 GS/s
+// xoshiro128ppx16 : 6.84 GS/s
+// xoshiro128ssx16 : 6.88 GS/s
 // philox64        : 3.01 GS/s
 // splitmix64      : 3.17 GS/s
 // mt1993764       : 0.58 GS/s
