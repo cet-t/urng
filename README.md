@@ -2,7 +2,6 @@
 [<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-urng-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/urng)
 [<img alt="github" src="https://img.shields.io/badge/github-cet--t%2Furng-5f5fff?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/cet-t/urng)
 
-
 # Universal RNG
 
 A collection of efficient pseudo-random number generators (PRNGs) implemented in pure Rust.
@@ -14,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.4.0"
+urng = "0.4.1"
 ```
 
 ## Supported Generators
@@ -26,38 +25,53 @@ SIMD generators have their own bulk-generation API and are listed separately.
 
 Implement `Rng32`, output `u32` natively.
 
-| Struct         | Algorithm        | Period / State   | Description                               |
-| -------------- | ---------------- | ---------------- | ----------------------------------------- |
-| `Mt19937`      | Mersenne Twister | $2^{19937}-1$    | Standard reliable generator.              |
-| `Sfmt19937`    | SFMT             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.      |
-| `Pcg32`        | PCG-XSH-RR       | $2^{64}$         | Fast, statistically good, small state.    |
-| `Philox32x4`   | Philox 4x32      | -                | Counter-based, suitable for parallel use. |
-| `SplitMix32`   | SplitMix32       | $2^{32}$         | Fast, used for initializing other states. |
-| `Xorwow`       | XORWOW           | $2^{192}-2^{32}$ | Used in NVIDIA cuRAND.                    |
-| `Xorshift32`   | Xorshift         | $2^{32}-1$       | Very simple and fast.                     |
-| `Lcg32`        | LCG              | $m$              | Linear Congruential Generator.            |
-| `Threefry32x4` | Threefry 4x32    | -                | Counter-based (Random123 family).         |
-| `Threefry32x2` | Threefry 2x32    | -                | Counter-based (Random123 family).         |
-| `Squares32`    | Squares          | -                | Counter-based (Widynski).                 |
+| Struct         | Algorithm        | Period / State   | Description                                     |
+| -------------- | ---------------- | ---------------- | ----------------------------------------------- |
+| `Mt19937`      | Mersenne Twister | $2^{19937}-1$    | Standard reliable generator.                    |
+| `Sfmt607`      | SFMT             | $2^{607}-1$      | SIMD-oriented Fast Mersenne Twister.            |
+| `Sfmt1279`     | SFMT             | $2^{1279}-1$     | SIMD-oriented Fast Mersenne Twister.            |
+| `Sfmt2281`     | SFMT             | $2^{2281}-1$     | SIMD-oriented Fast Mersenne Twister.            |
+| `Sfmt4253`     | SFMT             | $2^{4253}-1$     | SIMD-oriented Fast Mersenne Twister.            |
+| `Sfmt11213`    | SFMT             | $2^{11213}-1$    | SIMD-oriented Fast Mersenne Twister.            |
+| `Sfmt19937`    | SFMT             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.            |
+| `Sfmt44497`    | SFMT             | $2^{44497}-1$    | SIMD-oriented Fast Mersenne Twister.            |
+| `Sfmt86243`    | SFMT             | $2^{86243}-1$    | SIMD-oriented Fast Mersenne Twister.            |
+| `Sfmt132049`   | SFMT             | $2^{132049}-1$   | SIMD-oriented Fast Mersenne Twister.            |
+| `Sfmt216091`   | SFMT             | $2^{216091}-1$   | SIMD-oriented Fast Mersenne Twister.            |
+| `Pcg32`        | PCG-XSH-RR       | $2^{64}$         | Fast, statistically good, small state.          |
+| `Philox32x4`   | Philox 4x32      | -                | Counter-based, suitable for parallel use.       |
+| `SplitMix32`   | SplitMix32       | $2^{32}$         | Fast, used for initializing other states.       |
+| `Xorwow`       | XORWOW           | $2^{192}-2^{32}$ | Used in NVIDIA cuRAND.                          |
+| `Xorshift32`   | Xorshift         | $2^{32}-1$       | Very simple and fast.                           |
+| `Xoshiro128Pp` | xoshiro128++     | $2^{128}-1$      | Fast high-quality generator with 128-bit state. |
+| `Xoshiro128Ss` | xoshiro128\*\*   | $2^{128}-1$      | Fast high-quality generator with 128-bit state. |
+| `Lcg32`        | LCG              | $m$              | Linear Congruential Generator.                  |
+| `Threefry32x4` | Threefry 4x32    | -                | Counter-based (Random123 family).               |
+| `Threefry32x2` | Threefry 2x32    | -                | Counter-based (Random123 family).               |
+| `Squares32`    | Squares          | -                | Counter-based (Widynski).                       |
 
 ### 64-bit Generators (`urng::rng64`)
 
 Implement `Rng64`, output `u64` natively.
 
-| Struct         | Algorithm           | Period / State   | Description                               |
-| -------------- | ------------------- | ---------------- | ----------------------------------------- |
-| `Xoshiro256Pp` | xoshiro256++        | $2^{256}-1$      | **Recommended** all-purpose generator.    |
-| `Xoshiro256Ss` | xoshiro256\*\*      | $2^{256}-1$      | **Recommended** all-purpose generator.    |
-| `SplitMix64`   | SplitMix64          | $2^{64}$         | Fast, used for initializing other states. |
-| `Sfc64`        | SFC64               | $2^{256}$ approx | Small Fast Chaotic PRNG.                  |
-| `Mt1993764`    | Mersenne Twister 64 | $2^{19937}-1$    | 64-bit variant of MT.                     |
-| `Sfmt1993764`  | SFMT 64             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.      |
-| `Philox64`     | Philox 2x64         | -                | Counter-based.                            |
-| `Xorshift64`   | Xorshift            | $2^{64}-1$       | Simple and fast.                          |
-| `TwistedGFSR`  | TGFSR               | $2^{800}$ approx | Generalized Feedback Shift Register.      |
-| `Cet64`        | CET                 | -                | Custom experimental generator.            |
-| `Lcg64`        | LCG                 | $m$              | Linear Congruential Generator.            |
-| `Threefish256` | Threefish-256       | -                | Counter-based, 256-bit block cipher PRNG. |
+| Struct            | Algorithm           | Period / State   | Description                               |
+| ----------------- | ------------------- | ---------------- | ----------------------------------------- |
+| `Xoshiro256Pp`    | xoshiro256++        | $2^{256}-1$      | **Recommended** all-purpose generator.    |
+| `Xoshiro256Ss`    | xoshiro256\*\*      | $2^{256}-1$      | **Recommended** all-purpose generator.    |
+| `SplitMix64`      | SplitMix64          | $2^{64}$         | Fast, used for initializing other states. |
+| `Sfc64`           | SFC64               | $2^{256}$ approx | Small Fast Chaotic PRNG.                  |
+| `Mt1993764`       | Mersenne Twister 64 | $2^{19937}-1$    | 64-bit variant of MT.                     |
+| `Sfmt1993764`     | SFMT 64             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.      |
+| `Philox64`        | Philox 2x64         | -                | Counter-based.                            |
+| `Xorshift64`      | Xorshift            | $2^{64}-1$       | Simple and fast.                          |
+| `Xoroshiro128Pp`¹ | xoroshiro128++      | $2^{128}-1$      | Fast generator with 128-bit state.        |
+| `Xoroshiro128Ss`¹ | xoroshiro128\*\*    | $2^{128}-1$      | Fast generator with 128-bit state.        |
+| `TwistedGFSR`     | TGFSR               | $2^{800}$ approx | Generalized Feedback Shift Register.      |
+| `Cet64`           | CET                 | -                | Custom experimental generator.            |
+| `Lcg64`           | LCG                 | $m$              | Linear Congruential Generator.            |
+| `Threefish256`    | Threefish-256       | -                | Counter-based, 256-bit block cipher PRNG. |
+
+> ¹ In the `urng::rng64::xoroshiro` submodule (not re-exported at `urng::rng64`).
 
 ### Other (`urng::rng128`)
 
@@ -69,13 +83,15 @@ These generators do not implement `Rng32`/`Rng64` and instead expose a bulk-gene
 
 #### AVX-512 (`avx512f`)
 
-| Struct           | Algorithm         | Output   | Description                              |
-| ---------------- | ----------------- | -------- | ---------------------------------------- |
-| `Pcg32x8`        | PCG-XSH-RR x8     | 8×`u32`  | 8 independent PCG32 streams in parallel. |
-| `Philox32x4x4`   | Philox 4x32 x4    | 16×`u32` | Counter-based, 4 Philox4x32 streams.     |
-| `SplitMix32x16`  | SplitMix32 x16    | 16×`u32` | 16 independent SplitMix32 streams.       |
-| `Squares32x8`    | Squares x8        | 8×`u32`  | 8 counters processed in parallel.        |
-| `Xoshiro256Ssx2` | xoshiro256\*\* x2 | 2×`u64`  | 2 independent xoshiro256** streams.      |
+| Struct            | Algorithm          | Output   | Description                              |
+| ----------------- | ------------------ | -------- | ---------------------------------------- |
+| `Pcg32x8`         | PCG-XSH-RR x8      | 8×`u32`  | 8 independent PCG32 streams in parallel. |
+| `Philox32x4x4`    | Philox 4x32 x4     | 16×`u32` | Counter-based, 4 Philox4x32 streams.     |
+| `SplitMix32x16`   | SplitMix32 x16     | 16×`u32` | 16 independent SplitMix32 streams.       |
+| `Squares32x8`     | Squares x8         | 8×`u32`  | 8 counters processed in parallel.        |
+| `Xoshiro128Ppx16` | xoshiro128++ x16   | 16×`u32` | 16 independent xoshiro128++ streams.     |
+| `Xoshiro128Ssx16` | xoshiro128\*\* x16 | 16×`u32` | 16 independent xoshiro128\*\* streams.   |
+| `Xoshiro256Ssx2`  | xoshiro256\*\* x2  | 2×`u64`  | 2 independent xoshiro256\*\* streams.    |
 
 #### AVX2
 
