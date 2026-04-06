@@ -44,6 +44,8 @@ use urng::{
         xoshiro256pp_free, xoshiro256pp_new, xoshiro256pp_next_u64s,
         xoshiro256ss_free, xoshiro256ss_new, xoshiro256ss_next_u64s, 
         xoshiro256ssx2_free, xoshiro256ssx2_new, xoshiro256ssx2_next_u64s,
+        sfc64_free, sfc64_new, sfc64_next_u64s,
+        sfc64x8_free, sfc64x8_new, sfc64x8_next_u64s,
     },
 };
 
@@ -88,46 +90,54 @@ const G: f64 = 1_000_000_000f64;
 
 #[allow(unused_macros)]
 macro_rules! bench32 {
-    ($new:expr, $next:expr, $free:expr $(,)?) => {{
-        let name = stringify!($new).trim_end_matches("_new");
-        let mut buffer = vec![0u32; N];
-        let ptr = $new(0);
+    ($name:ident) => {
+        paste::paste! {
+            let name = stringify!($name);
+            let mut buffer = vec![0u32; N];
+            let ptr = [<$name _new>](0);
 
-        let start = Instant::now();
-        $next(ptr, buffer.as_mut_ptr(), N);
-        let duration = start.elapsed();
-        let thruput = N as f64 / duration.as_secs_f64() / G;
-        println!(
-            "{:<16}: {} {}",
-            name.bright_green(),
-            format!("{:.2}", thruput).bright_cyan().bold(),
-            "GS/s".bright_black(),
-        );
-        $free(ptr);
-    }};
+            let start = Instant::now();
+            [<$name _next_u32s>](ptr, buffer.as_mut_ptr(), N);
+            let duration = start.elapsed();
+            let thruput = N as f64 / duration.as_secs_f64() / G;
+            println!(
+                "{:<16}: {} {}",
+                name.bright_green(),
+                format!("{:.2}", thruput).bright_cyan().bold(),
+                "GS/s".bright_black(),
+            );
+            [<$name _free>](ptr);
+        }
+    };
+    ($($name:ident),*) => {
+        $(bench32!($name);)*
+    };
 }
 
 #[allow(unused_macros)]
 macro_rules! bench64 {
-    ($new:expr, $next:expr, $free:expr $(,)?) => {{
-        const N64: usize = N / 2;
+    ($name:ident) => {
+        paste::paste! {
+            let name = stringify!($name);
+            let mut buffer = vec![0u64; N];
+            let ptr = [<$name _new>](0);
 
-        let name = stringify!($new).trim_end_matches("_new");
-        let mut buffer = vec![0u64; N64];
-        let ptr = $new(0);
-
-        let start = Instant::now();
-        $next(ptr, buffer.as_mut_ptr(), N64);
-        let duration = start.elapsed();
-        let thruput = N64 as f64 / duration.as_secs_f64() / G;
-        println!(
-            "{:<16}: {} {}",
-            name.bright_green(),
-            format!("{:.2}", thruput).bright_cyan().bold(),
-            "GS/s".bright_black(),
-        );
-        $free(ptr);
-    }};
+            let start = Instant::now();
+            [<$name _next_u64s>](ptr, buffer.as_mut_ptr(), N);
+            let duration = start.elapsed();
+            let thruput = N as f64 / duration.as_secs_f64() / G;
+            println!(
+                "{:<16}: {} {}",
+                name.bright_green(),
+                format!("{:.2}", thruput).bright_cyan().bold(),
+                "GS/s".bright_black(),
+            );
+            [<$name _free>](ptr);
+        }
+    };
+    ($($name:ident),*) => {
+        $(bench64!($name);)*
+    };
 }
 
 fn main() {
@@ -136,65 +146,22 @@ fn main() {
         N.separate_with_commas().bright_cyan().bold()
     );
 
-    bench32!(philox32x4x4_new, philox32x4x4_next_u32s, philox32x4x4_free);
-    bench32!(philox32x4_new, philox32x4_next_u32s, philox32x4_free);
-    bench32!(philox32_new, philox32_next_u32s, philox32_free);
-    bench32!(threefry32x4_new, threefry32x4_next_u32s, threefry32x4_free);
-    bench32!(threefry32x2_new, threefry32x2_next_u32s, threefry32x2_free);
-    bench32!(squares32_new, squares32_next_u32s, squares32_free);
-    bench32!(squares32x8_new, squares32x8_next_u32s, squares32x8_free);
+    bench32!(philox32x4x4, philox32x4, philox32);
+    bench32!(threefry32x4, threefry32x2);
+    bench32!(squares32, squares32x8, squares32simd);
+    bench32!(pcg32, pcg32x8, pcg32simd);
+    bench32!(splitmix32, splitmix32x16, splitmix32simd);
+    bench32!(mt19937, sfmt19937);
     bench32!(
-        squares32simd_new,
-        squares32simd_next_u32s,
-        squares32simd_free
+        sfmt607, sfmt1279, sfmt2281, sfmt4253, sfmt11213, sfmt44497, sfmt86243, sfmt132049,
+        sfmt216091
     );
-    bench32!(pcg32_new, pcg32_next_u32s, pcg32_free);
-    bench32!(pcg32x8_new, pcg32x8_next_u32s, pcg32x8_free);
-    bench32!(pcg32simd_new, pcg32simd_next_u32s, pcg32simd_free);
-    bench32!(splitmix32_new, splitmix32_next_u32s, splitmix32_free);
-    bench32!(
-        splitmix32x16_new,
-        splitmix32x16_next_u32s,
-        splitmix32x16_free
-    );
-    bench32!(
-        splitmix32simd_new,
-        splitmix32simd_next_u32s,
-        splitmix32simd_free
-    );
-    bench32!(mt19937_new, mt19937_next_u32s, mt19937_free);
-    bench32!(sfmt607_new, sfmt607_next_u32s, sfmt607_free);
-    bench32!(sfmt1279_new, sfmt1279_next_u32s, sfmt1279_free);
-    bench32!(sfmt2281_new, sfmt2281_next_u32s, sfmt2281_free);
-    bench32!(sfmt4253_new, sfmt4253_next_u32s, sfmt4253_free);
-    bench32!(sfmt11213_new, sfmt11213_next_u32s, sfmt11213_free);
-    bench32!(sfmt19937_new, sfmt19937_next_u32s, sfmt19937_free);
-    bench32!(sfmt44497_new, sfmt44497_next_u32s, sfmt44497_free);
-    bench32!(sfmt86243_new, sfmt86243_next_u32s, sfmt86243_free);
-    bench32!(sfmt132049_new, sfmt132049_next_u32s, sfmt132049_free);
-    bench32!(sfmt216091_new, sfmt216091_next_u32s, sfmt216091_free);
-    bench32!(xoshiro128pp_new, xoshiro128pp_next_u32s, xoshiro128pp_free);
-    bench32!(
-        xoshiro128ppx16_new,
-        xoshiro128ppx16_next_u32s,
-        xoshiro128ppx16_free
-    );
-    bench32!(
-        xoshiro128ssx16_new,
-        xoshiro128ssx16_next_u32s,
-        xoshiro128ssx16_free
-    );
+    bench32!(xoshiro128pp, xoshiro128ppx16, xoshiro128ssx16);
 
-    bench64!(philox64_new, philox64_next_u64s, philox64_free);
-    bench64!(splitmix64_new, splitmix64_next_u64s, splitmix64_free);
-    bench64!(mt1993764_new, mt1993764_next_u64s, mt1993764_free);
-    bench64!(sfmt1993764_new, sfmt1993764_next_u64s, sfmt1993764_free);
-    bench64!(threefish256_new, threefish256_next_u64s, threefish256_free);
-    bench64!(xoshiro256pp_new, xoshiro256pp_next_u64s, xoshiro256pp_free);
-    bench64!(xoshiro256ss_new, xoshiro256ss_next_u64s, xoshiro256ss_free);
-    bench64!(
-        xoshiro256ssx2_new,
-        xoshiro256ssx2_next_u64s,
-        xoshiro256ssx2_free
-    );
+    bench64!(philox64);
+    bench64!(splitmix64);
+    bench64!(mt1993764, sfmt1993764);
+    bench64!(threefish256);
+    bench64!(xoshiro256pp, xoshiro256ss, xoshiro256ssx2);
+    bench64!(sfc64, sfc64x8);
 }

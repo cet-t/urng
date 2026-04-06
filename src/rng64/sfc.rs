@@ -115,36 +115,36 @@ impl Rng64 for Sfc64 {
 /// ```
 #[cfg(target_arch = "x86_64")]
 #[repr(C, align(64))]
-pub struct Sfc64x4 {
-    a: __m256i,
-    b: __m256i,
-    c: __m256i,
-    counter: __m256i,
+pub struct Sfc64x8 {
+    a: __m512i,
+    b: __m512i,
+    c: __m512i,
+    counter: __m512i,
 }
 
 #[cfg(target_arch = "x86_64")]
-impl Sfc64x4 {
-    /// Creates a new `Sfc64x4` from 4 independent seeds.
+impl Sfc64x8 {
+    /// Creates a new `Sfc64x8` from 8 independent seeds.
     ///
     /// # Safety
-    /// Requires AVX2 support (guaranteed by `target-cpu=native` on modern x86_64).
+    /// Requires AVX512 support (guaranteed by `target-cpu=native` on modern x86_64).
     #[inline(always)]
-    pub unsafe fn new(seeds: [u64; 4]) -> Self {
-        let mut a = [0u64; 4];
-        let mut b = [0u64; 4];
-        let mut c = [0u64; 4];
-        for i in 0..4 {
-            let mut sg = SplitMix64::new(seeds[i]);
+    pub fn new(seed: u64) -> Self {
+        let mut a = [0u64; 8];
+        let mut b = [0u64; 8];
+        let mut c = [0u64; 8];
+        let mut sg = SplitMix64::new(seed);
+        for i in 0..8 {
             a[i] = sg.nextu();
             b[i] = sg.nextu();
             c[i] = sg.nextu();
         }
         unsafe {
             Self {
-                a: _mm256_loadu_si256(a.as_ptr() as *const __m256i),
-                b: _mm256_loadu_si256(b.as_ptr() as *const __m256i),
-                c: _mm256_loadu_si256(c.as_ptr() as *const __m256i),
-                counter: _mm256_set1_epi64x(1),
+                a: _mm512_loadu_si512(a.as_ptr() as *const __m512i),
+                b: _mm512_loadu_si512(b.as_ptr() as *const __m512i),
+                c: _mm512_loadu_si512(c.as_ptr() as *const __m512i),
+                counter: _mm512_set1_epi64(1),
             }
         }
     }
@@ -152,70 +152,74 @@ impl Sfc64x4 {
     /// Generates 4 random `u64` values simultaneously and writes them to `out`.
     ///
     /// # Safety
-    /// `out` must point to a valid buffer of at least 4 `u64` values.
-    /// Requires AVX2 support.
+    /// `out` must point to a valid buffer of at least 8 `u64` values.
+    /// Requires AVX512 support.
     #[inline(always)]
-    pub unsafe fn next4u(&mut self, out: *mut u64) {
+    pub unsafe fn nextu(&mut self) -> [u64; 8] {
         unsafe {
-            let one = _mm256_set1_epi64x(1);
+            let one = _mm512_set1_epi64(1);
 
             // res = a + b + counter
-            let res = _mm256_add_epi64(_mm256_add_epi64(self.a, self.b), self.counter);
+            let res = _mm512_add_epi64(_mm512_add_epi64(self.a, self.b), self.counter);
 
             // a = b ^ (b >> 11)
-            self.a = _mm256_xor_si256(self.b, _mm256_srli_epi64(self.b, 11));
+            self.a = _mm512_xor_si512(self.b, _mm512_srli_epi64(self.b, 11));
 
             // b = c + (c << 3)
-            self.b = _mm256_add_epi64(self.c, _mm256_slli_epi64(self.c, 3));
+            self.b = _mm512_add_epi64(self.c, _mm512_slli_epi64(self.c, 3));
 
             // c = rotate_left(res, 24) = (res << 24) | (res >> 40)
-            self.c = _mm256_or_si256(_mm256_slli_epi64(res, 24), _mm256_srli_epi64(res, 40));
+            self.c = _mm512_or_si512(_mm512_slli_epi64(res, 24), _mm512_srli_epi64(res, 40));
 
             // counter += 1
-            self.counter = _mm256_add_epi64(self.counter, one);
+            self.counter = _mm512_add_epi64(self.counter, one);
 
-            // Store 4 results
-            _mm256_storeu_si256(out as *mut __m256i, res);
+            // Store 8 results
+            let mut out = [0u64; 8];
+            _mm512_storeu_si512(out.as_mut_ptr() as *mut __m512i, res);
+            out
         }
     }
 
-    /// Generates 4 random `f64` values in [0, 1) and writes them to `out`.
+    /// Generates 8 random `f64` values in [0, 1) and writes them to `out`.
     #[inline(always)]
-    pub unsafe fn next4f(&mut self, out: *mut f64) {
+    pub unsafe fn nextf(&mut self) -> [f64; 8] {
         unsafe {
-            let mut buf = [0u64; 4];
-            self.next4u(buf.as_mut_ptr());
-            const SCALE: f64 = 1.0 / (u64::MAX as f64 + 1.0);
-            for i in 0..4 {
-                *out.add(i) = buf[i] as f64 * SCALE;
+            let u = self.nextu();
+            let mut out = [0f64; 8];
+            let scale = 1.0 / (u64::MAX as f64 + 1.0);
+            for i in 0..8 {
+                out[i] = u[i] as f64 * scale;
             }
+            out
         }
     }
 
-    /// Generates 4 random `i64` values in [min, max] and writes them to `out`.
     #[inline(always)]
-    pub unsafe fn next4i(&mut self, out: *mut i64, min: i64, max: i64) {
+    pub unsafe fn randi(&mut self, min: i64, max: i64) -> [i64; 8] {
         unsafe {
-            let mut buf = [0u64; 4];
-            self.next4u(buf.as_mut_ptr());
+            let u = self.nextu();
             let range = (max as i128 - min as i128 + 1) as u128;
-            for i in 0..4 {
-                *out.add(i) = ((buf[i] as u128 * range) >> 64) as i64 + min;
+            let mut out = [0i64; 8];
+            for i in 0..8 {
+                out[i] = ((u[i] as u128 * range) >> 64) as i64 + min;
             }
+            out
         }
     }
 
-    /// Generates 4 random `f64` values in [min, max) and writes them to `out`.
+    /// Generates 8 random `f64` values in [min, max) and writes them to `out`.
     #[inline(always)]
-    pub unsafe fn next4rf(&mut self, out: *mut f64, min: f64, max: f64) {
+    pub unsafe fn randf(&mut self, min: f64, max: f64) -> [f64; 8] {
         unsafe {
-            let mut buf = [0u64; 4];
-            self.next4u(buf.as_mut_ptr());
+            let u = self.nextu();
             let range = max - min;
             let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
-            for i in 0..4 {
-                *out.add(i) = buf[i] as f64 * scale + min;
+            let mut out = [0f64; 8];
+            for i in 0..8 {
+                out[i] = (u[i] as f64 * scale) + min;
             }
+            out
         }
     }
 }
@@ -226,8 +230,34 @@ mod tests {
 
     #[test]
     fn sfc64_works() {
-        let mut rng = Sfc64::new(1);
-        assert_eq!(rng.nextu(), 5761717516557699369);
-        assert_eq!(rng.nextf(), 0.4850623141159338);
+        unsafe {
+            let mut rng = Sfc64x8::new(1);
+            assert_eq!(
+                rng.nextu(),
+                [
+                    5761717516557699369,
+                    16392217990948748997,
+                    7386369014502375963,
+                    3655015268200462072,
+                    18170354754293727307,
+                    14985574646059259295,
+                    10441402005730553591,
+                    10649205844500993130
+                ]
+            );
+            assert_eq!(
+                rng.nextf(),
+                [
+                    0.4850623141159338,
+                    0.3102235603972498,
+                    0.09287880555094546,
+                    0.852976412114921,
+                    0.4535304830821644,
+                    0.9831747932946263,
+                    0.47839713097547637,
+                    0.6040453125379837
+                ]
+            );
+        };
     }
 }

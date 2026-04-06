@@ -30,7 +30,7 @@ pub use cet::Cet64;
 pub use lcg::Lcg64;
 pub use mersenne::{Mt1993764, Sfmt1993764};
 pub use philox::Philox64;
-pub use sfc::{Sfc64, Sfc64x4};
+pub use sfc::{Sfc64, Sfc64x8};
 pub use splitmix::SplitMix64;
 pub use threefish::Threefish256;
 pub use twisted_gfsr::TwistedGFSR;
