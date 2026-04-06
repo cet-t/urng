@@ -92,12 +92,7 @@ These generators do not implement `Rng32`/`Rng64` and instead expose a bulk-gene
 | `Xoshiro128Ppx16` | xoshiro128++ x16   | 16×`u32` | 16 independent xoshiro128++ streams.     |
 | `Xoshiro128Ssx16` | xoshiro128\*\* x16 | 16×`u32` | 16 independent xoshiro128\*\* streams.   |
 | `Xoshiro256Ssx2`  | xoshiro256\*\* x2  | 2×`u64`  | 2 independent xoshiro256\*\* streams.    |
-
-#### AVX2
-
-| Struct    | Algorithm | Output  | Description                  |
-| --------- | --------- | ------- | ---------------------------- |
-| `Sfc64x4` | SFC64 x4  | 4×`u64` | 4 independent SFC64 streams. |
+| `Sfc64x8`         | SFC64 x8           | 8×`u64`  | 8 independent SFC64 streams.             |
 
 ## Sampler
 
