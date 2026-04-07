@@ -28,6 +28,12 @@ pub struct Alias64<'a, R: Rng64 + 'a> {
 }
 
 impl<'a, R: Rng64 + 'a> Alias64<'a, R> {
+    /// Creates a new sampler with the given random number generator and weights.
+    pub fn new(rng: &'a mut R, weights: &[f64]) -> Self {
+        let (prob, alias) = Self::build(weights);
+        Self { rng, prob, alias }
+    }
+
     fn build(weights: &[f64]) -> (Vec<f64>, Vec<usize>) {
         let n = weights.len();
         let total: f64 = weights.iter().sum();
@@ -68,11 +74,6 @@ impl<'a, R: Rng64 + 'a> Alias64<'a, R> {
 }
 
 impl<'a, R: Rng64 + 'a> Sampler64<'a, R> for Alias64<'a, R> {
-    fn new(rng: &'a mut R, weights: &[f64]) -> Self {
-        let (prob, alias) = Self::build(weights);
-        Self { rng, prob, alias }
-    }
-
     fn weights(&mut self, weights: &[f64]) {
         let (prob, alias) = Self::build(weights);
         self.prob = prob;

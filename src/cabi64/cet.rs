@@ -1,3 +1,4 @@
+use crate::rng::Rng64;
 use crate::rng64::Cet64;
 use std::slice::from_raw_parts_mut;
 

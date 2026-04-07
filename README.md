@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.4.1"
+urng = "0.4.2"
 ```
 
 ## Supported Generators
@@ -43,6 +43,7 @@ Implement `Rng32`, output `u32` natively.
 | `SplitMix32`   | SplitMix32       | $2^{32}$         | Fast, used for initializing other states.       |
 | `Xorwow`       | XORWOW           | $2^{192}-2^{32}$ | Used in NVIDIA cuRAND.                          |
 | `Xorshift32`   | Xorshift         | $2^{32}-1$       | Very simple and fast.                           |
+| `Xorshift128`  | Xorshift         | $2^{32}-1$       | Very simple and fast.                           |
 | `Xoshiro128Pp` | xoshiro128++     | $2^{128}-1$      | Fast high-quality generator with 128-bit state. |
 | `Xoshiro128Ss` | xoshiro128\*\*   | $2^{128}-1$      | Fast high-quality generator with 128-bit state. |
 | `Lcg32`        | LCG              | $m$              | Linear Congruential Generator.                  |
@@ -72,10 +73,6 @@ Implement `Rng64`, output `u64` natively.
 | `Threefish256`    | Threefish-256       | -                | Counter-based, 256-bit block cipher PRNG. |
 
 > ¹ In the `urng::rng64::xoroshiro` submodule (not re-exported at `urng::rng64`).
-
-### Other (`urng::rng128`)
-
-- `Xorshift128`: 128-bit state Xorshift, implements `Rng32` (outputs `u32`).
 
 ### SIMD Generators
 
@@ -127,8 +124,7 @@ Most generators expose the same basic workflow: create an instance with `new`, t
 ### Basic Usage
 
 ```rust
-use urng::rng64::{Xoshiro256Pp, SplitMix64};
-use urng::rng::Rng64; // Import trait for common methods
+use urng::prelude::*;
 
 fn main() {
     // 1. Initialize with a seed
@@ -150,47 +146,6 @@ fn main() {
     let mut sm = SplitMix64::new(9999);
     let seed_val = sm.nextu();
     let mut rng2 = Xoshiro256Pp::new(seed_val);
-}
-```
-
-### Weighted Choice (BST)
-
-The crate includes a binary-search-tree based weighted selector for efficient sampling.
-
-```rust
-use urng::bst::choice;
-use urng::rng64::Xoshiro256Pp;
-
-fn main() {
-    let mut rng = Xoshiro256Pp::new(42);
-    let items = vec!["Common", "Rare", "Epic"];
-    let weights = vec![100.0, 10.0, 1.0];
-
-    // Select an item based on weights
-    if let Some(item) = choice(&mut rng, weights, &items) {
-        println!("You got: {}", item);
-    }
-}
-```
-
-### Using Macros
-
-For convenience, you can use the provided macros (must import `urng::*`).
-These macros automatically initialize the generator with a system-seeded state.
-
-```rust
-use urng::{next, rand}; // Import macros
-
-fn main() {
-    // next! generates a single random number
-    // Format: [algorithm][bits][u/f]
-    let u = next!(mt64u); // Returns u64 using Mersenne Twister 64
-    let f = next!(xor32f); // Returns f32 using Xorshift 32
-
-    // rand! generates a number within a range
-    // Format: [algorithm][bits][i/f]; [min], [max]
-    let r = rand!(xor32i; 1, 10); // Returns i32 in range [1, 10]
-    let f2 = rand!(mt64f; 0.0, 1.0); // Returns f64 in range [0.0, 1.0)
 }
 ```
 

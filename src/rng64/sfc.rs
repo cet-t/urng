@@ -8,13 +8,10 @@ use std::arch::x86_64::*;
 
 /// A 64-bit SFC random number generator.
 ///
-/// All hot-path methods use `#[inline(always)]` to ensure the 4 state variables
-/// (a, b, c, counter) remain pinned in CPU registers throughout batch loops.
-///
 /// # Examples
 ///
 /// ```
-/// use urng::rng64::Sfc64;
+/// use urng::prelude::*;
 ///
 /// let mut rng = Sfc64::new(1);
 /// let _ = rng.nextu();
@@ -38,10 +35,11 @@ impl Sfc64 {
             counter: 1,
         }
     }
+}
 
-    /// Generates the next random `u64` value.
+impl Rng64 for Sfc64 {
     #[inline(always)]
-    pub fn nextu(&mut self) -> u64 {
+    fn nextu(&mut self) -> u64 {
         let res = self.a.wrapping_add(self.b).wrapping_add(self.counter);
         self.a = self.b ^ (self.b >> 11);
         self.b = self.c.wrapping_add(self.c << 3);
@@ -50,68 +48,21 @@ impl Sfc64 {
         self.counter = self.counter.wrapping_add(1);
         res
     }
-
-    /// Generates the next random `f64` value in the range [0, 1).
-    #[inline(always)]
-    pub fn nextf(&mut self) -> f64 {
-        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
-    }
-
-    /// Generates a random `i64` value in the range [min, max].
-    #[inline(always)]
-    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
-        let range = (max as i128 - min as i128 + 1) as u128;
-        let x = self.nextu();
-        ((x as u128 * range) >> 64) as i64 + min
-    }
-
-    /// Generates a random `f64` value in the range [min, max).
-    #[inline(always)]
-    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
-        let range = max - min;
-        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
-        (self.nextu() as f64 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    #[inline(always)]
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i64 - 1);
-        &choices[index as usize]
-    }
-}
-
-impl Rng64 for Sfc64 {
-    #[inline(always)]
-    fn randi(&mut self, min: i64, max: i64) -> i64 {
-        self.randi(min, max)
-    }
-    #[inline(always)]
-    fn randf(&mut self, min: f64, max: f64) -> f64 {
-        self.randf(min, max)
-    }
-    #[inline(always)]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
-    }
 }
 
 // --- Sfc64x4 (AVX2) ---
 
 /// A 4-way SIMD SFC64 generator using AVX2 256-bit intrinsics.
 ///
-/// Packs 4 independent SFC64 states into `__m256i` registers.
-/// Each `next4u()` call produces 4 random `u64` values simultaneously.
-///
 /// # Examples
 ///
-/// ```ignore
-/// use urng::rng64::Sfc64x4;
+/// ```
+/// use urng::rng64::Sfc64x8;
 ///
-/// let mut rng = unsafe { Sfc64x4::new([1, 2, 3, 4]) };
-/// let mut out = [0u64; 4];
-/// unsafe { rng.next4u(out.as_mut_ptr()) };
-/// assert_eq!(out.len(), 4);
+/// unsafe {
+///     let mut rng = Sfc64x8::new(0);
+///     let _ = rng.nextu();
+/// }
 /// ```
 #[cfg(target_arch = "x86_64")]
 #[repr(C, align(64))]

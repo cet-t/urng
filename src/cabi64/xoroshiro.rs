@@ -1,3 +1,4 @@
+use crate::rng::Rng64;
 use crate::rng64::{
     SplitMix64,
     xoroshiro::{Xoroshiro128Pp, Xoroshiro128Ss},

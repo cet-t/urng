@@ -1,3 +1,4 @@
+use crate::rng::Rng64;
 use crate::rng64::{Sfc64, Sfc64x8, SplitMix64};
 use rayon::{
     iter::{IndexedParallelIterator, ParallelIterator},

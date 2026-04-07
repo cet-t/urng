@@ -1,4 +1,5 @@
 use crate::dispatch_simd;
+use crate::rng::Rng32;
 use crate::rng32::{
     PCG32_MULT, PCG32X8_LANE, PCG32X8_PAR_CHUNK, PCG32X8_PAR_CHUNK_BLOCKS, Pcg32, Pcg32Simd,
     Pcg32x8,

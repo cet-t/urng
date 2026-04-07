@@ -1,3 +1,4 @@
+use crate::rng::Rng64;
 use crate::rng64::{Mt1993764, Sfmt1993764};
 use std::slice::from_raw_parts_mut;
 

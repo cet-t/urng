@@ -1,4 +1,4 @@
-﻿/// A trait for 32-bit random number generators.
+/// A trait for 32-bit random number generators.
 ///
 /// # Examples
 ///
@@ -14,12 +14,36 @@
 /// assert!(items.contains(rng.choice(&items)));
 /// ```
 pub trait Rng32 {
+    /// Generates the next random `u32` value in the range [0, 2^32).
+    fn nextu(&mut self) -> u32;
+
+    /// Generates the next random `f32` value in the range [0, 1).
+    #[inline(always)]
+    fn nextf(&mut self) -> f32 {
+        self.nextu() as f32 * (1.0 / (u32::MAX as f32 + 1.0))
+    }
+
     /// Generates a random `i32` value in the range [min, max].
-    fn randi(&mut self, min: i32, max: i32) -> i32;
+    #[inline(always)]
+    fn randi(&mut self, min: i32, max: i32) -> i32 {
+        let range = (max as i64 - min as i64 + 1) as u64;
+        ((self.nextu() as u64 * range) >> 32) as i32 + min
+    }
+
     /// Generates a random `f32` value in the range [min, max).
-    fn randf(&mut self, min: f32, max: f32) -> f32;
+    #[inline(always)]
+    fn randf(&mut self, min: f32, max: f32) -> f32 {
+        let range = max - min;
+        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
+        (self.nextu() as f32 * scale) + min
+    }
+
     /// Returns a random element from a slice.
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T;
+    #[inline(always)]
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        let index = self.randi(0, choices.len() as i32 - 1);
+        &choices[index as usize]
+    }
 }
 
 /// A trait for 64-bit random number generators.
@@ -38,10 +62,34 @@ pub trait Rng32 {
 /// assert!(items.contains(rng.choice(&items)));
 /// ```
 pub trait Rng64 {
+    /// Generates the next random `u64` value in the range [0, 2^64).
+    fn nextu(&mut self) -> u64;
+
+    /// Generates the next random `f64` value in the range [0, 1).
+    #[inline(always)]
+    fn nextf(&mut self) -> f64 {
+        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
+    }
+
     /// Generates a random `i64` value in the range [min, max].
-    fn randi(&mut self, min: i64, max: i64) -> i64;
+    #[inline(always)]
+    fn randi(&mut self, min: i64, max: i64) -> i64 {
+        let range = (max as i128 - min as i128 + 1) as u128;
+        ((self.nextu() as u128 * range) >> 64) as i64 + min
+    }
+
     /// Generates a random `f64` value in the range [min, max).
-    fn randf(&mut self, min: f64, max: f64) -> f64;
+    #[inline(always)]
+    fn randf(&mut self, min: f64, max: f64) -> f64 {
+        let range = max - min;
+        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
+        (self.nextu() as f64 * scale) + min
+    }
+
     /// Returns a random element from a slice.
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T;
+    #[inline(always)]
+    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+        let index = self.randi(0, choices.len() as i64 - 1);
+        &choices[index as usize]
+    }
 }

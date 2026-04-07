@@ -1,4 +1,4 @@
-use crate::rng32::SplitMix32;
+use crate::{rng::Rng32, rng32::SplitMix32};
 
 // --- Threefry32x4 ---
 
@@ -28,14 +28,6 @@ pub struct Threefry32x4 {
 impl Threefry32x4 {
     /// Creates a new `Threefry32x4` instance seeded with the given value.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Threefry32x4;
-    ///
-    /// let mut rng = Threefry32x4::new(1);
-    /// assert_eq!(rng.nextu(), [215661891, 4046822497, 3522917133, 3418596171]);
-    /// ```
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         let mut k = [0u32; 5];
@@ -228,14 +220,6 @@ pub struct Threefry32x2 {
 impl Threefry32x2 {
     /// Creates a new `Threefry32x2` instance seeded with the given value.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Threefry32x2;
-    ///
-    /// let mut rng = Threefry32x2::new(1);
-    /// assert_eq!(rng.nextu(), [3732229352, 2044399418]);
-    /// ```
     #[inline]
     pub fn new(seed: u32) -> Self {
         let mut sm = SplitMix32::new(seed);

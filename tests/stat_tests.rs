@@ -4,8 +4,12 @@ use anyhow::Result;
 use stat::{chisq, monte_carlo, scatter};
 use std::fs;
 use std::sync::OnceLock;
-use urng::rng32::*;
-use urng::rng64::*;
+use urng::prelude::*;
+use urng::rng::{Rng32, Rng64};
+use urng::rng32::{
+    Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253, Sfmt11213, Sfmt44497, Sfmt86243, Sfmt132049, Sfmt216091,
+};
+use urng::rng64::{SplitMix64, Xorshift64};
 
 const LOG_DIR: &str = "tests/logs";
 const CHI_N: usize = 10_000_000;
@@ -266,19 +270,16 @@ macro_rules! do_scatter {
 }
 
 macro_rules! rng_ctor {
-    (TwistedGFSR) => {
-        TwistedGFSR::new(TwistedGFSR::new_seed())
-    };
-    // seed=0 is degenerate for some generators; use seed=1.
-    (Pcg32) => {
-        Pcg32::new(1)
-    };
-    (Xorshift32) => {
-        Xorshift32::new(1)
-    };
-    (Xorwow) => {
-        Xorwow::new(1)
-    };
+    // // seed=0 is degenerate for some generators; use seed=1.
+    // (Pcg32) => {
+    //     Pcg32::new(1)
+    // };
+    // (Xorshift32) => {
+    //     Xorshift32::new(1)
+    // };
+    // (Xorwow) => {
+    //     Xorwow::new(1)
+    // };
     ($a:ident) => {
         $a::new(0)
     };
@@ -354,6 +355,7 @@ fn build_suite() -> Result<Suite> {
     reg!(s32 chi, monte, Pcg32);
     reg!(arr4f32 chi, monte, Philox32x4);
     reg!(s32 chi, monte, Xorshift32);
+    reg!(s32 chi, monte, Xorshift128);
     reg!(s32 chi, monte, Xorwow);
     reg!(arr4f32 chi, monte, Threefry32x4);
     reg!(arr2f32 chi, monte, Threefry32x2);

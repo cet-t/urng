@@ -1,3 +1,4 @@
+use crate::rng::Rng64;
 use crate::rng64::{SplitMix64, Xoshiro256Pp, Xoshiro256Ss, Xoshiro256Ssx2};
 use rayon::{
     iter::{IndexedParallelIterator, ParallelIterator},

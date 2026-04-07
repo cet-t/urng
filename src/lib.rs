@@ -43,12 +43,6 @@ pub mod rng64;
 
 pub mod cabi64;
 
-/// Consolidated 128-bit random number generators.
-pub mod rng128;
-
-/// A weighted random selection structure using a Binary Search Tree (BST) approach.
-pub mod bst;
-
 #[cfg(feature = "sampler")]
 /// Weighted random selection traits (`Sampler32`, `Sampler64`).
 pub mod sampler;
@@ -66,3 +60,15 @@ pub mod seedgen;
 
 #[macro_use]
 pub mod macros;
+
+pub mod prelude {
+    pub use crate::rng::{Rng32, Rng64};
+    pub use crate::rng32::{
+        Mt19937, Pcg32, Philox32x4, Sfmt19937, SplitMix32, Squares32, Squares32Simd, Squares32x8,
+        Threefry32x2, Threefry32x4, Xorshift32, Xorshift128, Xorwow, Xoshiro128Pp,
+    };
+    pub use crate::rng64::{
+        Cet64, Mt1993764, Philox64, Sfc64, Sfmt1993764, SplitMix64, Threefish256, TwistedGFSR,
+        Xoroshiro128Pp, Xoroshiro128Ss, Xoshiro256Pp, Xoshiro256Ss,
+    };
+}

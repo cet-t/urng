@@ -28,6 +28,12 @@ pub struct Alias32<'a, R: Rng32 + 'a> {
 }
 
 impl<'a, R: Rng32 + 'a> Alias32<'a, R> {
+    /// Creates a new sampler with the given random number generator and weights.
+    pub fn new(rng: &'a mut R, weights: &[f32]) -> Self {
+        let (prob, alias) = Self::build(weights);
+        Self { rng, prob, alias }
+    }
+
     fn build(weights: &[f32]) -> (Vec<f32>, Vec<usize>) {
         let n = weights.len();
         let total: f32 = weights.iter().sum();
@@ -68,11 +74,6 @@ impl<'a, R: Rng32 + 'a> Alias32<'a, R> {
 }
 
 impl<'a, R: Rng32 + 'a> Sampler32<'a, R> for Alias32<'a, R> {
-    fn new(rng: &'a mut R, weights: &[f32]) -> Self {
-        let (prob, alias) = Self::build(weights);
-        Self { rng, prob, alias }
-    }
-
     fn weights(&mut self, weights: &[f32]) {
         let (prob, alias) = Self::build(weights);
         self.prob = prob;

@@ -11,7 +11,7 @@ use wide::u32x4;
 /// # Examples
 ///
 /// ```
-/// use urng::rng64::Mt1993764;
+/// use urng::prelude::*;
 ///
 /// let mut rng = Mt1993764::new(1);
 /// let _ = rng.nextu();
@@ -31,17 +31,6 @@ const LOWER_MASK: u64 = 0x7FFFFFFF;
 impl Mt1993764 {
     /// Creates a new `Mt1993764` instance seeded via `SplitMix64`.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng64::Mt1993764;
-    ///
-    /// let mut rng = Mt1993764::new(1);
-    /// assert_eq!(rng.nextu(), 9822250072823399003);
-    /// assert_eq!(rng.nextf(), 0.8926985632057756);
-    /// let i = rng.randi(0, 100);
-    /// assert!(i >= 0 && i <= 100);
-    /// ```
     pub fn new(seed: u64) -> Self {
         let mut mt = [0u64; N];
         let mut seedgen = SplitMix64::new(seed);
@@ -123,49 +112,12 @@ impl Mt1993764 {
         self.mt[N - 1] = self.mt[M - 1] ^ x_a;
         self.mti = 0;
     }
-
-    /// Generates the next random `f64` value in the range [0, 1).
-    #[inline]
-    pub fn nextf(&mut self) -> f64 {
-        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
-    }
-
-    /// Generates a random `i64` value in the range [min, max].
-    #[inline]
-    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
-        let range = (max as i128 - min as i128 + 1) as u128;
-        let x = self.nextu();
-        ((x as u128 * range) >> 64) as i64 + min
-    }
-
-    /// Generates a random `f64` value in the range [min, max).
-    #[inline]
-    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
-        let range = max - min;
-        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
-        (self.nextu() as f64 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    #[inline]
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i64 - 1);
-        &choices[index as usize]
-    }
 }
 
 impl Rng64 for Mt1993764 {
     #[inline]
-    fn randi(&mut self, min: i64, max: i64) -> i64 {
-        self.randi(min, max)
-    }
-    #[inline]
-    fn randf(&mut self, min: f64, max: f64) -> f64 {
-        self.randf(min, max)
-    }
-    #[inline]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
+    fn nextu(&mut self) -> u64 {
+        self.nextu()
     }
 }
 
@@ -176,7 +128,7 @@ impl Rng64 for Mt1993764 {
 /// # Examples
 ///
 /// ```
-/// use urng::rng64::Sfmt1993764;
+/// use urng::prelude::*;
 ///
 /// let mut rng = Sfmt1993764::new(1);
 /// let _ = rng.nextu();
@@ -206,17 +158,6 @@ impl Sfmt1993764 {
     ///
     /// The state is period-certified after initialisation.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng64::Sfmt1993764;
-    ///
-    /// let mut rng = Sfmt1993764::new(1);
-    /// assert_eq!(rng.nextu(), 16435431249378271195);
-    /// assert_eq!(rng.nextf(), 0.914246861393214);
-    /// let i = rng.randi(0, 100);
-    /// assert!(i >= 0 && i <= 100);
-    /// ```
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
 
@@ -335,23 +276,8 @@ impl Sfmt1993764 {
         }
     }
 
-    /// Generates the next random `u64` value.
     #[inline]
-    pub fn nextu(&mut self) -> u64 {
-        if self.idx >= SFMT_N * 2 {
-            self.gen_rand_all();
-            self.idx = 0;
-        }
-
-        // Use cast_slice which was faster in previous benchmarks
-        let s: &[u64] = bytemuck::cast_slice(&self.state);
-        let val = s[self.idx];
-        self.idx += 1;
-        val
-    }
-
-    #[inline]
-    pub fn fill_next_u64s(&mut self, out: &mut [u64]) {
+    pub(crate) fn fill_next_u64s(&mut self, out: &mut [u64]) {
         let mut written = 0;
         while written < out.len() {
             if self.idx >= SFMT_N * 2 {
@@ -374,49 +300,20 @@ impl Sfmt1993764 {
             written += take;
         }
     }
-
-    /// Generates the next random `f64` value in the range [0, 1).
-    #[inline]
-    pub fn nextf(&mut self) -> f64 {
-        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
-    }
-
-    /// Generates a random `i64` value in the range [min, max].
-    #[inline]
-    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
-        let range = (max as i128 - min as i128 + 1) as u128;
-        let x = self.nextu();
-        ((x as u128 * range) >> 64) as i64 + min
-    }
-
-    /// Generates a random `f64` value in the range [min, max).
-    #[inline]
-    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
-        let range = max - min;
-        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
-        (self.nextu() as f64 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    #[inline]
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i64 - 1);
-        &choices[index as usize]
-    }
 }
 
 impl Rng64 for Sfmt1993764 {
     #[inline]
-    fn randi(&mut self, min: i64, max: i64) -> i64 {
-        self.randi(min, max)
-    }
-    #[inline]
-    fn randf(&mut self, min: f64, max: f64) -> f64 {
-        self.randf(min, max)
-    }
-    #[inline]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
+    fn nextu(&mut self) -> u64 {
+        if self.idx >= SFMT_N * 2 {
+            self.gen_rand_all();
+            self.idx = 0;
+        }
+
+        let s: &[u64] = bytemuck::cast_slice(&self.state);
+        let val = s[self.idx];
+        self.idx += 1;
+        val
     }
 }
 

@@ -125,7 +125,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .input_extern_file("src/cabi64/xoshiro.rs")
         .input_extern_file("src/cabi64/splitmix.rs")
         .input_extern_file("src/cabi64/threefish.rs")
-        .input_extern_file("src/rng128/xorshift.rs")
         .input_extern_file("src/cabi64/xoroshiro.rs")
         .csharp_dll_name("urng")
         .generate_csharp_file(cs_path)?;

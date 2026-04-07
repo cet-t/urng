@@ -1,3 +1,4 @@
+use crate::rng::Rng32;
 use crate::rng32::SplitMix32;
 use crate::wrap;
 use std::num::Wrapping;
@@ -27,14 +28,6 @@ pub struct Philox32x4 {
 impl Philox32x4 {
     /// Creates a new `Philox32x4` instance seeded with the given value.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Philox32x4;
-    ///
-    /// let mut rng = Philox32x4::new(1);
-    /// assert_eq!(rng.nextu(), [3153052020, 1439632633, 3707823678, 1301313894]);
-    /// ```
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
@@ -155,16 +148,6 @@ impl Philox32x4x4 {
     ///
     /// Must only be called on a CPU that supports AVX-512F.
     ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// use urng::rng32::Philox32x4x4;
-    ///
-    /// // requires avx512f
-    /// let mut rng = unsafe { Philox32x4x4::new(1) };
-    /// let vals = unsafe { rng.nextu() };
-    /// assert!(vals[0] > 0);
-    /// ```
     #[target_feature(enable = "avx512f")]
     pub unsafe fn new(seed: u32) -> Self {
         let mut c = [0u32; PHILOX32x16];

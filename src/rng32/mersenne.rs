@@ -1,5 +1,9 @@
-use crate::rng32::SplitMix32;
-use crate::{rng::Rng32, rng64::SplitMix64, wrap};
+use crate::{
+    rng::{Rng32, Rng64},
+    rng32::SplitMix32,
+    rng64::SplitMix64,
+    wrap,
+};
 use bytemuck::cast_slice;
 use std::num::Wrapping;
 use std::ptr;
@@ -12,7 +16,7 @@ use wide::u32x4;
 /// # Examples
 ///
 /// ```
-/// use urng::rng32::Mt19937;
+/// use urng::prelude::*;
 ///
 /// let mut rng = Mt19937::new(1);
 /// let _ = rng.nextu();
@@ -31,19 +35,6 @@ const MT32_LOWER_MASK: u32 = 0x7FFFFFFF;
 
 impl Mt19937 {
     /// Creates a new `Mt19937` instance seeded with the given value.
-    ///
-    /// # Arguments
-    ///
-    /// * `seed` - The initial seed value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Mt19937;
-    ///
-    /// let mut rng = Mt19937::new(1);
-    /// assert_eq!(rng.nextu(), 460915295);
-    /// ```
     pub fn new(seed: u32) -> Self {
         let mut mt = [wrap!(0u32); MT32_N];
         let mut seedgen = SplitMix32::new(seed);
@@ -58,32 +49,8 @@ impl Mt19937 {
         }
     }
 
-    /// Generates the next random `u32` value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Mt19937;
-    ///
-    /// let mut rng = Mt19937::new(1);
-    /// assert_eq!(rng.nextu(), 460915295);
-    /// ```
     #[inline]
-    pub fn nextu(&mut self) -> u32 {
-        if self.mti.0 >= MT32_N {
-            self.twist();
-        }
-        let mut y = self.mt[self.mti.0];
-        self.mti += 1;
-        y ^= y >> 11;
-        y ^= (y << 7).0 & 0x9D2C5680;
-        y ^= (y << 15).0 & 0xEFC60000;
-        y ^= y >> 18;
-        y.0
-    }
-
-    #[inline]
-    pub fn fill_next_u32s(&mut self, out: &mut [u32]) {
+    pub(crate) fn fill_next_u32s(&mut self, out: &mut [u32]) {
         let mut written = 0;
         while written < out.len() {
             if self.mti.0 >= MT32_N {
@@ -135,68 +102,21 @@ impl Mt19937 {
         self.mt[MT32_N - 1] = self.mt[MT32_M - 1] ^ wrap!(x_a);
         self.mti = wrap!(0);
     }
-
-    /// Generates the next random `f32` value in the range [0, 1).
-    #[inline]
-    pub fn nextf(&mut self) -> f32 {
-        self.nextu() as f32 * (1.0 / (u32::MAX as f32 + 1.0))
-    }
-
-    /// Generates a random `i32` value in the range [min, max].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Mt19937;
-    ///
-    /// let mut rng = Mt19937::new(1);
-    /// let val: i32 = rng.randi(0, 10);
-    /// assert!(val >= 0 && val <= 10);
-    /// ```
-    #[inline]
-    pub fn randi(&mut self, min: i32, max: i32) -> i32 {
-        let range = (max as i64 - min as i64 + 1) as u64;
-        ((self.nextu() as u64 * range) >> 32) as i32 + min
-    }
-
-    /// Generates a random `f32` value in the range [min, max).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Mt19937;
-    ///
-    /// let mut rng = Mt19937::new(1);
-    /// let val: f32 = rng.randf(0.0, 1.0);
-    /// assert!(val >= 0.0 && val < 1.0);
-    /// ```
-    #[inline]
-    pub fn randf(&mut self, min: f32, max: f32) -> f32 {
-        let range = max - min;
-        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
-        (self.nextu() as f32 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    #[inline]
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i32 - 1);
-        &choices[index as usize]
-    }
 }
 
 impl Rng32 for Mt19937 {
     #[inline]
-    fn randi(&mut self, min: i32, max: i32) -> i32 {
-        self.randi(min, max)
-    }
-    #[inline]
-    fn randf(&mut self, min: f32, max: f32) -> f32 {
-        self.randf(min, max)
-    }
-    #[inline]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
+    fn nextu(&mut self) -> u32 {
+        if self.mti.0 >= MT32_N {
+            self.twist();
+        }
+        let mut y = self.mt[self.mti.0];
+        self.mti += 1;
+        y ^= y >> 11;
+        y ^= (y << 7).0 & 0x9D2C5680;
+        y ^= (y << 15).0 & 0xEFC60000;
+        y ^= y >> 18;
+        y.0
     }
 }
 
@@ -207,7 +127,7 @@ impl Rng32 for Mt19937 {
 /// # Examples
 ///
 /// ```
-/// use urng::rng32::Sfmt19937;
+/// use urng::prelude::*;
 ///
 /// let mut rng = Sfmt19937::new(1);
 /// let _ = rng.nextu();
@@ -235,15 +155,6 @@ const SFMT_PARITY4: u32 = 0x13c9e684;
 
 impl Sfmt19937 {
     /// Creates a new `Sfmt19937` instance seeded with the given value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Sfmt19937;
-    ///
-    /// let mut rng = Sfmt19937::new(1);
-    /// assert_eq!(rng.nextu(), 2240536539);
-    /// ```
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
 
@@ -357,31 +268,8 @@ impl Sfmt19937 {
         }
     }
 
-    /// Generates the next random `u32` value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Sfmt19937;
-    ///
-    /// let mut rng = Sfmt19937::new(1);
-    /// assert_eq!(rng.nextu(), 2240536539);
-    /// ```
     #[inline]
-    pub fn nextu(&mut self) -> u32 {
-        if self.idx >= SFMT_N * 4 {
-            self.gen_rand_all();
-            self.idx = 0;
-        }
-
-        let s: &[u32] = cast_slice(&self.state);
-        let val = s[self.idx];
-        self.idx += 1;
-        val
-    }
-
-    #[inline]
-    pub fn fill_next_u32s(&mut self, out: &mut [u32]) {
+    pub(crate) fn fill_next_u32s(&mut self, out: &mut [u32]) {
         let mut written = 0;
         while written < out.len() {
             if self.idx >= SFMT_N * 4 {
@@ -404,76 +292,25 @@ impl Sfmt19937 {
             written += take;
         }
     }
-
-    /// Generates the next random `f32` value in the range [0, 1).
-    #[inline]
-    pub fn nextf(&mut self) -> f32 {
-        self.nextu() as f32 * (1.0 / (u32::MAX as f32 + 1.0))
-    }
-
-    /// Generates a random `i32` value in the range [min, max].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Sfmt19937;
-    ///
-    /// let mut rng = Sfmt19937::new(1);
-    /// let val: i32 = rng.randi(0, 10);
-    /// assert!(val >= 0 && val <= 10);
-    /// ```
-    #[inline]
-    pub fn randi(&mut self, min: i32, max: i32) -> i32 {
-        let range = (max as i64 - min as i64 + 1) as u64;
-        let x = self.nextu();
-        ((x as u64 * range) >> 32) as i32 + min
-    }
-
-    /// Generates a random `f32` value in the range [min, max).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Sfmt19937;
-    ///
-    /// let mut rng = Sfmt19937::new(1);
-    /// let val: f32 = rng.randf(0.0, 1.0);
-    /// assert!(val >= 0.0 && val < 1.0);
-    /// ```
-    #[inline]
-    pub fn randf(&mut self, min: f32, max: f32) -> f32 {
-        let range = max - min;
-        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
-        (self.nextu() as f32 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    #[inline]
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i32 - 1);
-        &choices[index as usize]
-    }
 }
 
 impl Rng32 for Sfmt19937 {
     #[inline]
-    fn randi(&mut self, min: i32, max: i32) -> i32 {
-        self.randi(min, max)
-    }
-    #[inline]
-    fn randf(&mut self, min: f32, max: f32) -> f32 {
-        self.randf(min, max)
-    }
-    #[inline]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
+    fn nextu(&mut self) -> u32 {
+        if self.idx >= SFMT_N * 4 {
+            self.gen_rand_all();
+            self.idx = 0;
+        }
+
+        let s: &[u32] = cast_slice(&self.state);
+        let val = s[self.idx];
+        self.idx += 1;
+        val
     }
 }
 
 macro_rules! define_sfmt_variant {
     (
-        $(#[$meta:meta])*
-        $name:ident,
         mexp = $mexp:literal,
         n = $n:literal,
         pos1 = $pos1:literal,
@@ -490,257 +327,320 @@ macro_rules! define_sfmt_variant {
         parity3 = $parity3:expr,
         parity4 = $parity4:expr $(,)?
     ) => {
-        $(#[$meta])*
-        #[repr(C)]
-        #[repr(align(16))]
-        pub struct $name {
-            state: [u32x4; $n],
-            idx: usize,
-        }
-
-        impl $name {
-            pub fn new(seed: u64) -> Self {
-                let mut seedgen = SplitMix64::new(seed);
-                let mut raw_state = [0u32; $n * 4];
-                for i in 0..($n * 2) {
-                    let s = seedgen.nextu();
-                    raw_state[2 * i]     = s as u32;
-                    raw_state[2 * i + 1] = (s >> 32) as u32;
-                }
-                let mut state = [u32x4::default(); $n];
-                for i in 0..$n {
-                    state[i] = u32x4::from([
-                        raw_state[4 * i],
-                        raw_state[4 * i + 1],
-                        raw_state[4 * i + 2],
-                        raw_state[4 * i + 3],
-                    ]);
-                }
-                let mut rng = Self { state, idx: $n * 4 };
-                rng.period_certification();
-                rng
+        paste::paste! {
+            /// A SIMD oriented Fast Mersenne Twister (SFMT) random number generator (32-bit version).
+            ///
+            /// # Examples
+            ///
+            #[doc = concat!(
+                "```\n",
+                "use urng::rng::Rng32;\n",
+                "use urng::rng32::",
+                stringify!([<Sfmt $mexp>]),
+                ";\n\n",
+                "let mut rng = ",
+                stringify!([<Sfmt $mexp>]),
+                "::new(1);\n",
+                "let _ = rng.nextu();\n",
+                "```"
+            )]
+            #[repr(C)]
+            #[repr(align(16))]
+            pub struct [<Sfmt $mexp>] {
+                state: [u32x4; $n],
+                idx: usize,
             }
 
-            fn gen_rand_all(&mut self) {
-                unsafe {
-                    let ptr = self.state.as_mut_ptr();
-                    let mut r1 = *ptr.add($n - 2);
-                    let mut r2 = *ptr.add($n - 1);
-                    let mask = u32x4::from([$msk1, $msk2, $msk3, $msk4]);
-
-                    for i in 0..($n - $pos1) {
-                        let p_i = ptr.add(i);
-                        let a = *p_i;
-                        let b = *ptr.add(i + $pos1);
-                        let x: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(a) << ($sl2 as u32 * 8));
-                        let y: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(r1) >> ($sr2 as u32 * 8));
-                        let r = a ^ x ^ ((b >> $sr1 as u32) & mask) ^ y ^ (r2 << $sl1 as u32);
-                        *p_i = r;
-                        r1 = r2;
-                        r2 = r;
+            impl [<Sfmt $mexp>] {
+                pub fn new(seed: u64) -> Self {
+                    let mut seedgen = SplitMix64::new(seed);
+                    let mut raw_state = [0u32; $n * 4];
+                    for i in 0..($n * 2) {
+                        let s = seedgen.nextu();
+                        raw_state[2 * i]     = s as u32;
+                        raw_state[2 * i + 1] = (s >> 32) as u32;
                     }
-
-                    for i in ($n - $pos1)..$n {
-                        let p_i = ptr.add(i);
-                        let a = *p_i;
-                        let b = *ptr.add(i + $pos1 - $n);
-                        let x: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(a) << ($sl2 as u32 * 8));
-                        let y: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(r1) >> ($sr2 as u32 * 8));
-                        let r = a ^ x ^ ((b >> $sr1 as u32) & mask) ^ y ^ (r2 << $sl1 as u32);
-                        *p_i = r;
-                        r1 = r2;
-                        r2 = r;
+                    let mut state = [u32x4::default(); $n];
+                    for i in 0..$n {
+                        state[i] = u32x4::from([
+                            raw_state[4 * i],
+                            raw_state[4 * i + 1],
+                            raw_state[4 * i + 2],
+                            raw_state[4 * i + 3],
+                        ]);
                     }
+                    let mut rng = Self { state, idx: $n * 4 };
+                    rng.period_certification();
+                    rng
                 }
-            }
 
-            fn period_certification(&mut self) {
-                let mut inner = 0u32;
-                let psfmt32 = unsafe {
-                    std::slice::from_raw_parts(self.state.as_ptr() as *const u32, $n * 4)
-                };
-                let parity = [$parity1, $parity2, $parity3, $parity4];
-                for i in 0..4 {
-                    inner ^= psfmt32[i] & parity[i];
-                }
-                let mut shift = 16u32;
-                while shift > 0 {
-                    inner ^= inner >> shift;
-                    shift >>= 1;
-                }
-                inner &= 1;
-                if inner == 1 {
-                    return;
-                }
-                let psfmt32_mut = unsafe {
-                    std::slice::from_raw_parts_mut(self.state.as_mut_ptr() as *mut u32, $n * 4)
-                };
-                for i in 0..4 {
-                    let mut work = 1u32;
-                    for _ in 0..32 {
-                        if (work & parity[i]) != 0 {
-                            psfmt32_mut[i] ^= work;
-                            return;
+                fn gen_rand_all(&mut self) {
+                    unsafe {
+                        let ptr = self.state.as_mut_ptr();
+                        let mut r1 = *ptr.add($n - 2);
+                        let mut r2 = *ptr.add($n - 1);
+                        let mask = u32x4::from([$msk1, $msk2, $msk3, $msk4]);
+
+                        for i in 0..($n - $pos1) {
+                            let p_i = ptr.add(i);
+                            let a = *p_i;
+                            let b = *ptr.add(i + $pos1);
+                            let x: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(a) << ($sl2 as u32 * 8));
+                            let y: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(r1) >> ($sr2 as u32 * 8));
+                            let r = a ^ x ^ ((b >> $sr1 as u32) & mask) ^ y ^ (r2 << $sl1 as u32);
+                            *p_i = r;
+                            r1 = r2;
+                            r2 = r;
                         }
-                        work <<= 1;
+
+                        for i in ($n - $pos1)..$n {
+                            let p_i = ptr.add(i);
+                            let a = *p_i;
+                            let b = *ptr.add(i + $pos1 - $n);
+                            let x: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(a) << ($sl2 as u32 * 8));
+                            let y: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(r1) >> ($sr2 as u32 * 8));
+                            let r = a ^ x ^ ((b >> $sr1 as u32) & mask) ^ y ^ (r2 << $sl1 as u32);
+                            *p_i = r;
+                            r1 = r2;
+                            r2 = r;
+                        }
+                    }
+                }
+
+                fn period_certification(&mut self) {
+                    let mut inner = 0u32;
+                    let psfmt32 = unsafe {
+                        std::slice::from_raw_parts(self.state.as_ptr() as *const u32, $n * 4)
+                    };
+                    let parity = [$parity1, $parity2, $parity3, $parity4];
+                    for i in 0..4 {
+                        inner ^= psfmt32[i] & parity[i];
+                    }
+                    let mut shift = 16u32;
+                    while shift > 0 {
+                        inner ^= inner >> shift;
+                        shift >>= 1;
+                    }
+                    inner &= 1;
+                    if inner == 1 {
+                        return;
+                    }
+                    let psfmt32_mut = unsafe {
+                        std::slice::from_raw_parts_mut(self.state.as_mut_ptr() as *mut u32, $n * 4)
+                    };
+                    for i in 0..4 {
+                        let mut work = 1u32;
+                        for _ in 0..32 {
+                            if (work & parity[i]) != 0 {
+                                psfmt32_mut[i] ^= work;
+                                return;
+                            }
+                            work <<= 1;
+                        }
+                    }
+                }
+
+                #[inline]
+                pub(crate) fn fill_next_u32s(&mut self, out: &mut [u32]) {
+                    let mut written = 0;
+                    while written < out.len() {
+                        if self.idx >= $n * 4 {
+                            self.gen_rand_all();
+                            self.idx = 0;
+                        }
+                        let available = $n * 4 - self.idx;
+                        let take = available.min(out.len() - written);
+                        unsafe {
+                            ptr::copy_nonoverlapping(
+                                (self.state.as_ptr() as *const u32).add(self.idx),
+                                out.as_mut_ptr().add(written),
+                                take,
+                            );
+                        }
+                        self.idx += take;
+                        written += take;
                     }
                 }
             }
 
-            #[inline]
-            pub fn nextu(&mut self) -> u32 {
-                if self.idx >= $n * 4 {
-                    self.gen_rand_all();
-                    self.idx = 0;
-                }
-                let s: &[u32] = cast_slice(&self.state);
-                let val = s[self.idx];
-                self.idx += 1;
-                val
-            }
-
-            #[inline]
-            pub fn fill_next_u32s(&mut self, out: &mut [u32]) {
-                let mut written = 0;
-                while written < out.len() {
+            impl Rng32 for [<Sfmt $mexp>] {
+                #[inline]
+                fn nextu(&mut self) -> u32 {
                     if self.idx >= $n * 4 {
                         self.gen_rand_all();
                         self.idx = 0;
                     }
-                    let available = $n * 4 - self.idx;
-                    let take = available.min(out.len() - written);
-                    unsafe {
-                        ptr::copy_nonoverlapping(
-                            (self.state.as_ptr() as *const u32).add(self.idx),
-                            out.as_mut_ptr().add(written),
-                            take,
-                        );
-                    }
-                    self.idx += take;
-                    written += take;
+                    let s: &[u32] = cast_slice(&self.state);
+                    let val = s[self.idx];
+                    self.idx += 1;
+                    val
                 }
             }
 
-            #[inline]
-            pub fn nextf(&mut self) -> f32 {
-                self.nextu() as f32 * (1.0 / (u32::MAX as f32 + 1.0))
-            }
-
-            #[inline]
-            pub fn randi(&mut self, min: i32, max: i32) -> i32 {
-                let range = (max as i64 - min as i64 + 1) as u64;
-                let x = self.nextu();
-                ((x as u64 * range) >> 32) as i32 + min
-            }
-
-            #[inline]
-            pub fn randf(&mut self, min: f32, max: f32) -> f32 {
-                let range = max - min;
-                let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
-                (self.nextu() as f32 * scale) + min
-            }
-
-            #[inline]
-            pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-                let index = self.randi(0, choices.len() as i32 - 1);
-                &choices[index as usize]
-            }
-        }
-
-        impl Rng32 for $name {
-            #[inline]
-            fn randi(&mut self, min: i32, max: i32) -> i32 { self.randi(min, max) }
-            #[inline]
-            fn randf(&mut self, min: f32, max: f32) -> f32 { self.randf(min, max) }
-            #[inline]
-            fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T { self.choice(choices) }
         }
     };
 }
 
-// SFMT-521 has no standard parameterization; uses SFMT-607 (period 2^607-1).
 define_sfmt_variant!(
-    /// SFMT with period 2^607-1. Named `Sfmt607` for API compatibility;
-    /// uses SFMT-607 parameters (no standard SFMT-607 exists).
-    Sfmt607,
-    mexp = 607, n = 5, pos1 = 2, sl1 = 15, sl2 = 3, sr1 = 13, sr2 = 3,
-    msk1 = 0xfdff37ffu32, msk2 = 0xef7f3f7du32, msk3 = 0xff777b7du32, msk4 = 0x7ff7fb2fu32,
-    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
-    parity3 = 0x00000000u32, parity4 = 0x5986f054u32,
+    mexp = 607,
+    n = 5,
+    pos1 = 2,
+    sl1 = 15,
+    sl2 = 3,
+    sr1 = 13,
+    sr2 = 3,
+    msk1 = 0xfdff37ffu32,
+    msk2 = 0xef7f3f7du32,
+    msk3 = 0xff777b7du32,
+    msk4 = 0x7ff7fb2fu32,
+    parity1 = 0x00000001u32,
+    parity2 = 0x00000000u32,
+    parity3 = 0x00000000u32,
+    parity4 = 0x5986f054u32,
 );
 
 define_sfmt_variant!(
-    /// SFMT with period 2^1279-1.
-    Sfmt1279,
-    mexp = 1279, n = 10, pos1 = 7, sl1 = 14, sl2 = 3, sr1 = 5, sr2 = 1,
-    msk1 = 0xf7fefffdu32, msk2 = 0x7fefcfffu32, msk3 = 0xaff3ef3fu32, msk4 = 0xb5ffff7fu32,
-    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
-    parity3 = 0x00000000u32, parity4 = 0x20000000u32,
-);
-
-// SFMT-2281 has no standard parameterization; uses SFMT-2281 (period 2^2281-1).
-define_sfmt_variant!(
-    /// SFMT with period 2^2281-1. Named `Sfmt2281` for API compatibility;
-    /// uses SFMT-2281 parameters (no standard SFMT-2281 exists).
-    Sfmt2281,
-    mexp = 2281, n = 18, pos1 = 12, sl1 = 19, sl2 = 1, sr1 = 5, sr2 = 1,
-    msk1 = 0xbff7ffbfu32, msk2 = 0xfdfffffeu32, msk3 = 0xf7ffef7fu32, msk4 = 0xf2f7cbbfu32,
-    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
-    parity3 = 0x00000000u32, parity4 = 0x41dfa600u32,
-);
-
-define_sfmt_variant!(
-    /// SFMT with period 2^4253-1.
-    Sfmt4253,
-    mexp = 4253, n = 34, pos1 = 17, sl1 = 20, sl2 = 1, sr1 = 7, sr2 = 1,
-    msk1 = 0x9f7bffffu32, msk2 = 0x9fffff5fu32, msk3 = 0x3efffffbu32, msk4 = 0xfffff7bbu32,
-    parity1 = 0xa8000001u32, parity2 = 0xaf5390a3u32,
-    parity3 = 0xb740b3f8u32, parity4 = 0x6c11486du32,
+    mexp = 1279,
+    n = 10,
+    pos1 = 7,
+    sl1 = 14,
+    sl2 = 3,
+    sr1 = 5,
+    sr2 = 1,
+    msk1 = 0xf7fefffdu32,
+    msk2 = 0x7fefcfffu32,
+    msk3 = 0xaff3ef3fu32,
+    msk4 = 0xb5ffff7fu32,
+    parity1 = 0x00000001u32,
+    parity2 = 0x00000000u32,
+    parity3 = 0x00000000u32,
+    parity4 = 0x20000000u32,
 );
 
 define_sfmt_variant!(
-    /// SFMT with period 2^11213-1.
-    Sfmt11213,
-    mexp = 11213, n = 88, pos1 = 68, sl1 = 14, sl2 = 3, sr1 = 7, sr2 = 3,
-    msk1 = 0xeffff7fbu32, msk2 = 0xffffffefu32, msk3 = 0xdfdfbfffu32, msk4 = 0x7fffdbfdu32,
-    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
-    parity3 = 0xe8148000u32, parity4 = 0xd0c7afa3u32,
+    mexp = 2281,
+    n = 18,
+    pos1 = 12,
+    sl1 = 19,
+    sl2 = 1,
+    sr1 = 5,
+    sr2 = 1,
+    msk1 = 0xbff7ffbfu32,
+    msk2 = 0xfdfffffeu32,
+    msk3 = 0xf7ffef7fu32,
+    msk4 = 0xf2f7cbbfu32,
+    parity1 = 0x00000001u32,
+    parity2 = 0x00000000u32,
+    parity3 = 0x00000000u32,
+    parity4 = 0x41dfa600u32,
 );
 
 define_sfmt_variant!(
-    /// SFMT with period 2^44497-1.
-    Sfmt44497,
-    mexp = 44497, n = 348, pos1 = 330, sl1 = 5, sl2 = 3, sr1 = 9, sr2 = 3,
-    msk1 = 0xeffffffbu32, msk2 = 0xdfbebfffu32, msk3 = 0xbfbf7befu32, msk4 = 0x9ffd7bffu32,
-    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
-    parity3 = 0xa3ac4000u32, parity4 = 0xecc1327au32,
+    mexp = 4253,
+    n = 34,
+    pos1 = 17,
+    sl1 = 20,
+    sl2 = 1,
+    sr1 = 7,
+    sr2 = 1,
+    msk1 = 0x9f7bffffu32,
+    msk2 = 0x9fffff5fu32,
+    msk3 = 0x3efffffbu32,
+    msk4 = 0xfffff7bbu32,
+    parity1 = 0xa8000001u32,
+    parity2 = 0xaf5390a3u32,
+    parity3 = 0xb740b3f8u32,
+    parity4 = 0x6c11486du32,
 );
 
 define_sfmt_variant!(
-    /// SFMT with period 2^86243-1.
-    Sfmt86243,
-    mexp = 86243, n = 674, pos1 = 366, sl1 = 6, sl2 = 7, sr1 = 19, sr2 = 1,
-    msk1 = 0xfdbffbffu32, msk2 = 0xbff7ff3fu32, msk3 = 0xfd77efffu32, msk4 = 0xbf9ff3ffu32,
-    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
-    parity3 = 0x00000000u32, parity4 = 0xe9528d85u32,
+    mexp = 11213,
+    n = 88,
+    pos1 = 68,
+    sl1 = 14,
+    sl2 = 3,
+    sr1 = 7,
+    sr2 = 3,
+    msk1 = 0xeffff7fbu32,
+    msk2 = 0xffffffefu32,
+    msk3 = 0xdfdfbfffu32,
+    msk4 = 0x7fffdbfdu32,
+    parity1 = 0x00000001u32,
+    parity2 = 0x00000000u32,
+    parity3 = 0xe8148000u32,
+    parity4 = 0xd0c7afa3u32,
 );
 
 define_sfmt_variant!(
-    /// SFMT with period 2^132049-1.
-    Sfmt132049,
-    mexp = 132049, n = 1032, pos1 = 110, sl1 = 19, sl2 = 1, sr1 = 21, sr2 = 1,
-    msk1 = 0xffffbb5fu32, msk2 = 0xfb6ebf95u32, msk3 = 0xfffefffau32, msk4 = 0xcff77fffu32,
-    parity1 = 0x00000001u32, parity2 = 0x00000000u32,
-    parity3 = 0xcb520000u32, parity4 = 0xc7e91c7du32,
+    mexp = 44497,
+    n = 348,
+    pos1 = 330,
+    sl1 = 5,
+    sl2 = 3,
+    sr1 = 9,
+    sr2 = 3,
+    msk1 = 0xeffffffbu32,
+    msk2 = 0xdfbebfffu32,
+    msk3 = 0xbfbf7befu32,
+    msk4 = 0x9ffd7bffu32,
+    parity1 = 0x00000001u32,
+    parity2 = 0x00000000u32,
+    parity3 = 0xa3ac4000u32,
+    parity4 = 0xecc1327au32,
 );
 
 define_sfmt_variant!(
-    /// SFMT with period 2^216091-1.
-    Sfmt216091,
-    mexp = 216091, n = 1689, pos1 = 627, sl1 = 11, sl2 = 3, sr1 = 10, sr2 = 1,
-    msk1 = 0xbff7bff7u32, msk2 = 0xbfffffffu32, msk3 = 0xbffffa7fu32, msk4 = 0xffddfbfbu32,
-    parity1 = 0xf8000001u32, parity2 = 0x89e80709u32,
-    parity3 = 0x3bd2b64bu32, parity4 = 0x0c64b1e4u32,
+    mexp = 86243,
+    n = 674,
+    pos1 = 366,
+    sl1 = 6,
+    sl2 = 7,
+    sr1 = 19,
+    sr2 = 1,
+    msk1 = 0xfdbffbffu32,
+    msk2 = 0xbff7ff3fu32,
+    msk3 = 0xfd77efffu32,
+    msk4 = 0xbf9ff3ffu32,
+    parity1 = 0x00000001u32,
+    parity2 = 0x00000000u32,
+    parity3 = 0x00000000u32,
+    parity4 = 0xe9528d85u32,
+);
+
+define_sfmt_variant!(
+    mexp = 132049,
+    n = 1032,
+    pos1 = 110,
+    sl1 = 19,
+    sl2 = 1,
+    sr1 = 21,
+    sr2 = 1,
+    msk1 = 0xffffbb5fu32,
+    msk2 = 0xfb6ebf95u32,
+    msk3 = 0xfffefffau32,
+    msk4 = 0xcff77fffu32,
+    parity1 = 0x00000001u32,
+    parity2 = 0x00000000u32,
+    parity3 = 0xcb520000u32,
+    parity4 = 0xc7e91c7du32,
+);
+
+define_sfmt_variant!(
+    mexp = 216091,
+    n = 1689,
+    pos1 = 627,
+    sl1 = 11,
+    sl2 = 3,
+    sr1 = 10,
+    sr2 = 1,
+    msk1 = 0xbff7bff7u32,
+    msk2 = 0xbfffffffu32,
+    msk3 = 0xbffffa7fu32,
+    msk4 = 0xffddfbfbu32,
+    parity1 = 0xf8000001u32,
+    parity2 = 0x89e80709u32,
+    parity3 = 0x3bd2b64bu32,
+    parity4 = 0x0c64b1e4u32,
 );
 
 #[cfg(test)]

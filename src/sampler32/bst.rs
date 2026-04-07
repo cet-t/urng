@@ -21,6 +21,14 @@ pub struct Bst32<'a, R: Rng32 + 'a> {
 }
 
 impl<'a, R: Rng32 + 'a> Bst32<'a, R> {
+    /// Creates a new sampler with the given random number generator and weights.
+    pub fn new(rng: &'a mut R, weights: &[f32]) -> Self {
+        Self {
+            rng,
+            cumulative: Self::build_cumulative(weights),
+        }
+    }
+
     fn build_cumulative(weights: &[f32]) -> Vec<f32> {
         let mut cumulative = Vec::with_capacity(weights.len());
         let mut sum = 0.0f32;
@@ -33,13 +41,6 @@ impl<'a, R: Rng32 + 'a> Bst32<'a, R> {
 }
 
 impl<'a, R: Rng32 + 'a> Sampler32<'a, R> for Bst32<'a, R> {
-    fn new(rng: &'a mut R, weights: &[f32]) -> Self {
-        Self {
-            rng,
-            cumulative: Self::build_cumulative(weights),
-        }
-    }
-
     fn weights(&mut self, weights: &[f32]) {
         self.cumulative = Self::build_cumulative(weights);
     }

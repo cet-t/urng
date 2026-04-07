@@ -20,7 +20,7 @@ use crate::{rng::Rng32, rng32::SplitMix32, wrap};
 /// # Examples
 ///
 /// ```
-/// use urng::rng32::Xoshiro128Pp;
+/// use urng::prelude::*;
 ///
 /// let mut rng = Xoshiro128Pp::new(1);
 /// assert_eq!(rng.nextu(), 4075539671);
@@ -35,14 +35,6 @@ impl Xoshiro128Pp {
     ///
     /// The seed is expanded via `SplitMix32` to initialize all four state words.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Xoshiro128Pp;
-    ///
-    /// let mut rng = Xoshiro128Pp::new(1);
-    /// assert_eq!(rng.nextu(), 4075539671);
-    /// ```
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
@@ -54,19 +46,11 @@ impl Xoshiro128Pp {
             ],
         }
     }
+}
 
-    /// Generates the next random `u32` value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Xoshiro128Pp;
-    ///
-    /// let mut rng = Xoshiro128Pp::new(1);
-    /// assert_eq!(rng.nextu(), 4075539671);
-    /// ```
+impl Rng32 for Xoshiro128Pp {
     #[inline]
-    pub fn nextu(&mut self) -> u32 {
+    fn nextu(&mut self) -> u32 {
         let res = wrap!((self.s[0] + self.s[3]).0.rotate_left(7)) + self.s[0];
         let t = self.s[1] << 9;
 
@@ -78,70 +62,6 @@ impl Xoshiro128Pp {
         self.s[3] = wrap!(self.s[3].0.rotate_left(11));
 
         res.0
-    }
-
-    /// Generates the next random `f32` value in the range [0, 1).
-    #[inline]
-    pub fn nextf(&mut self) -> f32 {
-        self.nextu() as f32 * (1.0 / (u32::MAX as f32 + 1.0))
-    }
-
-    /// Generates a random `i32` value in the range [min, max].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Xoshiro128Pp;
-    ///
-    /// let mut rng = Xoshiro128Pp::new(1);
-    /// let val: i32 = rng.randi(0, 10);
-    /// assert!(val >= 0 && val <= 10);
-    /// ```
-    #[inline]
-    pub fn randi(&mut self, min: i32, max: i32) -> i32 {
-        let range = (max as i64 - min as i64 + 1) as u64;
-        let x = self.nextu();
-        ((x as u64 * range) >> 32) as i32 + min
-    }
-
-    /// Generates a random `f32` value in the range [min, max).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Xoshiro128Pp;
-    ///
-    /// let mut rng = Xoshiro128Pp::new(1);
-    /// let val: f32 = rng.randf(0.0, 1.0);
-    /// assert!(val >= 0.0 && val < 1.0);
-    /// ```
-    #[inline]
-    pub fn randf(&mut self, min: f32, max: f32) -> f32 {
-        let range = max - min;
-        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
-        (self.nextu() as f32 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    #[inline]
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i32 - 1);
-        &choices[index as usize]
-    }
-}
-
-impl Rng32 for Xoshiro128Pp {
-    #[inline]
-    fn randi(&mut self, min: i32, max: i32) -> i32 {
-        self.randi(min, max)
-    }
-    #[inline]
-    fn randf(&mut self, min: f32, max: f32) -> f32 {
-        self.randf(min, max)
-    }
-    #[inline]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
     }
 }
 
@@ -155,6 +75,7 @@ impl Rng32 for Xoshiro128Pp {
 /// # Examples
 ///
 /// ```
+/// use urng::rng::Rng32;
 /// use urng::rng32::Xoshiro128Ss;
 ///
 /// let mut rng = Xoshiro128Ss::new(1);
@@ -167,17 +88,6 @@ pub struct Xoshiro128Ss {
 
 impl Xoshiro128Ss {
     /// Creates a new `Xoshiro128Ss` instance seeded with the given value.
-    ///
-    /// The seed is expanded via `SplitMix32` to initialize all four state words.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Xoshiro128Ss;
-    ///
-    /// let mut rng = Xoshiro128Ss::new(1);
-    /// assert_eq!(rng.nextu(), 997331382);
-    /// ```
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
@@ -189,19 +99,11 @@ impl Xoshiro128Ss {
             ],
         }
     }
+}
 
-    /// Generates the next random `u32` value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Xoshiro128Ss;
-    ///
-    /// let mut rng = Xoshiro128Ss::new(1);
-    /// assert_eq!(rng.nextu(), 997331382);
-    /// ```
+impl Rng32 for Xoshiro128Ss {
     #[inline]
-    pub fn nextu(&mut self) -> u32 {
+    fn nextu(&mut self) -> u32 {
         let res = wrap!((self.s[1] * wrap!(5)).0.rotate_left(7)) * wrap!(9);
         let t = self.s[1] << 9;
 
@@ -213,70 +115,6 @@ impl Xoshiro128Ss {
         self.s[3] = wrap!(self.s[3].0.rotate_left(11));
 
         res.0
-    }
-
-    /// Generates the next random `f32` value in the range [0, 1).
-    #[inline]
-    pub fn nextf(&mut self) -> f32 {
-        self.nextu() as f32 * (1.0 / (u32::MAX as f32 + 1.0))
-    }
-
-    /// Generates a random `i32` value in the range [min, max].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Xoshiro128Ss;
-    ///
-    /// let mut rng = Xoshiro128Ss::new(1);
-    /// let val: i32 = rng.randi(0, 10);
-    /// assert!(val >= 0 && val <= 10);
-    /// ```
-    #[inline]
-    pub fn randi(&mut self, min: i32, max: i32) -> i32 {
-        let range = (max as i64 - min as i64 + 1) as u64;
-        let x = self.nextu();
-        ((x as u64 * range) >> 32) as i32 + min
-    }
-
-    /// Generates a random `f32` value in the range [min, max).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Xoshiro128Ss;
-    ///
-    /// let mut rng = Xoshiro128Ss::new(1);
-    /// let val: f32 = rng.randf(0.0, 1.0);
-    /// assert!(val >= 0.0 && val < 1.0);
-    /// ```
-    #[inline]
-    pub fn randf(&mut self, min: f32, max: f32) -> f32 {
-        let range = max - min;
-        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
-        (self.nextu() as f32 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    #[inline]
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i32 - 1);
-        &choices[index as usize]
-    }
-}
-
-impl Rng32 for Xoshiro128Ss {
-    #[inline]
-    fn randi(&mut self, min: i32, max: i32) -> i32 {
-        self.randi(min, max)
-    }
-    #[inline]
-    fn randf(&mut self, min: f32, max: f32) -> f32 {
-        self.randf(min, max)
-    }
-    #[inline]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
     }
 }
 

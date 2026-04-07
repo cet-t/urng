@@ -17,8 +17,6 @@
 /// assert_eq!(sampler.sample(), 1);
 /// ```
 pub trait Sampler32<'a, R: Rng32 + 'a> {
-    /// Creates a new sampler with the given random number generator and weights.
-    fn new(rng: &'a mut R, weights: &[f32]) -> Self;
     /// Samples a random index based on the weights.
     fn sample(&mut self) -> usize;
     /// Updates the weights of the sampler.
@@ -42,8 +40,6 @@ pub trait Sampler32<'a, R: Rng32 + 'a> {
 /// assert_eq!(sampler.sample(), 0);
 /// ```
 pub trait Sampler64<'a, R: Rng64 + 'a> {
-    /// Creates a new sampler with the given random number generator and weights.
-    fn new(rng: &'a mut R, weights: &[f64]) -> Self;
     /// Samples a random index based on the weights.
     fn sample(&mut self) -> usize;
     /// Updates the weights of the sampler.

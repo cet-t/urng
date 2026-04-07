@@ -8,7 +8,7 @@ use std::num::Wrapping;
 /// # Examples
 ///
 /// ```
-/// use urng::rng64::xoroshiro::Xoroshiro128Pp;
+/// use urng::prelude::*;
 ///
 /// let mut rng = Xoroshiro128Pp::new(1);
 /// let _ = rng.nextu();
@@ -25,25 +25,6 @@ impl Xoroshiro128Pp {
         Self {
             s: [Wrapping(seedgen.nextu()), Wrapping(seedgen.nextu())],
         }
-    }
-
-    /// Generates the next random `u64` value.
-    #[inline]
-    pub fn nextu(&mut self) -> u64 {
-        let s0 = self.s[0];
-        let s1 = self.s[1];
-        let result = s0 + s1;
-
-        let s0 = s0.0;
-        let s1 = s1.0;
-
-        self.s = wrap![
-            s1 ^ s0,
-            s0.rotate_left(24) ^ self.s[1].0 ^ (self.s[1].0 << 16)
-        ];
-        self.s[1] = wrap!(self.s[1].0.rotate_left(37));
-
-        result.0
     }
 
     /// Applies the jump function for advancing by $2^{64}$ steps.
@@ -100,48 +81,25 @@ impl Xoroshiro128Pp {
 
         self.s = wrap![s0, s1];
     }
-
-    /// Generates the next random `f64` value in the range `[0, 1)`.
-    #[inline]
-    pub fn nextf(&mut self) -> f64 {
-        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
-    }
-
-    /// Generates a random `i64` value in the range `[min, max]`.
-    #[inline]
-    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
-        let range = (max as i128 - min as i128 + 1) as u128;
-        ((self.nextu() as u128 * range) >> 64) as i64 + min
-    }
-
-    /// Generates a random `f64` value in the range `[min, max)`.
-    #[inline]
-    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
-        let range = max - min;
-        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
-        (self.nextu() as f64 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    #[inline]
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i64 - 1);
-        &choices[index as usize]
-    }
 }
 
 impl Rng64 for Xoroshiro128Pp {
     #[inline]
-    fn randi(&mut self, min: i64, max: i64) -> i64 {
-        self.randi(min, max)
-    }
-    #[inline]
-    fn randf(&mut self, min: f64, max: f64) -> f64 {
-        self.randf(min, max)
-    }
-    #[inline]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
+    fn nextu(&mut self) -> u64 {
+        let s0 = self.s[0];
+        let s1 = self.s[1];
+        let result = s0 + s1;
+
+        let s0 = s0.0;
+        let s1 = s1.0;
+
+        self.s = wrap![
+            s1 ^ s0,
+            s0.rotate_left(24) ^ self.s[1].0 ^ (self.s[1].0 << 16)
+        ];
+        self.s[1] = wrap!(self.s[1].0.rotate_left(37));
+
+        result.0
     }
 }
 
@@ -152,7 +110,7 @@ impl Rng64 for Xoroshiro128Pp {
 /// # Examples
 ///
 /// ```
-/// use urng::rng64::xoroshiro::Xoroshiro128Ss;
+/// use urng::prelude::*;
 ///
 /// let mut rng = Xoroshiro128Ss::new(1);
 /// let _ = rng.nextu();
@@ -169,20 +127,6 @@ impl Xoroshiro128Ss {
         Self {
             s: [Wrapping(seedgen.nextu()), Wrapping(seedgen.nextu())],
         }
-    }
-
-    /// Generates the next random `u64` value.
-    #[inline]
-    pub fn nextu(&mut self) -> u64 {
-        let s0 = self.s[0];
-        let s1 = self.s[1];
-        let result = wrap!((s0 * wrap!(5)).0.rotate_left(7)) * wrap!(9);
-
-        let s1 = s1 ^ s0;
-        self.s[0] = wrap!(s0.0.rotate_left(24) ^ s1.0 ^ (s1.0 << 16));
-        self.s[1] = wrap!(s1.0.rotate_left(37));
-
-        result.0
     }
 
     /// Applies the jump function for advancing by $2^{64}$ steps.
@@ -239,48 +183,20 @@ impl Xoroshiro128Ss {
 
         self.s = wrap![s0, s1];
     }
-
-    /// Generates the next random `f64` value in the range `[0, 1)`.
-    #[inline]
-    pub fn nextf(&mut self) -> f64 {
-        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
-    }
-
-    /// Generates a random `i64` value in the range `[min, max]`.
-    #[inline]
-    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
-        let range = (max as i128 - min as i128 + 1) as u128;
-        ((self.nextu() as u128 * range) >> 64) as i64 + min
-    }
-
-    /// Generates a random `f64` value in the range `[min, max)`.
-    #[inline]
-    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
-        let range = max - min;
-        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
-        (self.nextu() as f64 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    #[inline]
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i64 - 1);
-        &choices[index as usize]
-    }
 }
 
 impl Rng64 for Xoroshiro128Ss {
     #[inline]
-    fn randi(&mut self, min: i64, max: i64) -> i64 {
-        self.randi(min, max)
-    }
-    #[inline]
-    fn randf(&mut self, min: f64, max: f64) -> f64 {
-        self.randf(min, max)
-    }
-    #[inline]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
+    fn nextu(&mut self) -> u64 {
+        let s0 = self.s[0];
+        let s1 = self.s[1];
+        let result = wrap!((s0 * wrap!(5)).0.rotate_left(7)) * wrap!(9);
+
+        let s1 = s1 ^ s0;
+        self.s[0] = wrap!(s0.0.rotate_left(24) ^ s1.0 ^ (s1.0 << 16));
+        self.s[1] = wrap!(s1.0.rotate_left(37));
+
+        result.0
     }
 }
 

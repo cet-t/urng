@@ -11,7 +11,7 @@ use std::arch::x86_64::*;
 /// # Examples
 ///
 /// ```
-/// use urng::rng32::SplitMix32;
+/// use urng::prelude::*;
 ///
 /// let mut rng = SplitMix32::new(1);
 /// let _ = rng.nextu();
@@ -26,99 +26,22 @@ const B: Wrapping<u64> = wrap!(0xC4CE_B9FE_1A85_EC53);
 
 impl SplitMix32 {
     /// Creates a new `SplitMix32` instance seeded with the given value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::SplitMix32;
-    ///
-    /// let mut rng = SplitMix32::new(1);
-    /// assert_ne!(rng.nextu(), 0);
-    /// ```
     pub fn new(seed: u32) -> Self {
         Self {
             state: wrap!(seed | 1),
         }
     }
+}
 
-    /// Generates the next random `u32` value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::SplitMix32;
-    ///
-    /// let mut rng = SplitMix32::new(1);
-    /// assert_ne!(rng.nextu(), 0);
-    /// ```
-    pub fn nextu(&mut self) -> u32 {
+impl Rng32 for SplitMix32 {
+    #[inline]
+    fn nextu(&mut self) -> u32 {
         self.state += wrap!(0x9E3779B9);
 
         let mut z = wrap!(self.state.0 as u64);
         z = (z ^ (z >> 16)) * A;
         z = (z ^ (z >> 16)) * B;
         (z ^ (z >> 16)).0 as u32
-    }
-
-    /// Generates the next random `f32` value in the range [0, 1).
-    #[inline]
-    pub fn nextf(&mut self) -> f32 {
-        self.nextu() as f32 * (1.0 / (u32::MAX as f32 + 1.0))
-    }
-
-    /// Generates a random `i32` value in the range [min, max].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::SplitMix32;
-    ///
-    /// let mut rng = SplitMix32::new(1);
-    /// let val: i32 = rng.randi(0, 10);
-    /// assert!(val >= 0 && val <= 10);
-    /// ```
-    #[inline]
-    pub fn randi(&mut self, min: i32, max: i32) -> i32 {
-        let range = (max as i64 - min as i64 + 1) as u64;
-        ((self.nextu() as u64 * range) >> 32) as i32 + min
-    }
-
-    /// Generates a random `f32` value in the range [min, max).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::SplitMix32;
-    ///
-    /// let mut rng = SplitMix32::new(1);
-    /// let val: f32 = rng.randf(0.0, 1.0);
-    /// assert!(val >= 0.0 && val < 1.0);
-    /// ```
-    #[inline]
-    pub fn randf(&mut self, min: f32, max: f32) -> f32 {
-        let range = max - min;
-        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
-        (self.nextu() as f32 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i32 - 1);
-        &choices[index as usize]
-    }
-}
-
-impl Rng32 for SplitMix32 {
-    fn randi(&mut self, min: i32, max: i32) -> i32 {
-        self.randi(min, max)
-    }
-
-    fn randf(&mut self, min: f32, max: f32) -> f32 {
-        self.randf(min, max)
-    }
-
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
     }
 }
 
@@ -132,23 +55,13 @@ pub const SPLITMIX32_GAMMA: u32 = 0x9E37_79B9;
 ///
 /// # Examples
 ///
-/// ```ignore
-/// use urng::rng32::SplitMix32x16;
-///
-/// let mut rng = unsafe { SplitMix32x16::new(1) };
-/// let vals = unsafe { rng.nextu() };
-/// assert_eq!(vals.len(), 16);
 /// ```
-/// AVX-512 implementation of SplitMix32 producing 16 values per step.
-///
-/// # Examples
-///
-/// ```ignore
 /// use urng::rng32::SplitMix32x16;
 ///
-/// let mut rng = unsafe { SplitMix32x16::new(1) };
-/// let vals = unsafe { rng.nextu() };
-/// assert_eq!(vals.len(), 16);
+/// unsafe {
+///     let mut rng = SplitMix32x16::new(1);
+///     let _ = rng.nextu();
+/// }
 /// ```
 #[cfg(target_arch = "x86_64")]
 #[repr(C, align(64))]

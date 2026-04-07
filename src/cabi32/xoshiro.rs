@@ -1,3 +1,4 @@
+use crate::rng::Rng32;
 use crate::rng32::{Xoshiro128Pp, Xoshiro128Ppx16, Xoshiro128Ss, Xoshiro128Ssx16};
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;

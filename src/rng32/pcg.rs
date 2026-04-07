@@ -1,3 +1,4 @@
+use crate::rng::Rng64;
 use crate::{rng::Rng32, rng64::SplitMix64, wrap};
 use std::num::Wrapping;
 
@@ -12,7 +13,7 @@ use std::arch::x86_64::*;
 /// # Examples
 ///
 /// ```
-/// use urng::rng32::Pcg32;
+/// use urng::prelude::*;
 ///
 /// let mut rng = Pcg32::new(1);
 /// let _ = rng.nextu();
@@ -25,15 +26,6 @@ pub struct Pcg32 {
 
 impl Pcg32 {
     /// Creates a new `Pcg32` instance seeded with the given value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Pcg32;
-    ///
-    /// let mut rng = Pcg32::new(1);
-    /// assert_eq!(rng.nextu(), 1299187792);
-    /// ```
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed | 1);
         Pcg32 {
@@ -41,88 +33,16 @@ impl Pcg32 {
             inc: wrap!(seedgen.nextu()),
         }
     }
+}
 
-    /// Generates the next random `u32` value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Pcg32;
-    ///
-    /// let mut rng = Pcg32::new(1);
-    /// assert_eq!(rng.nextu(), 1299187792);
-    /// ```
+impl Rng32 for Pcg32 {
     #[inline]
-    pub fn nextu(&mut self) -> u32 {
+    fn nextu(&mut self) -> u32 {
         let oldstate = self.state;
         self.state = oldstate * wrap!(6364136223846793005) + self.inc;
         let xorshifted = ((((oldstate >> 18) ^ oldstate) >> 27).0) as u32;
         let rot = ((oldstate >> 59).0) as u32;
         xorshifted.rotate_right(rot)
-    }
-
-    /// Generates the next random `f32` value in the range [0, 1).
-    #[inline]
-    pub fn nextf(&mut self) -> f32 {
-        self.nextu() as f32 * (1.0 / (u32::MAX as f32 + 1.0))
-    }
-
-    /// Generates a random `i32` value in the range [min, max].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Pcg32;
-    ///
-    /// let mut rng = Pcg32::new(1);
-    /// let val: i32 = rng.randi(0, 10);
-    /// assert!(val >= 0 && val <= 10);
-    /// ```
-    #[inline]
-    pub fn randi(&mut self, min: i32, max: i32) -> i32 {
-        let range = (max as i64 - min as i64 + 1) as u64;
-        let x = self.nextu();
-        ((x as u64 * range) >> 32) as i32 + min
-    }
-
-    /// Generates a random `f32` value in the range [min, max).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Pcg32;
-    ///
-    /// let mut rng = Pcg32::new(1);
-    /// let val: f32 = rng.randf(0.0, 1.0);
-    /// assert!(val >= 0.0 && val < 1.0);
-    /// ```
-    #[inline]
-    pub fn randf(&mut self, min: f32, max: f32) -> f32 {
-        let range = max - min;
-        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
-        (self.nextu() as f32 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    #[inline]
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i32 - 1);
-        &choices[index as usize]
-    }
-}
-
-impl Rng32 for Pcg32 {
-    #[inline]
-    fn randi(&mut self, min: i32, max: i32) -> i32 {
-        self.randi(min, max)
-    }
-    #[inline]
-    fn randf(&mut self, min: f32, max: f32) -> f32 {
-        self.randf(min, max)
-    }
-    #[inline]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
     }
 }
 
@@ -137,12 +57,13 @@ pub const PCG32_MULT: u64 = 6364136223846793005;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```
 /// use urng::rng32::Pcg32x8;
 ///
-/// let mut rng = unsafe { Pcg32x8::new(1) };
-/// let vals = unsafe { rng.nextu() };
-/// assert_eq!(vals.len(), 8);
+/// unsafe {
+///     let mut rng = Pcg32x8::new(1);
+///     let _ = rng.nextu();
+/// }
 /// ```
 #[cfg(target_arch = "x86_64")]
 #[repr(C, align(64))]

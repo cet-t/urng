@@ -1,4 +1,4 @@
-use crate::rng64::SplitMix64;
+use crate::{rng::Rng64, rng64::SplitMix64};
 
 // --- Threefish256 ---
 

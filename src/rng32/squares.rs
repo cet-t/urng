@@ -1,4 +1,7 @@
-use crate::rng64::SplitMix64;
+use crate::{
+    rng::{Rng32, Rng64},
+    rng64::SplitMix64,
+};
 
 use std::arch::x86_64::*;
 
@@ -9,7 +12,7 @@ use std::arch::x86_64::*;
 /// # Examples
 ///
 /// ```
-/// use urng::rng32::Squares32;
+/// use urng::prelude::*;
 ///
 /// let mut rng = Squares32::new(1);
 /// let _ = rng.nextu();
@@ -21,15 +24,6 @@ pub struct Squares32 {
 
 impl Squares32 {
     /// Creates a new `Squares32` instance seeded with the given value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng32::Squares32;
-    ///
-    /// let mut rng = Squares32::new(1);
-    /// assert_eq!(rng.nextu(), 1225738608);
-    /// ```
     #[inline]
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed | 1);
@@ -65,34 +59,14 @@ impl Squares32 {
         let z = y.wrapping_add(key);
         Self::compute_yz(y, z)
     }
+}
 
-    /// Generates the next random `u32` value.
+impl Rng32 for Squares32 {
     #[inline(always)]
-    pub fn nextu(&mut self) -> u32 {
+    fn nextu(&mut self) -> u32 {
         let out = Self::compute(self.c, self.k);
         self.c = self.c.wrapping_add(1);
         out
-    }
-
-    /// Generates the next random `f32` value in the range [0, 1).
-    #[inline(always)]
-    pub fn nextf(&mut self) -> f32 {
-        self.nextu() as f32 * (1.0 / (u32::MAX as f32 + 1.0))
-    }
-
-    /// Generates a random `i32` value in the range [min, max].
-    #[inline(always)]
-    pub fn randi(&mut self, min: i32, max: i32) -> i32 {
-        let range = (max as i64 - min as i64 + 1) as u64;
-        ((self.nextu() as u64 * range) >> 32) as i32 + min
-    }
-
-    /// Generates a random `f32` value in the range [min, max).
-    #[inline(always)]
-    pub fn randf(&mut self, min: f32, max: f32) -> f32 {
-        let range = max - min;
-        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
-        (self.nextu() as f32 * scale) + min
     }
 }
 
@@ -106,23 +80,12 @@ pub const SQUARES32x8: usize = 8;
 ///
 /// # Examples
 ///
-/// ```ignore
-/// use urng::rng32::Squares32x8;
-///
-/// let mut rng = unsafe { Squares32x8::new(1) };
-/// let vals = unsafe { rng.nextu() };
-/// assert_eq!(vals.len(), 8);
 /// ```
-/// A high-throughput Squares32 implementation using AVX-512 SIMD.
-///
-/// # Examples
-///
-/// ```ignore
 /// use urng::rng32::Squares32x8;
-///
-/// let mut rng = unsafe { Squares32x8::new(1) };
-/// let vals = unsafe { rng.nextu() };
-/// assert_eq!(vals.len(), 8);
+/// unsafe {
+///     let mut rng = Squares32x8::new(1);
+///     let _ = rng.nextu();
+/// }
 /// ```
 #[cfg(target_arch = "x86_64")]
 #[repr(C)]
@@ -143,6 +106,8 @@ impl Squares32x8 {
         let mut k = [0u64; SQUARES32x8];
         let mut seedgen = SplitMix64::new(seed as u64 | 1);
         k.iter_mut().for_each(|v| {
+            use crate::rng::Rng64;
+
             *v = seedgen.nextu();
         });
 
@@ -213,22 +178,13 @@ impl Squares32x8 {
 ///
 /// let _ = core::mem::size_of::<Squares32Simd>();
 /// ```
-/// Opaque handle for the Squares32 RNG.
-/// Dispatched at runtime to AVX-512 (`Squares32x8`) or scalar (`Squares32`) implementation.
-///
-/// # Examples
-///
-/// ```
-/// use urng::rng32::Squares32Simd;
-///
-/// let _ = core::mem::size_of::<Squares32Simd>();
-/// ```
 #[repr(C)]
 pub struct Squares32Simd([u8; 0]);
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::rng::Rng32;
 
     #[test]
     fn squares32_works() {

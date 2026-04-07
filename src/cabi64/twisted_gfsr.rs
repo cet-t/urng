@@ -1,3 +1,4 @@
+use crate::rng::Rng64;
 use crate::rng64::TwistedGFSR;
 use std::slice::from_raw_parts_mut;
 
@@ -5,8 +6,8 @@ use std::slice::from_raw_parts_mut;
 /// The `_seed` argument is currently unused. The caller must free the result with
 /// [`twisted_gfsr_free`].
 #[unsafe(no_mangle)]
-pub extern "C" fn twisted_gfsr_new(_seed: u64) -> *mut TwistedGFSR {
-    Box::into_raw(Box::new(TwistedGFSR::new(TwistedGFSR::new_seed())))
+pub extern "C" fn twisted_gfsr_new(seed: u64) -> *mut TwistedGFSR {
+    Box::into_raw(Box::new(TwistedGFSR::new(seed)))
 }
 /// Frees a `TwistedGFSR` instance previously created by [`twisted_gfsr_new`].
 /// Does nothing if `ptr` is null.

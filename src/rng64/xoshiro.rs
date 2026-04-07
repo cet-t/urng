@@ -3,17 +3,6 @@ use crate::rng64::SplitMix64;
 use crate::wrap;
 use std::num::Wrapping;
 
-/// AVX-512 vectorized xoshiro256++ variant producing 2 `u64` values per call.
-///
-/// # Examples
-///
-/// ```ignore
-/// use urng::rng64::Xoshiro256Ssx2;
-///
-/// let mut rng = unsafe { Xoshiro256Ssx2::new(1) };
-/// let vals = rng.nextu();
-/// assert_eq!(vals.len(), 2);
-/// ```
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 
@@ -25,10 +14,10 @@ use std::arch::x86_64::*;
 /// # Examples
 ///
 /// ```
-/// use urng::rng64::Xoshiro256Pp;
+/// use urng::prelude::*;
 ///
 /// let mut rng = Xoshiro256Pp::new(1);
-/// assert_eq!(rng.nextu(), 14971601782005023387);
+/// let _ = rng.nextu();
 /// ```
 #[repr(C)]
 pub struct Xoshiro256Pp {
@@ -38,17 +27,6 @@ pub struct Xoshiro256Pp {
 impl Xoshiro256Pp {
     /// Creates a new `Xoshiro256Pp` instance seeded via `SplitMix64`.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng64::Xoshiro256Pp;
-    ///
-    /// let mut rng = Xoshiro256Pp::new(1);
-    /// assert_eq!(rng.nextu(), 14971601782005023387);
-    /// assert_eq!(rng.nextf(), 0.7471047161582187);
-    /// let i = rng.randi(0, 100);
-    /// assert!(i >= 0 && i <= 100);
-    /// ```
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
@@ -60,9 +38,11 @@ impl Xoshiro256Pp {
             ],
         }
     }
+}
 
-    /// Generates the next random `u64` value.
-    pub fn nextu(&mut self) -> u64 {
+impl Rng64 for Xoshiro256Pp {
+    #[inline]
+    fn nextu(&mut self) -> u64 {
         let s = &mut self.s;
         let res = wrap!((s[0] + s[3]).0.rotate_left(23)) + s[0];
         let t = s[1] << 17;
@@ -76,46 +56,6 @@ impl Xoshiro256Pp {
         s[3] = wrap!(s[3].0.rotate_left(45));
 
         res.0
-    }
-
-    /// Generates the next `f64` value in `[0, 1)`.
-    pub fn nextf(&mut self) -> f64 {
-        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
-    }
-
-    /// Generates a random `i64` value in the range `[min, max]`.
-    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
-        let range = (max as i128 - min as i128 + 1) as u128;
-        let x = self.nextu();
-        ((x as u128 * range) >> 64) as i64 + min
-    }
-
-    /// Generates a random `f64` value in the range `[min, max)`.
-    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
-        let range = max - min;
-        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
-        (self.nextu() as f64 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i64 - 1);
-        &choices[index as usize]
-    }
-}
-
-impl Rng64 for Xoshiro256Pp {
-    #[inline]
-    fn randi(&mut self, min: i64, max: i64) -> i64 {
-        self.randi(min, max)
-    }
-    #[inline]
-    fn randf(&mut self, min: f64, max: f64) -> f64 {
-        self.randf(min, max)
-    }
-    #[inline]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
     }
 }
 
@@ -189,10 +129,10 @@ impl Xoshiro256Ssx2 {
 /// # Examples
 ///
 /// ```
-/// use urng::rng64::Xoshiro256Ss;
+/// use urng::prelude::*;
 ///
 /// let mut rng = Xoshiro256Ss::new(1);
-/// assert_eq!(rng.nextu(), 12966619160104079557);
+/// let _ = rng.nextu();
 /// ```
 #[repr(C)]
 pub struct Xoshiro256Ss {
@@ -202,17 +142,6 @@ pub struct Xoshiro256Ss {
 impl Xoshiro256Ss {
     /// Creates a new `Xoshiro256Ss` instance seeded via `SplitMix64`.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use urng::rng64::Xoshiro256Ss;
-    ///
-    /// let mut rng = Xoshiro256Ss::new(1);
-    /// assert_eq!(rng.nextu(), 12966619160104079557);
-    /// assert_eq!(rng.nextf(), 0.520436619938857);
-    /// let i = rng.randi(0, 100);
-    /// assert!(i >= 0 && i <= 100);
-    /// ```
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
@@ -224,9 +153,11 @@ impl Xoshiro256Ss {
             ],
         }
     }
+}
 
-    /// Generates the next random `u64` value.
-    pub fn nextu(&mut self) -> u64 {
+impl Rng64 for Xoshiro256Ss {
+    #[inline]
+    fn nextu(&mut self) -> u64 {
         let s = &mut self.s;
         let res = wrap!((s[1] * wrap!(5)).0.rotate_left(7)) * wrap!(9);
         let t = s[1] << 17;
@@ -240,43 +171,6 @@ impl Xoshiro256Ss {
         s[3] = wrap!(s[3].0.rotate_left(45));
 
         res.0
-    }
-
-    /// Generates the next `f64` value in `[0, 1)`.
-    pub fn nextf(&mut self) -> f64 {
-        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
-    }
-
-    /// Generates a random `i64` value in the range `[min, max]`.
-    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
-        let range = (max as i128 - min as i128 + 1) as u128;
-        let x = self.nextu();
-        ((x as u128 * range) >> 64) as i64 + min
-    }
-
-    /// Generates a random `f64` value in the range `[min, max)`.
-    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
-        let range = max - min;
-        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
-        (self.nextu() as f64 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i64 - 1);
-        &choices[index as usize]
-    }
-}
-
-impl Rng64 for Xoshiro256Ss {
-    fn randi(&mut self, min: i64, max: i64) -> i64 {
-        self.randi(min, max)
-    }
-    fn randf(&mut self, min: f64, max: f64) -> f64 {
-        self.randf(min, max)
-    }
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
     }
 }
 

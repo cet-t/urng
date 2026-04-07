@@ -1,3 +1,4 @@
+use crate::rng::Rng64;
 #[allow(deprecated)]
 use crate::rng64::Lcg64;
 use std::slice::from_raw_parts_mut;

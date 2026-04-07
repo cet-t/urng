@@ -38,5 +38,5 @@ pub(crate) use splitmix::{SPLITMIX32_GAMMA, SPLITMIX32x16, SPLITMIX32x16_PAR_CHU
 pub use splitmix::{SplitMix32, SplitMix32Simd, SplitMix32x16};
 pub use squares::{SQUARES32x8, Squares32, Squares32Simd, Squares32x8};
 pub use threefry::{Threefry32x2, Threefry32x4};
-pub use xorshift::{Xorshift32, Xorwow};
+pub use xorshift::{Xorshift32, Xorshift128, Xorwow};
 pub use xoshiro::{Xoshiro128Pp, Xoshiro128Ppx16, Xoshiro128Ss, Xoshiro128Ssx16};

@@ -34,5 +34,6 @@ pub use sfc::{Sfc64, Sfc64x8};
 pub use splitmix::SplitMix64;
 pub use threefish::Threefish256;
 pub use twisted_gfsr::TwistedGFSR;
+pub use xoroshiro::{Xoroshiro128Pp, Xoroshiro128Ss};
 pub use xorshift::Xorshift64;
 pub use xoshiro::{Xoshiro256Pp, Xoshiro256Ss, Xoshiro256Ssx2};

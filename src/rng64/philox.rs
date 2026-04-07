@@ -1,5 +1,4 @@
-use crate::rng::Rng64;
-use crate::rng64::SplitMix64;
+use crate::{rng::Rng64, rng64::SplitMix64};
 
 // --- Philox64 ---
 
@@ -97,21 +96,6 @@ impl Philox64 {
     pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
         let index = self.randi(0, choices.len() as i64 - 1) as usize;
         &choices[index]
-    }
-}
-
-impl Rng64 for Philox64 {
-    #[inline]
-    fn randi(&mut self, min: i64, max: i64) -> i64 {
-        self.randi(min, max)
-    }
-    #[inline]
-    fn randf(&mut self, min: f64, max: f64) -> f64 {
-        self.randf(min, max)
-    }
-    #[inline]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        self.choice(choices)
     }
 }
 

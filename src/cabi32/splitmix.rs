@@ -1,3 +1,4 @@
+use crate::rng::Rng32;
 use crate::dispatch_simd;
 use crate::rng32::{
     SPLITMIX32_GAMMA, SPLITMIX32x16, SPLITMIX32x16_PAR_CHUNK, SplitMix32, SplitMix32Simd,
