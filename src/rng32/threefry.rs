@@ -353,20 +353,6 @@ impl Threefry32x2 {
 mod tests {
     use super::*;
 
-    #[test]
-    fn threefry32x4_works() {
-        let mut rng = Threefry32x4::new(1);
-        assert_eq!(rng.nextu(), [215661891, 4046822497, 3522917133, 3418596171]);
-        assert_eq!(
-            rng.nextf(),
-            [0.05775363, 0.54074997, 0.15642758, 0.23995495]
-        );
-    }
-
-    #[test]
-    fn threefry32x2_works() {
-        let mut rng = Threefry32x2::new(1);
-        assert_eq!(rng.nextu(), [3732229352, 2044399418]);
-        assert_eq!(rng.nextf(), [0.092225075, 0.077477075]);
-    }
+    crate::safe_test!(Threefry32x4);
+    crate::safe_test!(Threefry32x2);
 }

@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.4.2"
+urng = "0.4.3"
 ```
 
 ## Supported Generators
@@ -68,7 +68,8 @@ Implement `Rng64`, output `u64` natively.
 | `Xoroshiro128Pp`¹ | xoroshiro128++      | $2^{128}-1$      | Fast generator with 128-bit state.            |
 | `Xoroshiro128Ss`¹ | xoroshiro128\*\*    | $2^{128}-1$      | Fast generator with 128-bit state.            |
 | `TwistedGFSR`     | TGFSR               | $2^{800}$ approx | Generalized Feedback Shift Register.          |
-| `Cet64`           | CET                 | -                | Custom experimental generator.                |
+| `Cet64`           | CET                 | $2^{64}$         | Custom experimental generator.                |
+| `Cet256`          | CET                 | $2^{256}$        | Custom experimental generator.                |
 | `Lcg64`           | LCG                 | $m$              | Linear Congruential Generator.                |
 | `Threefish256`    | Threefish-256       | -                | Counter-based, 256-bit block cipher PRNG.     |
 | `Biski64`         | Biski64             | $2^{64}$         | Extremely fast pseudo-random number generator |
@@ -91,6 +92,8 @@ These generators do not implement `Rng32`/`Rng64` and instead expose a bulk-gene
 | `Xoshiro128Ssx16` | xoshiro128\*\* x16 | 16×`u32` | 16 independent xoshiro128\*\* streams.   |
 | `Xoshiro256Ssx2`  | xoshiro256\*\* x2  | 2×`u64`  | 2 independent xoshiro256\*\* streams.    |
 | `Sfc64x8`         | SFC64 x8           | 8×`u64`  | 8 independent SFC64 streams.             |
+| `Cet64x8`         | CET64 x8           | 8×`u64`  | 8 independent CET64 streams.             |
+| `Cet256x2`        | CET256 x2          | 2×`u64`  | 8 independent CET256 streams.            |
 
 ## Sampler
 

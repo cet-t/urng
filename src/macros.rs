@@ -65,6 +65,17 @@ macro_rules! dispatch_simd {
 
 #[macro_export]
 macro_rules! safe_test {
+    ($name:ident, $ctor:expr $(,)?) => {
+        paste::paste! {
+            #[test]
+            fn [<test_ $name:snake>]() {
+                let mut rng1 = $ctor;
+                let mut rng2 = $ctor;
+                assert_eq!(rng1.nextu(), rng2.nextu());
+                assert_eq!(rng1.nextf(), rng2.nextf());
+            }
+        }
+    };
     ($name:ident) => {
         paste::paste! {
             #[test]
@@ -80,6 +91,19 @@ macro_rules! safe_test {
 
 #[macro_export]
 macro_rules! unsafe_test {
+    ($name:ident, $ctor:expr $(,)?) => {
+        paste::paste! {
+            #[test]
+            fn [<test_ $name:snake>]() {
+                unsafe {
+                    let mut rng1 = $ctor;
+                    let mut rng2 = $ctor;
+                    assert_eq!(rng1.nextu(), rng2.nextu());
+                    assert_eq!(rng1.nextf(), rng2.nextf());
+                }
+            }
+        }
+    };
     ($name:ident) => {
         paste::paste! {
             #[test]

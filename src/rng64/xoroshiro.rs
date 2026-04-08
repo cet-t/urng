@@ -204,17 +204,6 @@ impl Rng64 for Xoroshiro128Ss {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_xoroshiro128pp() {
-        let mut rng = Xoroshiro128Pp::new(12345);
-        assert_eq!(rng.nextu(), 6233086606872742541);
-        assert_eq!(rng.nextf(), 0.07074813251086551);
-    }
-
-    #[test]
-    fn test_xoroshiro128ss() {
-        let mut rng = Xoroshiro128Ss::new(12345);
-        assert_eq!(rng.nextu(), 9940793396233540349);
-        assert_eq!(rng.nextf(), 0.47619897611218037);
-    }
+    crate::safe_test!(Xoroshiro128Pp);
+    crate::safe_test!(Xoroshiro128Ss);
 }

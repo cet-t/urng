@@ -144,17 +144,6 @@ impl Rng32 for Xorwow {
 mod tests {
     use super::*;
 
-    #[test]
-    fn xorshift32_works() {
-        let mut rng = Xorshift32::new(1);
-        assert_eq!(rng.nextu(), 2076024533);
-        assert_eq!(rng.nextf(), 0.7677616);
-    }
-
-    #[test]
-    fn xorwow_works() {
-        let mut rng = Xorwow::new(1);
-        assert_eq!(rng.nextu(), 3932718581);
-        assert_eq!(rng.nextf(), 0.10210251);
-    }
+    crate::safe_test!(Xorshift32);
+    crate::safe_test!(Xorwow);
 }

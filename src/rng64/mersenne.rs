@@ -321,17 +321,6 @@ impl Rng64 for Sfmt1993764 {
 mod tests {
     use super::*;
 
-    #[test]
-    fn mt1993764_works() {
-        let mut rng = Mt1993764::new(1);
-        assert_eq!(rng.nextu(), 9822250072823399003);
-        assert_eq!(rng.nextf(), 0.8926985632057756);
-    }
-
-    #[test]
-    fn sfmt_works() {
-        let mut rng = Sfmt1993764::new(1);
-        assert_eq!(rng.nextu(), 16435431249378271195);
-        assert_eq!(rng.nextf(), 0.914246861393214);
-    }
+    crate::safe_test!(Mt1993764);
+    crate::safe_test!(Sfmt1993764);
 }

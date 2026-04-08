@@ -103,10 +103,5 @@ impl Philox64 {
 mod tests {
     use super::*;
 
-    #[test]
-    fn philox64_works() {
-        let mut rng = Philox64::new(1);
-        assert_eq!(rng.nextu(), [3996411588887038491, 2166702704631007519]);
-        assert_eq!(rng.nextf(), 0.1488059942543676);
-    }
+    crate::safe_test!(Philox64);
 }

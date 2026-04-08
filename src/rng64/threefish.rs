@@ -209,26 +209,5 @@ impl Threefish256 {
 mod tests {
     use super::*;
 
-    #[test]
-    fn threefish256_works() {
-        let mut rng = Threefish256::new(1);
-        assert_eq!(
-            rng.nextu(),
-            [
-                11703024954964515355,
-                12040493508789228569,
-                15247998991077977543,
-                2489860152104538722
-            ]
-        );
-        assert_eq!(
-            rng.nextf(),
-            [
-                0.9622286493050641,
-                0.5334118826690859,
-                0.5452741654192154,
-                0.6320415850102533
-            ]
-        );
-    }
+    crate::safe_test!(Threefish256);
 }

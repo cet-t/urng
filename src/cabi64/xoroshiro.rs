@@ -3,10 +3,7 @@ use crate::rng64::{
     SplitMix64,
     xoroshiro::{Xoroshiro128Pp, Xoroshiro128Ss},
 };
-use rayon::{
-    iter::{IndexedParallelIterator, ParallelIterator},
-    slice::ParallelSliceMut,
-};
+use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
 
 /// Creates a new heap-allocated `Xoroshiro128Pp` and returns a raw pointer to it.

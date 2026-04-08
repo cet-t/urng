@@ -164,10 +164,5 @@ pub struct Pcg32Simd([u8; 0]);
 mod tests {
     use super::*;
 
-    #[test]
-    fn pcg32_works() {
-        let mut rng = Pcg32::new(1);
-        assert_eq!(rng.nextu(), 1299187792);
-        assert_eq!(rng.nextf(), 0.6898074);
-    }
+    crate::safe_test!(Pcg32);
 }

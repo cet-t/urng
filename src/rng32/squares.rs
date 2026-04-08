@@ -164,6 +164,18 @@ impl Squares32x8 {
             out
         }
     }
+
+    /// Generates 8 random `f32` values in the range [0, 1).
+    #[target_feature(enable = "avx512f,avx512dq")]
+    pub unsafe fn nextf(&mut self) -> [f32; SQUARES32x8] {
+        let out = unsafe { self.nextu() };
+        let mut dst = [0f32; SQUARES32x8];
+        let scale = 1.0 / (u32::MAX as f32 + 1.0);
+        for i in 0..SQUARES32x8 {
+            dst[i] = out[i] as f32 * scale;
+        }
+        dst
+    }
 }
 
 // -- Squares32Simd --
@@ -184,26 +196,7 @@ pub struct Squares32Simd([u8; 0]);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rng::Rng32;
 
-    #[test]
-    fn squares32_works() {
-        let mut rng = Squares32::new(1);
-        assert_eq!(rng.nextu(), 1225738608);
-        assert_eq!(rng.nextf(), 0.9183048);
-    }
-
-    #[test]
-    fn squares32x8_works() {
-        unsafe {
-            let mut rng = Squares32x8::new(1);
-            assert_eq!(
-                rng.nextu(),
-                [
-                    1225738608, 3081786017, 2002165410, 1518623550, 443612158, 1744152856,
-                    1924491776, 1460635941
-                ]
-            );
-        }
-    }
+    crate::safe_test!(Squares32);
+    crate::unsafe_test!(Squares32x8);
 }

@@ -28,7 +28,7 @@ pub mod xorshift;
 pub mod xoshiro;
 
 pub use biski::{Biski64, Biski64x8};
-pub use cet::{Cet64, Cet256};
+pub use cet::{Cet64, Cet64x8, Cet256, Cet256x2};
 #[allow(deprecated)]
 pub use lcg::Lcg64;
 pub use mersenne::{Mt1993764, Sfmt1993764};

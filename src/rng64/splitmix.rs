@@ -47,10 +47,5 @@ impl Rng64 for SplitMix64 {
 mod tests {
     use super::*;
 
-    #[test]
-    fn splitmix64_works() {
-        let mut rng = SplitMix64::new(1);
-        assert_eq!(rng.nextu(), 10451216379200822465);
-        assert_eq!(rng.nextf(), 0.7457817572627012);
-    }
+    crate::safe_test!(SplitMix64);
 }

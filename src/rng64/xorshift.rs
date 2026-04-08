@@ -45,10 +45,5 @@ impl Rng64 for Xorshift64 {
 mod tests {
     use super::*;
 
-    #[test]
-    fn xorshift64_works() {
-        let mut rng = Xorshift64::new(1);
-        assert_eq!(rng.nextu(), 8247328468710148152);
-        assert_eq!(rng.nextf(), 0.8223768786697171);
-    }
+    crate::safe_test!(Xorshift64);
 }

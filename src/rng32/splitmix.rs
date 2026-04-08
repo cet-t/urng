@@ -131,10 +131,5 @@ pub struct SplitMix32Simd([u8; 0]);
 mod tests {
     use super::*;
 
-    #[test]
-    fn splitmix32_works() {
-        let mut rng = SplitMix32::new(1);
-        assert_eq!(rng.nextu(), 2338703698);
-        assert_eq!(rng.nextf(), 0.80941534);
-    }
+    crate::safe_test!(SplitMix32);
 }

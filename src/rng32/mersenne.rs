@@ -647,40 +647,15 @@ define_sfmt_variant!(
 mod tests {
     use super::*;
 
-    #[test]
-    fn mt19937_works() {
-        let mut rng = Mt19937::new(1);
-        assert_eq!(rng.nextu(), 460915295);
-        assert_eq!(rng.nextf(), 0.068138085);
-    }
-
-    #[test]
-    fn sfmt19937_works() {
-        let mut rng = Sfmt19937::new(1);
-        assert_eq!(rng.nextu(), 2240536539);
-        assert_eq!(rng.nextf(), 0.89096653);
-    }
-
-    macro_rules! smoke_variant {
-        ($name:ident) => {{
-            let mut rng = $name::new(1);
-            let u = rng.nextu();
-            let f = rng.nextf();
-            assert!(u <= u32::MAX);
-            assert!((0.0..1.0).contains(&f));
-        }};
-    }
-
-    #[test]
-    fn sfmt_param_variants_smoke() {
-        smoke_variant!(Sfmt607);
-        smoke_variant!(Sfmt1279);
-        smoke_variant!(Sfmt2281);
-        smoke_variant!(Sfmt4253);
-        smoke_variant!(Sfmt11213);
-        smoke_variant!(Sfmt44497);
-        smoke_variant!(Sfmt86243);
-        smoke_variant!(Sfmt132049);
-        smoke_variant!(Sfmt216091);
-    }
+    crate::safe_test!(Mt19937);
+    crate::safe_test!(Sfmt19937);
+    crate::safe_test!(Sfmt607);
+    crate::safe_test!(Sfmt1279);
+    crate::safe_test!(Sfmt2281);
+    crate::safe_test!(Sfmt4253);
+    crate::safe_test!(Sfmt11213);
+    crate::safe_test!(Sfmt44497);
+    crate::safe_test!(Sfmt86243);
+    crate::safe_test!(Sfmt132049);
+    crate::safe_test!(Sfmt216091);
 }

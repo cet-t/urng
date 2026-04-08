@@ -52,14 +52,9 @@ impl Rng64 for Lcg64 {
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
 
-    #[allow(deprecated)]
-    #[test]
-    fn lcg64_works() {
-        let mut rng = Lcg64::new(8, 13, 5, 24);
-        assert_eq!(rng.nextu(), 13);
-        assert_eq!(rng.nextf(), 3.2526065174565133e-19);
-    }
+    crate::safe_test!(Lcg64, Lcg64::new(8, 13, 5, 24));
 }

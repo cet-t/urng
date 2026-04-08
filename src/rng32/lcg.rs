@@ -59,10 +59,5 @@ impl Rng32 for Lcg32 {
 mod tests {
     use super::*;
 
-    #[test]
-    fn lcg32_works() {
-        let mut rng = Lcg32::new(8, 13, 5, 24);
-        assert_eq!(rng.nextu(), 13);
-        assert_eq!(rng.nextf(), 1.3969839e-9);
-    }
+    crate::safe_test!(Lcg32, Lcg32::new(8, 13, 5, 24));
 }

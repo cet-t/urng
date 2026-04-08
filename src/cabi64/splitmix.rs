@@ -1,8 +1,5 @@
 use crate::rng64::SplitMix64;
-use rayon::{
-    iter::{IndexedParallelIterator, ParallelIterator},
-    slice::ParallelSliceMut,
-};
+use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
 
 /// Creates a new heap-allocated `SplitMix64` and returns a raw pointer to it.

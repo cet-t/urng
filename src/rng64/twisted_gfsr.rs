@@ -87,14 +87,5 @@ impl Rng64 for TwistedGFSR {
 mod tests {
     use super::*;
 
-    #[test]
-    fn twisted_gfsr_works() {
-        let mut rng_u = TwistedGFSR::new(0);
-        assert_eq!(rng_u.nextu(), 3414865079);
-        let expected_nextf = rng_u.nextu() as f64 * (1.0 / (u32::MAX as f64 + 1.0));
-
-        let mut rng_f = TwistedGFSR::new(0);
-        assert_eq!(rng_f.nextu(), 3414865079);
-        assert_eq!(rng_f.nextf(), expected_nextf);
-    }
+    crate::safe_test!(TwistedGFSR);
 }

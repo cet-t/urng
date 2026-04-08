@@ -483,17 +483,6 @@ impl Xoshiro128Ssx16 {
 mod tests {
     use super::*;
 
-    #[test]
-    fn xoshiro128pp_works() {
-        let mut rng = Xoshiro128Pp::new(1);
-        assert_eq!(rng.nextu(), 4075539671);
-        assert_eq!(rng.nextf(), 0.1750842);
-    }
-
-    #[test]
-    fn xoshiro128ss_works() {
-        let mut rng = Xoshiro128Ss::new(1);
-        assert_eq!(rng.nextu(), 997331382);
-        assert_eq!(rng.nextf(), 0.3114698);
-    }
+    crate::safe_test!(Xoshiro128Pp);
+    crate::safe_test!(Xoshiro128Ss);
 }

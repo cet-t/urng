@@ -1,9 +1,6 @@
 use crate::rng::Rng64;
 use crate::rng64::{Sfc64, Sfc64x8, SplitMix64};
-use rayon::{
-    iter::{IndexedParallelIterator, ParallelIterator},
-    slice::ParallelSliceMut,
-};
+use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
 
 #[cfg(target_arch = "x86_64")]

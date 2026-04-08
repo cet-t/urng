@@ -1,11 +1,10 @@
 use crate::rng::Rng64;
 use crate::rng64::{SplitMix64, Xoshiro256Pp, Xoshiro256Ss, Xoshiro256Ssx2};
-use rayon::{
-    iter::{IndexedParallelIterator, ParallelIterator},
-    slice::ParallelSliceMut,
-};
-use std::arch::x86_64::_mm512_storeu_si512;
+use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
+
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
 
 /// Creates a new heap-allocated `Xoshiro256Pp` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`xoshiro256pp_free`].
@@ -240,8 +239,6 @@ unsafe fn xoshiro256ssx2_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], ba
 
     if is_aligned {
         for dst in chunks_exact.by_ref() {
-            use std::arch::x86_64::_mm512_stream_si512;
-
             let (r0, r1, r2, r3) = step4!();
             let p = dst.as_mut_ptr();
             _mm512_stream_si512(p as *mut _, r0);

@@ -40,6 +40,10 @@ use urng::{
         philox64_free, philox64_new, philox64_next_u64s, 
         sfmt1993764_free, sfmt1993764_new, sfmt1993764_next_u64s,
         splitmix64_free, splitmix64_new, splitmix64_next_u64s, 
+        cet64_free, cet64_new, cet64_next_u64s,
+        cet64x8_free, cet64x8_new, cet64x8_next_u64s,
+        cet256_free, cet256_new, cet256_next_u64s,
+        cet256x2_free, cet256x2_new, cet256x2_next_u64s,
         threefish256_free, threefish256_new, threefish256_next_u64s, 
         xoshiro256pp_free, xoshiro256pp_new, xoshiro256pp_next_u64s,
         xoshiro256ss_free, xoshiro256ss_new, xoshiro256ss_next_u64s, 
@@ -162,6 +166,7 @@ fn main() {
 
     bench64!(philox64);
     bench64!(splitmix64);
+    bench64!(cet64, cet64x8, cet256, cet256x2);
     bench64!(mt1993764, sfmt1993764);
     bench64!(threefish256);
     bench64!(xoshiro256pp, xoshiro256ss, xoshiro256ssx2);
