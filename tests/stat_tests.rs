@@ -359,6 +359,7 @@ fn build_suite() -> Result<Suite> {
     reg!(s64 chi, monte, Sfc64);
     reg!(s64 chi, monte, Xorshift64);
     reg!(s64 chi, monte, Cet64);
+    reg!(s64 chi, monte, Cet256);
     reg!(s64 chi, monte, Xoshiro256Pp);
     reg!(s64 chi, monte, Xoshiro256Ss);
     reg!(nf64 chi, monte, TwistedGFSR);

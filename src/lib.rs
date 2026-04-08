@@ -63,7 +63,7 @@ pub mod prelude {
         Threefry32x2, Threefry32x4, Xorshift32, Xorshift128, Xorwow, Xoshiro128Pp,
     };
     pub use crate::rng64::{
-        Cet64, Mt1993764, Philox64, Sfc64, Sfmt1993764, SplitMix64, Threefish256, TwistedGFSR,
-        Xoroshiro128Pp, Xoroshiro128Ss, Xoshiro256Pp, Xoshiro256Ss,
+        Cet64, Cet256, Mt1993764, Philox64, Sfc64, Sfmt1993764, SplitMix64, Threefish256,
+        TwistedGFSR, Xoroshiro128Pp, Xoroshiro128Ss, Xoshiro256Pp, Xoshiro256Ss,
     };
 }
