@@ -1,5 +1,7 @@
 //! C-compatible ABI wrappers for the 64-bit RNGs.
 
+/// Biski C ABI exports.
+pub mod biski;
 /// CET C ABI exports.
 pub mod cet;
 /// LCG C ABI exports.
@@ -23,6 +25,7 @@ pub mod xorshift;
 /// Xoshiro C ABI exports.
 pub mod xoshiro;
 
+pub use biski::*;
 pub use cet::*;
 pub use lcg::*;
 pub use mersenne::*;

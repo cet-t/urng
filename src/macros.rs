@@ -62,3 +62,35 @@ macro_rules! dispatch_simd {
         $fallback_fn($ptr as *mut $fallback_type $(, $arg)*);
     }};
 }
+
+#[macro_export]
+macro_rules! safe_test {
+    ($name:ident) => {
+        paste::paste! {
+            #[test]
+            fn [<test_ $name:snake>]() {
+                let mut rng1 = $name::new(0);
+                let mut rng2 = $name::new(0);
+                assert_eq!(rng1.nextu(), rng2.nextu());
+                assert_eq!(rng1.nextf(), rng2.nextf());
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! unsafe_test {
+    ($name:ident) => {
+        paste::paste! {
+            #[test]
+            fn [<test_ $name:snake>]() {
+                unsafe {
+                    let mut rng1 = $name::new(0);
+                    let mut rng2 = $name::new(0);
+                    assert_eq!(rng1.nextu(), rng2.nextu());
+                    assert_eq!(rng1.nextf(), rng2.nextf());
+                }
+            }
+        }
+    };
+}

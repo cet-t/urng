@@ -2,6 +2,8 @@
 //!
 //! This module groups the 64-bit RNG implementations and re-exports the main generator types.
 
+/// Biski generator implementation.
+pub mod biski;
 /// Cellular automaton and custom experimental generators.
 pub mod cet;
 /// Linear Congruential Generator implementations.
@@ -25,6 +27,7 @@ pub mod xorshift;
 /// Xoshiro implementations.
 pub mod xoshiro;
 
+pub use biski::Biski64;
 pub use cet::Cet64;
 #[allow(deprecated)]
 pub use lcg::Lcg64;

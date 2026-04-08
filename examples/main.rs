@@ -46,6 +46,8 @@ use urng::{
         xoshiro256ssx2_free, xoshiro256ssx2_new, xoshiro256ssx2_next_u64s,
         sfc64_free, sfc64_new, sfc64_next_u64s,
         sfc64x8_free, sfc64x8_new, sfc64x8_next_u64s,
+        biski64_free, biski64_new, biski64_next_u64s,
+        biski64x8_free, biski64x8_new, biski64x8_next_u64s,
     },
 };
 
@@ -164,4 +166,5 @@ fn main() {
     bench64!(threefish256);
     bench64!(xoshiro256pp, xoshiro256ss, xoshiro256ssx2);
     bench64!(sfc64, sfc64x8);
+    bench64!(biski64, biski64x8);
 }

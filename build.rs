@@ -114,6 +114,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .input_extern_file("src/rng64/xoshiro.rs")
         .input_extern_file("src/rng64/threefish.rs")
         .input_extern_file("src/rng64/xoroshiro.rs")
+        .input_extern_file("src/rng64/biski.rs")
         // cabi64 C ABI bindings
         .input_extern_file("src/cabi64/mersenne.rs")
         .input_extern_file("src/cabi64/twisted_gfsr.rs")

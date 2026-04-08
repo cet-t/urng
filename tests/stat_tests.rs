@@ -9,7 +9,7 @@ use urng::rng::{Rng32, Rng64};
 use urng::rng32::{
     Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253, Sfmt11213, Sfmt44497, Sfmt86243, Sfmt132049, Sfmt216091,
 };
-use urng::rng64::{SplitMix64, Xorshift64};
+use urng::rng64::{Biski64, SplitMix64, Xorshift64};
 
 const LOG_DIR: &str = "tests/logs";
 const CHI_N: usize = 10_000_000;
@@ -270,16 +270,6 @@ macro_rules! do_scatter {
 }
 
 macro_rules! rng_ctor {
-    // // seed=0 is degenerate for some generators; use seed=1.
-    // (Pcg32) => {
-    //     Pcg32::new(1)
-    // };
-    // (Xorshift32) => {
-    //     Xorshift32::new(1)
-    // };
-    // (Xorwow) => {
-    //     Xorwow::new(1)
-    // };
     ($a:ident) => {
         $a::new(0)
     };
@@ -373,6 +363,7 @@ fn build_suite() -> Result<Suite> {
     reg!(s64 chi, monte, Xoshiro256Ss);
     reg!(nf64 chi, monte, TwistedGFSR);
     reg!(arr4f64 chi, monte, Threefish256);
+    reg!(s64 chi, monte, Biski64);
 
     chisq::log(&chi, &logs_path("chi_square.log"))?;
     monte_carlo::log(&monte, &logs_path("monte_carlo.log"))?;
