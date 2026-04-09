@@ -53,6 +53,9 @@ pub mod sampler64;
 #[cfg(feature = "seedgen")]
 pub mod seedgen;
 
+#[cfg(feature = "testing")]
+pub mod testing;
+
 #[macro_use]
 pub mod macros;
 

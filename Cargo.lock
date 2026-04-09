@@ -993,6 +993,7 @@ dependencies = [
  "paste",
  "plotters",
  "rayon",
+ "thiserror",
  "thousands",
  "wide",
 ]
