@@ -17,6 +17,7 @@ crate-type = ["cdylib", "rlib"]
 
 [build-dependencies]
 csbindgen = "1.9.7"
+cc = "1"
 
 [dev-dependencies]
 colored = "3.1.1"
@@ -28,6 +29,9 @@ anyhow = "1"
 [features]
 sampler = []
 seedgen = []
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(has_testu01)'] }
 
 [dependencies]
 wide = "0.7.33"

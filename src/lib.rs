@@ -56,6 +56,11 @@ pub mod seedgen;
 #[macro_use]
 pub mod macros;
 
+#[cfg(debug_assertions)]
+/// Statistical test harness (debug builds only).
+/// See [`testing::pracrand`] and [`testing::testu01`].
+pub mod testing;
+
 pub mod prelude {
     pub use crate::rng::{Rng32, Rng64};
     pub use crate::rng32::{
