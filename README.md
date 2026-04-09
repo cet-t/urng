@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.4.3"
+urng = "0.4.4"
 ```
 
 ## Supported Generators
