@@ -20,11 +20,10 @@ pub struct Philox64 {
     pub(crate) k: [u64; 2],
 }
 
-impl Philox64 {
-    const fn m0() -> u128 {
-        0xD2B74407B1CE6E93
-    }
+const M0: u128 = 0xD2B74407B1CE6E93;
+const W0: u64 = 0x9E3779B97F4A7C15;
 
+impl Philox64 {
     /// Creates a new `Philox64` instance.
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
@@ -41,19 +40,33 @@ impl Philox64 {
         let mut v1 = c[1];
         let mut key = k[0];
 
-        let w0: u64 = 0x9E3779B97F4A7C15;
+        macro_rules! step {
+            () => {
+                step!(fin);
+                key = key.wrapping_add(W0);
+            };
+            (fin) => {
+                let prod = (v0 as u128).wrapping_mul(M0);
+                let hi = (prod >> 64) as u64;
+                let lo = prod as u64;
+                let next_v0 = hi ^ v1 ^ key;
+                let next_v1 = lo;
 
-        for _ in 0..10 {
-            let prod = (v0 as u128).wrapping_mul(Self::m0());
-            let hi = (prod >> 64) as u64;
-            let lo = prod as u64;
-            let next_v0 = hi ^ v1 ^ key;
-            let next_v1 = lo;
-
-            v0 = next_v0;
-            v1 = next_v1;
-            key = key.wrapping_add(w0);
+                v0 = next_v0;
+                v1 = next_v1;
+            };
         }
+
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!(fin);
 
         [v0, v1]
     }

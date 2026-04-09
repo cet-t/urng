@@ -52,24 +52,57 @@ impl Philox32x4 {
         const W0: u32 = 0x9E3779B9;
         const W1: u32 = 0xBB67AE85;
 
-        for _ in 0..10 {
-            let prod0 = (x[0] as u64).wrapping_mul(M0);
-            let hi0 = (prod0 >> 32) as u32;
-            let lo0 = prod0 as u32;
+        macro_rules! step {
+            () => {
+                step!(fin);
 
-            let prod1 = (x[2] as u64).wrapping_mul(M1);
-            let hi1 = (prod1 >> 32) as u32;
-            let lo1 = prod1 as u32;
+                // key[0] = key[0].wrapping_add(W0);
+                // key[1] = key[1].wrapping_add(W1);
+                key = [key[0] * wrap!(W0), key[1] * wrap!(W1)];
+            };
+            (fin) => {
+                let prod0 = (x[0] as u64).wrapping_mul(M0);
+                let hi0 = (prod0 >> 32) as u32;
+                let lo0 = prod0 as u32;
 
-            x[0] = hi1 ^ x[1] ^ key[0].0;
-            x[1] = lo1;
-            x[2] = hi0 ^ x[3] ^ key[1].0;
-            x[3] = lo0;
+                let prod1 = (x[2] as u64).wrapping_mul(M1);
+                let hi1 = (prod1 >> 32) as u32;
+                let lo1 = prod1 as u32;
 
-            // key[0] = key[0].wrapping_add(W0);
-            // key[1] = key[1].wrapping_add(W1);
-            key = [key[0] * wrap!(W0), key[1] * wrap!(W1)];
+                x[0] = hi1 ^ x[1] ^ key[0].0;
+                x[1] = lo1;
+                x[2] = hi0 ^ x[3] ^ key[1].0;
+                x[3] = lo0;
+
+                // key[0] = key[0].wrapping_add(W0);
+                // key[1] = key[1].wrapping_add(W1);
+                key = [key[0] * wrap!(W0), key[1] * wrap!(W1)];
+
+                let prod0 = (x[0] as u64).wrapping_mul(M0);
+                let hi0 = (prod0 >> 32) as u32;
+                let lo0 = prod0 as u32;
+
+                let prod1 = (x[2] as u64).wrapping_mul(M1);
+                let hi1 = (prod1 >> 32) as u32;
+                let lo1 = prod1 as u32;
+
+                x[0] = hi1 ^ x[1] ^ key[0].0;
+                x[1] = lo1;
+                x[2] = hi0 ^ x[3] ^ key[1].0;
+                x[3] = lo0;
+            };
         }
+
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!(fin);
 
         x
     }
@@ -128,7 +161,6 @@ pub const PHILOX32x4x4_SHIFT: u128 = PHILOX32x4x4_CHUNK_RATIO.trailing_zeros() a
 #[allow(non_upper_case_globals)]
 pub const PHILOX32x16_SHIFT: usize = PHILOX32x16.trailing_zeros() as usize;
 
-#[cfg(target_arch = "x86_64")]
 /// A Philox 4x32x4 random number generator.
 ///
 /// This is a counter-based RNG suitable for parallel applications.
@@ -149,19 +181,16 @@ impl Philox32x4x4 {
     /// Must only be called on a CPU that supports AVX-512F.
     ///
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn new(seed: u32) -> Self {
-        let mut c = [0u32; PHILOX32x16];
-        let mut k = [0u32; PHILOX32x16];
+    pub fn new(seed: u32) -> Self {
+        let mut c = [0; PHILOX32x16];
+        let mut k = [0; PHILOX32x16];
 
         let mut seedgen = SplitMix32::new(seed);
         c.iter_mut().for_each(|c| *c = seedgen.nextu());
 
         // [k0, 0, k1, 0]
-        (0..PHILOX32x16).step_by(4).for_each(|i| {
-            k[i + 0] = seedgen.nextu();
-            k[i + 1] = 0;
-            k[i + 2] = seedgen.nextu();
-            k[i + 3] = 0;
+        (0..PHILOX32x16).step_by(2).for_each(|i| {
+            k[i] = seedgen.nextu();
         });
 
         unsafe {
@@ -179,22 +208,38 @@ impl Philox32x4x4 {
         let m = _mm512_set1_epi64(0xCD9E8D57_D2511F53u64 as i64);
         let w = _mm512_set1_epi64(0xBB67AE85_9E3779B9u64 as i64);
 
-        for _ in 0..10 {
-            // x0 * M0, x2 * M1 = [lo0, hi0, lo1, hi1]
-            let prod = _mm512_mul_epu32(x, m);
+        macro_rules! step {
+            () => {
+                step!(fin);
 
-            // shuffle -> [hi1, lo1, hi0, lo0]
-            let shuf = _mm512_shuffle_epi32(prod, 0x1B);
+                // key += w
+                key = _mm512_add_epi32(key, w);
+            };
+            (fin) => {
+                // x0 * M0, x2 * M1 = [lo0, hi0, lo1, hi1]
+                let prod = _mm512_mul_epu32(x, m);
 
-            // x >> 32 -> [x1, 0, x3, 0]
-            let x_shift = _mm512_srli_epi64(x, 32);
+                // shuffle -> [hi1, lo1, hi0, lo0]
+                let shuf = _mm512_shuffle_epi32(prod, 0x1B);
 
-            // x ^ x_shift ^ key
-            x = _mm512_xor_epi32(shuf, _mm512_xor_epi32(x_shift, key));
+                // x >> 32 -> [x1, 0, x3, 0]
+                let x_shift = _mm512_srli_epi64(x, 32);
 
-            // key += w
-            key = _mm512_add_epi32(key, w);
+                // x ^ x_shift ^ key
+                x = _mm512_xor_epi32(shuf, _mm512_xor_epi32(x_shift, key));
+            };
         }
+
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!();
+        step!(fin);
 
         unsafe {
             let mut out = [0u32; PHILOX32x16];
@@ -205,7 +250,7 @@ impl Philox32x4x4 {
 
     /// Generates the next block of random numbers.
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextu(&mut self) -> [u32; PHILOX32x16] {
+    pub fn nextu(&mut self) -> [u32; PHILOX32x16] {
         let out = self.compute();
 
         // increment counter
@@ -231,53 +276,26 @@ impl Philox32x4x4 {
 
     /// Generates 16 random `f32` values in the range [0, 1) using AVX-512.
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextf(&mut self) -> [f32; PHILOX32x16] {
-        /*
+    pub fn nextf(&mut self) -> [f32; PHILOX32x16] {
         let out = self.nextu();
-        let mut dst = [0f32; PHILOX32x16];
-        let scale = 1.0 / (u32::MAX as f32 + 1.0);
-        for i in 0..PHILOX32x16 {
-            dst[i] = (out[i] as f32) * scale;
-        }
-        dst
-        */
-
-        unsafe {
-            let out = self.nextu();
-            let v_u32 = _mm512_loadu_si512(out.as_ptr() as *const _);
-            let v_f32 = _mm512_cvtepu32_ps(v_u32);
-            let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
-            let v_res = _mm512_mul_ps(v_f32, scale);
-
-            let mut res = [0f32; PHILOX32x16];
-            _mm512_storeu_ps(res.as_mut_ptr(), v_res);
-            res
-        }
+        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
+        out.map(|x| (x as f32) * SCALE)
     }
 
     /// Generates a random `i32` value in the range [min, max].
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn randi(&mut self, min: i32, max: i32) -> [i32; PHILOX32x16] {
+    pub fn randi(&mut self, min: i32, max: i32) -> [i32; PHILOX32x16] {
         let range = (max as i64 - min as i64 + 1) as u64;
-        let out = unsafe { self.nextu() };
-        let mut dst = [0i32; PHILOX32x16];
-        for i in 0..PHILOX32x16 {
-            dst[i] = ((out[i] as u64 * range) >> 32) as i32 + min;
-        }
-        dst
+        self.nextu()
+            .map(|x| ((x as u64 * range) >> 32) as i32 + min)
     }
 
     /// Generates a random `f32` value in the range [min, max).
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn randf(&mut self, min: f32, max: f32) -> [f32; PHILOX32x16] {
+    pub fn randf(&mut self, min: f32, max: f32) -> [f32; PHILOX32x16] {
         let range = max - min;
         let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
-        let out = unsafe { self.nextu() };
-        let mut dst = [0f32; PHILOX32x16];
-        for i in 0..PHILOX32x16 {
-            dst[i] = (out[i] as f32 * scale) + min;
-        }
-        dst
+        self.nextu().map(|x| (x as f32 * scale) + min)
     }
 }
 
