@@ -1,4 +1,4 @@
-use crate::{rng::Rng64, rng64::SplitMix64};
+use crate::{_internal::FSCALE64, rng::Rng64, rng64::SplitMix64};
 
 // --- Philox64 ---
 
@@ -20,9 +20,6 @@ pub struct Philox64 {
     pub(crate) k: [u64; 2],
 }
 
-const M0: u128 = 0xD2B74407B1CE6E93;
-const W0: u64 = 0x9E3779B97F4A7C15;
-
 impl Philox64 {
     /// Creates a new `Philox64` instance.
     pub fn new(seed: u64) -> Self {
@@ -39,6 +36,9 @@ impl Philox64 {
         let mut v0 = c[0];
         let mut v1 = c[1];
         let mut key = k[0];
+
+        const M0: u128 = 0xD2B74407B1CE6E93;
+        const W0: u64 = 0x9E3779B97F4A7C15;
 
         macro_rules! step {
             () => {
@@ -82,33 +82,25 @@ impl Philox64 {
         out
     }
 
-    /// Generates the next random `f64` value in the range [0, 1).
+    /// Generates a random `f64` values in the range [0, 1).
     #[inline]
-    pub fn nextf(&mut self) -> f64 {
-        self.nextu()[0] as f64 * (1.0 / (u64::MAX as f64 + 1.0))
+    pub fn nextf(&mut self) -> [f64; 2] {
+        self.nextu().map(|x| (x as f64) * FSCALE64)
     }
 
-    /// Generates a random `i64` value in the range [min, max].
+    /// Generates a random `i64` values in the range [min, max].
     #[inline]
-    pub fn randi(&mut self, min: i64, max: i64) -> i64 {
+    pub fn randi(&mut self, min: i64, max: i64) -> [i64; 2] {
         let range = (max as i128 - min as i128 + 1) as u128;
-        let x = self.nextu()[0];
-        ((x as u128 * range) >> 64) as i64 + min
+        self.nextu()
+            .map(|x| ((x as u128 * range) >> 64) as i64 + min)
     }
 
-    /// Generates a random `f64` value in the range [min, max).
+    /// Generates a random `f64` values in the range [min, max).
     #[inline]
-    pub fn randf(&mut self, min: f64, max: f64) -> f64 {
-        let range = max - min;
-        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
-        (self.nextu()[0] as f64 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    #[inline]
-    pub fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i64 - 1) as usize;
-        &choices[index]
+    pub fn randf(&mut self, min: f64, max: f64) -> [f64; 2] {
+        let scale = (max - min) * FSCALE64;
+        self.nextu().map(|x| (x as f64 * scale) + min)
     }
 }
 

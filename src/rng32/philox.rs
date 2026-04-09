@@ -1,3 +1,4 @@
+use crate::_internal::FSCALE32;
 use crate::rng::Rng32;
 use crate::rng32::SplitMix32;
 use crate::wrap;
@@ -127,8 +128,7 @@ impl Philox32x4 {
     /// Generates the next random `f32` value in the range [0, 1).
     #[inline(always)]
     pub fn nextf(&mut self) -> [f32; 4] {
-        self.nextu()
-            .map(|x| x as f32 * (1.0 / (u32::MAX as f32 + 1.0)))
+        self.nextu().map(|x| x as f32 * FSCALE32)
     }
 
     /// Generates a random `i32` value in the range [min, max].
@@ -142,8 +142,7 @@ impl Philox32x4 {
     /// Generates a random `f32` value in the range [min, max).
     #[inline(always)]
     pub fn randf(&mut self, min: f32, max: f32) -> [f32; 4] {
-        let range = max - min;
-        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
+        let scale = (max - min) * FSCALE32;
         self.nextu().map(|x| (x as f32 * scale) + min)
     }
 }
@@ -277,9 +276,7 @@ impl Philox32x4x4 {
     /// Generates 16 random `f32` values in the range [0, 1) using AVX-512.
     #[target_feature(enable = "avx512f")]
     pub fn nextf(&mut self) -> [f32; PHILOX32x16] {
-        let out = self.nextu();
-        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
-        out.map(|x| (x as f32) * SCALE)
+        self.nextu().map(|x| (x as f32) * FSCALE32)
     }
 
     /// Generates a random `i32` value in the range [min, max].
@@ -294,7 +291,7 @@ impl Philox32x4x4 {
     #[target_feature(enable = "avx512f")]
     pub fn randf(&mut self, min: f32, max: f32) -> [f32; PHILOX32x16] {
         let range = max - min;
-        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
+        let scale = range * FSCALE32;
         self.nextu().map(|x| (x as f32 * scale) + min)
     }
 }

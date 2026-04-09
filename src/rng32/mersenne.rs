@@ -476,7 +476,6 @@ macro_rules! define_sfmt_variant {
                     val
                 }
             }
-
         }
     };
 }

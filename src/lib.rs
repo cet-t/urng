@@ -38,6 +38,8 @@ pub mod rng64;
 
 pub mod cabi64;
 
+pub(crate) mod _internal;
+
 #[cfg(feature = "sampler")]
 /// Weighted random selection traits (`Sampler32`, `Sampler64`).
 pub mod sampler;

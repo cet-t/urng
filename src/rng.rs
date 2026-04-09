@@ -1,95 +1,78 @@
-/// A trait for 32-bit random number generators.
-///
-/// # Examples
-///
-/// ```
-/// use urng::rng::Rng32;
-/// use urng::rng32::Xorshift32;
-///
-/// let mut rng = Xorshift32::new(1);
-/// let val = rng.randi(1, 6);
-/// assert!((1..=6).contains(&val));
-/// assert!(rng.randf(0.0, 1.0_f32) < 1.0);
-/// let items = ["a", "b", "c"];
-/// assert!(items.contains(rng.choice(&items)));
-/// ```
-pub trait Rng32 {
-    /// Generates the next random `u32` value in the range [0, 2^32).
-    fn nextu(&mut self) -> u32;
+use crate::_internal::{FSCALE32, FSCALE64};
 
-    /// Generates the next random `f32` value in the range [0, 1).
-    #[inline(always)]
-    fn nextf(&mut self) -> f32 {
-        self.nextu() as f32 * (1.0 / (u32::MAX as f32 + 1.0))
-    }
-
-    /// Generates a random `i32` value in the range [min, max].
-    #[inline(always)]
-    fn randi(&mut self, min: i32, max: i32) -> i32 {
-        let range = (max as i64 - min as i64 + 1) as u64;
-        ((self.nextu() as u64 * range) >> 32) as i32 + min
-    }
-
-    /// Generates a random `f32` value in the range [min, max).
-    #[inline(always)]
-    fn randf(&mut self, min: f32, max: f32) -> f32 {
-        let range = max - min;
-        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
-        (self.nextu() as f32 * scale) + min
-    }
-
-    /// Returns a random element from a slice.
-    #[inline(always)]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i32 - 1);
-        &choices[index as usize]
-    }
+macro_rules! randi_wide {
+    (i 32) => {
+        i64
+    };
+    (i 64) => {
+        i128
+    };
+    (u 32) => {
+        u64
+    };
+    (u 64) => {
+        u128
+    };
 }
 
-/// A trait for 64-bit random number generators.
-///
-/// # Examples
-///
-/// ```
-/// use urng::rng::Rng64;
-/// use urng::rng64::Xorshift64;
-///
-/// let mut rng = Xorshift64::new(1);
-/// let val = rng.randi(1, 100);
-/// assert!((1..=100).contains(&val));
-/// assert!(rng.randf(0.0, 1.0_f64) < 1.0);
-/// let items = [10u64, 20, 30];
-/// assert!(items.contains(rng.choice(&items)));
-/// ```
-pub trait Rng64 {
-    /// Generates the next random `u64` value in the range [0, 2^64).
-    fn nextu(&mut self) -> u64;
+macro_rules! impl_rng_trait {
+    ($bits:expr) => {
+        paste::paste! {
+            #[doc = concat!("A trait for ", $bits, "-bit random number generators.")]
+            ///
+            /// # Examples
+            ///
+            /// ```
+            #[doc = concat!("use urng::rng::Rng", $bits, ";")]
+            #[doc = concat!("use urng::rng::Choice", $bits, ";")]
+            #[doc = concat!("use urng::rng", $bits, "::Xorshift", $bits, ";")]
+            ///
+            #[doc = concat!("let mut rng = Xorshift", $bits, "::new(1);")]
+            #[doc = concat!("let val = rng.randi(1, 6);")]
+            #[doc = concat!("assert!((1..=6).contains(&val));")]
+            #[doc = concat!("assert!(rng.randf(0.0, 1.0_f", $bits, ") < 1.0);")]
+            #[doc = concat!("let items = [\"a\", \"b\", \"c\"];")]
+            #[doc = concat!("assert!(items.contains(rng.choice(&items)));")]
+            /// ```
+            pub trait [<Rng $bits>] {
+                #[doc = concat!("Generates the next random `u", $bits, "` value in the range [0, 2^", $bits, ").")]
+                fn nextu(&mut self) -> [<u $bits>];
 
-    /// Generates the next random `f64` value in the range [0, 1).
-    #[inline(always)]
-    fn nextf(&mut self) -> f64 {
-        self.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0))
-    }
+                #[doc = concat!("Generates the next random `f", $bits, "` value in the range [0, 1).")]
+                #[inline(always)]
+                fn nextf(&mut self) -> [<f $bits>] {
+                    self.nextu() as [<f $bits>] * [<FSCALE $bits>]
+                }
 
-    /// Generates a random `i64` value in the range [min, max].
-    #[inline(always)]
-    fn randi(&mut self, min: i64, max: i64) -> i64 {
-        let range = (max as i128 - min as i128 + 1) as u128;
-        ((self.nextu() as u128 * range) >> 64) as i64 + min
-    }
+                #[doc = concat!("Generates a random `i", $bits, "` value in the range [min, max].")]
+                #[inline(always)]
+                fn randi(&mut self, min: [<i $bits>], max: [<i $bits>]) -> [<i $bits>] {
+                    let range = (max as randi_wide!(i $bits) - min as randi_wide!(i $bits) + 1)
+                        as randi_wide!(u $bits);
+                    ((self.nextu() as randi_wide!(u $bits) * range) >> $bits) as [<i $bits>] + min
+                }
 
-    /// Generates a random `f64` value in the range [min, max).
-    #[inline(always)]
-    fn randf(&mut self, min: f64, max: f64) -> f64 {
-        let range = max - min;
-        let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
-        (self.nextu() as f64 * scale) + min
-    }
+                #[doc = concat!("Generates a random `f", $bits, "` value in the range [min, max).")]
+                #[inline(always)]
+                fn randf(&mut self, min: [<f $bits>], max: [<f $bits>]) -> [<f $bits>] {
+                    let scale = (max - min) * [<FSCALE $bits>];
+                    (self.nextu() as [<f $bits>] * scale) + min
+                }
+            }
 
-    /// Returns a random element from a slice.
-    #[inline(always)]
-    fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
-        let index = self.randi(0, choices.len() as i64 - 1);
-        &choices[index as usize]
-    }
+            pub trait [<Choice $bits>]: [<Rng $bits>] {
+                /// Returns a random element from a slice.
+                #[inline(always)]
+                fn choice<'a, T>(&mut self, choices: &'a [T]) -> &'a T {
+                    let index = self.randi(0, choices.len() as [<i $bits>] - 1);
+                    &choices[index as usize]
+                }
+            }
+
+            impl<T: [<Rng $bits>] + ?Sized> [<Choice $bits>] for T {}
+        }
+    };
 }
+
+impl_rng_trait!(32);
+impl_rng_trait!(64);
