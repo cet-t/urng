@@ -1,5 +1,7 @@
 //! C-compatible ABI wrappers for the 32-bit RNGs.
 
+/// JSF C ABI exports.
+pub mod jsf;
 /// LCG C ABI exports.
 pub mod lcg;
 /// Mersenne Twister and SFMT C ABI exports.
@@ -19,6 +21,7 @@ pub mod xorshift;
 /// Xoshiro C ABI exports.
 pub mod xoshiro;
 
+pub use jsf::*;
 pub use lcg::*;
 pub use mersenne::*;
 pub use pcg::*;

@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.4.4"
+urng = "0.4.5"
 ```
 
 ## Supported Generators
@@ -50,6 +50,7 @@ Implement `Rng32`, output `u32` natively.
 | `Threefry32x4` | Threefry 4x32    | -                | Counter-based (Random123 family).               |
 | `Threefry32x2` | Threefry 2x32    | -                | Counter-based (Random123 family).               |
 | `Squares32`    | Squares          | -                | Counter-based (Widynski).                       |
+| `Jsf32`        | JSF32            | -                | Jenskin Small Fast.                             |
 
 ### 64-bit Generators (`urng::rng64`)
 
@@ -90,6 +91,7 @@ These generators do not implement `Rng32`/`Rng64` and instead expose a bulk-gene
 | `Squares32x8`     | Squares x8         | 8×`u32`  | 8 counters processed in parallel.        |
 | `Xoshiro128Ppx16` | xoshiro128++ x16   | 16×`u32` | 16 independent xoshiro128++ streams.     |
 | `Xoshiro128Ssx16` | xoshiro128\*\* x16 | 16×`u32` | 16 independent xoshiro128\*\* streams.   |
+| `Jsf32x16`        | JSF32 x16          | 16×`u32` | 16 independent JSF32 streams.            |
 | `Xoshiro256Ssx2`  | xoshiro256\*\* x2  | 2×`u64`  | 2 independent xoshiro256\*\* streams.    |
 | `Sfc64x8`         | SFC64 x8           | 8×`u64`  | 8 independent SFC64 streams.             |
 | `Cet64x8`         | CET64 x8           | 8×`u64`  | 8 independent CET64 streams.             |

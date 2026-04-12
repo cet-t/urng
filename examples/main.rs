@@ -34,6 +34,8 @@ use urng::{
         xoshiro128ppx16_free, xoshiro128ppx16_new, xoshiro128ppx16_next_u32s,
         xoshiro128ss_free, xoshiro128ss_new, xoshiro128ss_next_u32s,
         xoshiro128ssx16_free, xoshiro128ssx16_new, xoshiro128ssx16_next_u32s,
+        jsf32_free, jsf32_new, jsf32_next_u32s,
+        jsf32x16_free, jsf32x16_new, jsf32x16_next_u32s,
     },
     cabi64::{
         mt1993764_free, mt1993764_new, mt1993764_next_u64s, 
@@ -163,6 +165,7 @@ fn main() {
         sfmt216091
     );
     bench32!(xoshiro128pp, xoshiro128ppx16, xoshiro128ssx16);
+    bench32!(jsf32, jsf32x16);
 
     bench64!(philox64);
     bench64!(splitmix64);

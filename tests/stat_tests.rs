@@ -7,7 +7,8 @@ use std::sync::OnceLock;
 use urng::prelude::*;
 use urng::rng::{Rng32, Rng64};
 use urng::rng32::{
-    Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253, Sfmt11213, Sfmt44497, Sfmt86243, Sfmt132049, Sfmt216091,
+    Jsf32, Jsf32x16, Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253, Sfmt11213, Sfmt44497, Sfmt86243,
+    Sfmt132049, Sfmt216091,
 };
 use urng::rng64::{Biski64, SplitMix64, Xorshift64};
 
@@ -86,6 +87,20 @@ fn gen_arr4f32<F: FnMut() -> [f32; 4]>(mut f: F) -> impl FnMut() -> f64 {
     }
 }
 
+fn gen_arr16f32<F: FnMut() -> [f32; 16]>(mut f: F) -> impl FnMut() -> f64 {
+    let mut buf = [0f32; 16];
+    let mut i = 16usize;
+    move || {
+        if i >= 16 {
+            buf = f();
+            i = 0;
+        }
+        let v = buf[i] as f64;
+        i += 1;
+        v
+    }
+}
+
 fn gen_arr4f64<F: FnMut() -> [f64; 4]>(mut f: F) -> impl FnMut() -> f64 {
     let mut buf = [0f64; 4];
     let mut i = 4usize;
@@ -141,6 +156,11 @@ macro_rules! push_chi {
         let mut f = gen_arr4f32(move || r.nextf());
         $rs.push(chisq::run(stringify!($algo), &mut f, CHI_N, CHI_BINS));
     }};
+    (arr16f32 $rs:expr, $algo:ident, $rng:expr) => {{
+        let mut r = $rng;
+        let mut f = gen_arr16f32(move || r.nextf());
+        $rs.push(chisq::run(stringify!($algo), &mut f, CHI_N, CHI_BINS));
+    }};
     (arr2u64 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
         let mut f = gen_arr2u64(move || r.nextu());
@@ -177,6 +197,11 @@ macro_rules! push_monte {
     (arr4f32 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
         let mut f = gen_arr4f32(move || r.nextf());
+        $rs.push(monte_carlo::run(stringify!($algo), &mut f, MONTE_CARLO_N));
+    }};
+    (arr16f32 $rs:expr, $algo:ident, $rng:expr) => {{
+        let mut r = $rng;
+        let mut f = gen_arr16f32(move || r.nextf());
         $rs.push(monte_carlo::run(stringify!($algo), &mut f, MONTE_CARLO_N));
     }};
     (arr2u64 $rs:expr, $algo:ident, $rng:expr) => {{
@@ -237,6 +262,16 @@ macro_rules! do_scatter {
             &scatter_path(stringify!($algo)),
         )?;
     }};
+    (arr16f32 $algo:ident, $rng:expr) => {{
+        let mut r = $rng;
+        let mut f = gen_arr16f32(move || r.nextf());
+        scatter::plot(
+            stringify!($algo),
+            &mut f,
+            SCATTER_N,
+            &scatter_path(stringify!($algo)),
+        )?;
+    }};
     (arr2u64 $algo:ident, $rng:expr) => {{
         let mut r = $rng;
         let mut f = gen_arr2u64(move || r.nextu());
@@ -270,9 +305,12 @@ macro_rules! do_scatter {
 }
 
 macro_rules! rng_ctor {
-    ($a:ident) => {
-        $a::new(0)
-    };
+    ($a:ident) => {{
+        #[allow(unused_unsafe)]
+        unsafe {
+            $a::new(0)
+        }
+    }};
 }
 
 macro_rules! reg {
@@ -295,6 +333,11 @@ macro_rules! reg {
         push_chi!(arr4f32 $chi, $algo, rng_ctor!($algo));
         push_monte!(arr4f32 $mc, $algo, rng_ctor!($algo));
         do_scatter!(arr4f32 $algo, rng_ctor!($algo));
+    }};
+    (arr16f32 $chi:expr, $mc:expr, $algo:ident) => {{
+        push_chi!(arr16f32 $chi, $algo, rng_ctor!($algo));
+        push_monte!(arr16f32 $mc, $algo, rng_ctor!($algo));
+        do_scatter!(arr16f32 $algo, rng_ctor!($algo));
     }};
     (arr2u64 $chi:expr, $mc:expr, $algo:ident) => {{
         push_chi!(arr2u64 $chi, $algo, rng_ctor!($algo));
@@ -350,6 +393,8 @@ fn build_suite() -> Result<Suite> {
     reg!(arr4f32 chi, monte, Threefry32x4);
     reg!(arr2f32 chi, monte, Threefry32x2);
     reg!(s32 chi, monte, Squares32);
+    reg!(s32 chi, monte, Jsf32);
+    reg!(arr16f32 chi, monte, Jsf32x16);
 
     // rng64  (nextu → u64 scalar, except Philox64 → [u64;2] and Threefish256 → [f64;4])
     reg!(s64 chi, monte, SplitMix64);

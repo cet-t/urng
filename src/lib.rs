@@ -21,6 +21,7 @@
 //! * **Linear Congruential Generator**: [`rng32::Lcg32`] (32-bit), [`rng64::Lcg64`] (64-bit).
 //! * **Cet**: [`rng64::Cet64`] (64-bit), [`rng64::Cet256`] (256-bit state).
 //! * **SplitMix**: [`rng32::SplitMix32`] (32-bit), [`rng64::SplitMix64`] (64-bit).
+//! * **Jenkins Small Fast**: [`rng32::Jsf32`] (32-bit).
 //!
 //! Each generator supports generating uniform random numbers for various types (u32, u64, f32, f64)
 //! and ranges.
