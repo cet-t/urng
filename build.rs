@@ -92,6 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .input_extern_file("src/rng32/threefry.rs")
         .input_extern_file("src/rng32/squares.rs")
         .input_extern_file("src/rng32/xoshiro.rs")
+        .input_extern_file("src/rng32/jsf.rs")
         // cabi32 C ABI bindings
         .input_extern_file("src/cabi32/mersenne.rs")
         .input_extern_file("src/cabi32/lcg.rs")
@@ -102,6 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .input_extern_file("src/cabi32/threefry.rs")
         .input_extern_file("src/cabi32/squares.rs")
         .input_extern_file("src/cabi32/xoshiro.rs")
+        .input_extern_file("src/cabi32/jsf.rs")
         // rng64 algorithm implementations (struct definitions)
         .input_extern_file("src/rng64/splitmix.rs")
         .input_extern_file("src/rng64/mersenne.rs")
