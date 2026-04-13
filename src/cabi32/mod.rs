@@ -10,6 +10,8 @@ pub mod mersenne;
 pub mod pcg;
 /// Philox C ABI exports.
 pub mod philox;
+/// SFC C ABI exports.
+pub mod sfc;
 /// SplitMix C ABI exports.
 pub mod splitmix;
 /// Squares C ABI exports.
@@ -26,6 +28,7 @@ pub use lcg::*;
 pub use mersenne::*;
 pub use pcg::*;
 pub use philox::*;
+pub use sfc::*;
 pub use splitmix::*;
 pub use squares::*;
 pub use threefry::*;

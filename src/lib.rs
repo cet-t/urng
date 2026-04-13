@@ -65,8 +65,8 @@ pub mod macros;
 pub mod prelude {
     pub use crate::rng::{Rng32, Rng64};
     pub use crate::rng32::{
-        Mt19937, Pcg32, Philox32x4, Sfmt19937, SplitMix32, Squares32, Squares32Simd, Squares32x8,
-        Threefry32x2, Threefry32x4, Xorshift32, Xorshift128, Xorwow, Xoshiro128Pp,
+        Mt19937, Pcg32, Philox32x4, Sfc32, Sfmt19937, SplitMix32, Squares32, Squares32Simd,
+        Squares32x8, Threefry32x2, Threefry32x4, Xorshift32, Xorshift128, Xorwow, Xoshiro128Pp,
     };
     pub use crate::rng64::{
         Cet64, Cet256, Mt1993764, Philox64, Sfc64, Sfmt1993764, SplitMix64, Threefish256,
