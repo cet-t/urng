@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.4.5"
+urng = "0.4.6"
 ```
 
 ## Supported Generators
@@ -38,6 +38,8 @@ Implement `Rng32`, output `u32` natively.
 | `Sfmt86243`    | SFMT             | $2^{86243}-1$    | SIMD-oriented Fast Mersenne Twister.            |
 | `Sfmt132049`   | SFMT             | $2^{132049}-1$   | SIMD-oriented Fast Mersenne Twister.            |
 | `Sfmt216091`   | SFMT             | $2^{216091}-1$   | SIMD-oriented Fast Mersenne Twister.            |
+| `Sfc32`        | SFC32            | $2^{127}-1$      | Small fast chaotic.                             |
+| `Sfc32x4`      | SFC32            | $2^{127}-1$      | Small fast chaotic. (wide 32x4)                 |
 | `Pcg32`        | PCG-XSH-RR       | $2^{64}$         | Fast, statistically good, small state.          |
 | `Philox32x4`   | Philox4x32-10    | -                | Counter-based, suitable for parallel use.       |
 | `SplitMix32`   | SplitMix32       | $2^{32}$         | Fast, used for initializing other states.       |
@@ -81,6 +83,12 @@ Implement `Rng64`, output `u64` natively.
 
 These generators do not implement `Rng32`/`Rng64` and instead expose a bulk-generation API.
 
+#### AVX2 (`avx2`)
+
+| Struct    | Algorithm | Output  | Description                  |
+| --------- | --------- | ------- | ---------------------------- |
+| `Sfc32x4` | SFC32 x8  | 8×`u32` | 8 independent SFC32 streams. |
+
 #### AVX-512 (`avx512f`)
 
 | Struct            | Algorithm          | Output   | Description                              |
@@ -92,6 +100,7 @@ These generators do not implement `Rng32`/`Rng64` and instead expose a bulk-gene
 | `Xoshiro128Ppx16` | xoshiro128++ x16   | 16×`u32` | 16 independent xoshiro128++ streams.     |
 | `Xoshiro128Ssx16` | xoshiro128\*\* x16 | 16×`u32` | 16 independent xoshiro128\*\* streams.   |
 | `Jsf32x16`        | JSF32 x16          | 16×`u32` | 16 independent JSF32 streams.            |
+| `Sfc32x8`         | SFC32 x16          | 16×`u32` | 16 independent SFC64 streams.            |
 | `Xoshiro256Ssx2`  | xoshiro256\*\* x2  | 2×`u64`  | 2 independent xoshiro256\*\* streams.    |
 | `Sfc64x8`         | SFC64 x8           | 8×`u64`  | 8 independent SFC64 streams.             |
 | `Cet64x8`         | CET64 x8           | 8×`u64`  | 8 independent CET64 streams.             |
@@ -163,11 +172,14 @@ This crate exports a C-compatible ABI generic interface. Each generator has corr
 - `_free`
 - `_next_uXXs` (bulk generation)
 - `_next_fXXs` (bulk generation)
+- `_rand_uXXs` (bulk generation)
+- `_rand_fXXs` (bulk generation)
 
 Example for `Mt19937`:
 
 ```c
 void* mt19937_new(uint32_t seed, size_t warm);
 void mt19937_next_u32s(void* ptr, uint32_t* out, size_t count);
+void mt19937_rand_f32s(void* ptr, float* out, size_t count, float min, float max);
 void mt19937_free(void* ptr);
 ```

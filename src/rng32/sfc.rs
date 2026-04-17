@@ -2,6 +2,16 @@ use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
 use std::arch::x86_64::*;
 use wide::{f32x4, i32x4, u32x4, u64x2};
 
+/// A SFC32 pseudo-random number generator.
+///
+/// # Examples
+///
+/// ```
+/// use urng::prelude::*;
+///
+/// let mut rng = Sfc32::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 pub struct Sfc32 {
     pub a: u32,
@@ -37,6 +47,16 @@ impl Rng32 for Sfc32 {
 
 pub(crate) const SFC32X4: usize = 4;
 
+/// A SFC32 pseudo-random number generator.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::sfc::Sfc32x4;
+///
+/// let mut rng = Sfc32x4::new(1);
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 pub struct Sfc32x4 {
     pub(crate) a: u32x4,
@@ -46,8 +66,7 @@ pub struct Sfc32x4 {
 }
 
 impl Sfc32x4 {
-    #[target_feature(enable = "avx2")]
-    pub unsafe fn new(seed: u32) -> Self {
+    pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         let mut a = [0u32; SFC32X4];
         let mut b = [0u32; SFC32X4];
@@ -112,6 +131,16 @@ impl Sfc32x4 {
 
 pub(crate) const SFC32X8: usize = 8;
 
+/// A SFC32 pseudo-random number generator.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::sfc::Sfc32x8;
+///
+/// let mut rng = unsafe { Sfc32x8::new(1) };
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 pub struct Sfc32x8 {
     pub(crate) a: __m256i,
@@ -195,6 +224,16 @@ impl Sfc32x8 {
 
 pub(crate) const SFC32X16: usize = 16;
 
+/// A SFC32 pseudo-random number generator.
+///
+/// # Examples
+///
+/// ```
+/// use urng::rng32::sfc::Sfc32x16;
+///
+/// let mut rng = unsafe { Sfc32x16::new(1) };
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 pub struct Sfc32x16 {
     pub(crate) a: __m512i,
@@ -285,7 +324,7 @@ mod tests {
     use crate::{safe_test, unsafe_test};
 
     safe_test!(Sfc32);
-    unsafe_test!(Sfc32x4);
+    safe_test!(Sfc32x4);
     unsafe_test!(Sfc32x8);
     unsafe_test!(Sfc32x16);
 }

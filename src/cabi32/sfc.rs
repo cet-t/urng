@@ -101,7 +101,7 @@ fn sfc32x4_chunk_seed(base_seed: u32, chunk_idx: usize) -> u32 {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn sfc32x4_new(seed: u32) -> *mut Sfc32x4 {
-    unsafe { Box::into_raw(Box::new(Sfc32x4::new(seed))) }
+    Box::into_raw(Box::new(Sfc32x4::new(seed)))
 }
 
 #[unsafe(no_mangle)]
