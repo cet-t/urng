@@ -37,6 +37,8 @@ use urng::{
         jsf32_free, jsf32_new, jsf32_next_u32s,
         jsf32x16_free, jsf32x16_new, jsf32x16_next_u32s,
         sfc32_free, sfc32_new, sfc32_next_u32s,
+        sfc32x4_free, sfc32x4_new, sfc32x4_next_u32s,
+        sfc32x8_free, sfc32x8_new, sfc32x8_next_u32s,
         sfc32x16_free, sfc32x16_new, sfc32x16_next_u32s,
     },
     cabi64::{
@@ -120,8 +122,10 @@ where
     best
 }
 
-fn print_group(results: &[(&str, f64)], hi: f64, mid: f64) {
+fn print_group(results: &[(&str, f64)]) {
     let max_gs = results.iter().map(|(_, gs)| *gs).fold(0.0f64, f64::max);
+    let hi = max_gs * 0.75;
+    let mid = max_gs * 0.50;
     for (name, gs) in results {
         let bar = make_bar(*gs, max_gs);
         let bar_colored = if *gs >= hi {
@@ -187,7 +191,7 @@ fn main() {
         jsf32x16_free(ptr);
     }
 
-    let mut r32: Vec<(&str, f64)> = Vec::new();
+    let mut r32 = Vec::new();
     bench32!(buf32, r32, philox32x4x4, philox32x4, philox32);
     bench32!(buf32, r32, threefry32x4, threefry32x2);
     bench32!(buf32, r32, squares32, squares32x8, squares32simd);
@@ -200,8 +204,8 @@ fn main() {
     );
     bench32!(buf32, r32, xoshiro128pp, xoshiro128ppx16, xoshiro128ssx16);
     bench32!(buf32, r32, jsf32, jsf32x16);
-    bench32!(buf32, r32, sfc32, sfc32x16);
-    print_group(&r32, 6.0, 4.0);
+    bench32!(buf32, r32, sfc32, sfc32x4, sfc32x8, sfc32x16);
+    print_group(&r32);
 
     println!("{}", "─".repeat(72).bright_black());
 
@@ -214,7 +218,7 @@ fn main() {
         splitmix64_free(ptr);
     }
 
-    let mut r64: Vec<(&str, f64)> = Vec::new();
+    let mut r64 = Vec::new();
     bench64!(buf64, r64, philox64);
     bench64!(buf64, r64, splitmix64);
     bench64!(buf64, r64, cet64, cet64x8, cet256, cet256x2);
@@ -223,5 +227,5 @@ fn main() {
     bench64!(buf64, r64, xoshiro256pp, xoshiro256ss, xoshiro256ssx2);
     bench64!(buf64, r64, sfc64, sfc64x8);
     bench64!(buf64, r64, biski64, biski64x8);
-    print_group(&r64, 3.0, 2.0);
+    print_group(&r64);
 }

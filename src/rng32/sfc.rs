@@ -1,5 +1,6 @@
 use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
 use std::arch::x86_64::*;
+use wide::{f32x4, i32x4, u32x4, u64x2};
 
 #[repr(C, align(64))]
 pub struct Sfc32 {
@@ -31,6 +32,164 @@ impl Rng32 for Sfc32 {
         self.c = (self.c << 21) | (self.c >> 11);
         self.c = self.c.wrapping_add(tmp);
         tmp
+    }
+}
+
+pub(crate) const SFC32X4: usize = 4;
+
+#[repr(C, align(64))]
+pub struct Sfc32x4 {
+    pub(crate) a: u32x4,
+    pub(crate) b: u32x4,
+    pub(crate) c: u32x4,
+    pub(crate) counter: u32x4,
+}
+
+impl Sfc32x4 {
+    #[target_feature(enable = "avx2")]
+    pub unsafe fn new(seed: u32) -> Self {
+        let mut seedgen = SplitMix32::new(seed);
+        let mut a = [0u32; SFC32X4];
+        let mut b = [0u32; SFC32X4];
+        let mut c = [0u32; SFC32X4];
+        for i in 0..SFC32X4 {
+            a[i] = seedgen.nextu();
+            b[i] = seedgen.nextu();
+            c[i] = seedgen.nextu();
+        }
+
+        Self {
+            a: u32x4::from(a),
+            b: u32x4::from(b),
+            c: u32x4::from(c),
+            counter: u32x4::splat(1),
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn nextuv(&mut self) -> u32x4 {
+        let tmp = self.a + self.b + self.counter;
+        self.counter += u32x4::splat(1);
+        self.a = self.b ^ (self.b >> 9);
+        self.b = self.c + (self.c << 3);
+        self.c = ((self.c << 21) | (self.c >> (32 - 21))) + tmp;
+        tmp
+    }
+
+    #[inline(always)]
+    pub(crate) fn nextfv_scaled(&mut self, scale: f32x4) -> f32x4 {
+        let arr: [u32; 4] = bytemuck::cast(self.nextuv());
+        f32x4::from([arr[0] as f32, arr[1] as f32, arr[2] as f32, arr[3] as f32]) * scale
+    }
+
+    #[inline(always)]
+    pub(crate) fn randiv(&mut self, v_range: u32x4, v_min: i32x4) -> i32x4 {
+        let v: u64x2 = bytemuck::cast(self.nextuv());
+        let r: u64x2 = bytemuck::cast(v_range);
+        let lo = u64x2::splat(0xffff_ffff);
+        let res_even: u32x4 = bytemuck::cast((v & lo) * (r & lo) >> 32);
+        let prod_odd: u32x4 = bytemuck::cast((v >> 32) * (r >> 32) & (lo << 32));
+        let merged: i32x4 = bytemuck::cast(res_even | prod_odd);
+        merged + v_min
+    }
+
+    #[inline(always)]
+    pub(crate) fn randfv(&mut self, v_mult: f32x4, v_min: f32x4) -> f32x4 {
+        let v_f32 = f32x4::from_i32x4(bytemuck::cast(self.nextuv()));
+        v_f32 * v_mult + v_min
+    }
+
+    #[inline(always)]
+    pub fn nextu(&mut self) -> [u32; SFC32X4] {
+        bytemuck::cast(self.nextuv())
+    }
+
+    #[inline(always)]
+    pub fn nextf(&mut self) -> [f32; SFC32X4] {
+        self.nextu().map(|x| x as f32 * FSCALE32)
+    }
+}
+
+pub(crate) const SFC32X8: usize = 8;
+
+#[repr(C, align(64))]
+pub struct Sfc32x8 {
+    pub(crate) a: __m256i,
+    pub(crate) b: __m256i,
+    pub(crate) c: __m256i,
+    pub(crate) counter: __m256i,
+}
+
+impl Sfc32x8 {
+    #[target_feature(enable = "avx2")]
+    pub unsafe fn new(seed: u32) -> Self {
+        let mut seedgen = SplitMix32::new(seed);
+        let mut a = [0u32; SFC32X8];
+        let mut b = [0u32; SFC32X8];
+        let mut c = [0u32; SFC32X8];
+        for i in 0..SFC32X8 {
+            a[i] = seedgen.nextu();
+            b[i] = seedgen.nextu();
+            c[i] = seedgen.nextu();
+        }
+        unsafe {
+            Self {
+                a: _mm256_loadu_si256(a.as_ptr() as *const _),
+                b: _mm256_loadu_si256(b.as_ptr() as *const _),
+                c: _mm256_loadu_si256(c.as_ptr() as *const _),
+                counter: _mm256_set1_epi32(1),
+            }
+        }
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    pub(crate) unsafe fn nextuv(&mut self) -> __m256i {
+        let tmp = _mm256_add_epi32(_mm256_add_epi32(self.a, self.b), self.counter);
+        self.counter = _mm256_add_epi32(self.counter, _mm256_set1_epi32(1));
+        self.a = _mm256_xor_si256(self.b, _mm256_srli_epi32(self.b, 9));
+        self.b = _mm256_add_epi32(self.c, _mm256_slli_epi32(self.c, 3));
+        self.c = _mm256_add_epi32(unsafe { _mm256_rol_epi32(self.c, 21) }, tmp);
+        tmp
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    pub(crate) unsafe fn nextfv_scaled(&mut self, scale: __m256) -> __m256 {
+        let v_f32 = _mm256_cvtepi32_ps(unsafe { self.nextuv() });
+        _mm256_mul_ps(v_f32, scale)
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    pub(crate) unsafe fn randiv(&mut self, v_range: __m256i, v_min: __m256i) -> __m256i {
+        const MERGE_MASK: u8 = 0xAA;
+        let v_u32 = unsafe { self.nextuv() };
+        let res_even = _mm256_srli_epi64(_mm256_mul_epu32(v_u32, v_range), 32);
+        let prod_odd = _mm256_mul_epu32(_mm256_srli_epi64(v_u32, 32), v_range);
+        let merged = unsafe { _mm256_mask_blend_epi32(MERGE_MASK, res_even, prod_odd) };
+        _mm256_add_epi32(merged, v_min)
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    pub(crate) unsafe fn randfv(&mut self, v_mult: __m256, v_min: __m256) -> __m256 {
+        let v_f32 = _mm256_cvtepi32_ps(unsafe { self.nextuv() });
+        _mm256_add_ps(_mm256_mul_ps(v_f32, v_mult), v_min)
+    }
+
+    #[inline(always)]
+    pub fn nextu(&mut self) -> [u32; SFC32X8] {
+        unsafe {
+            let mut result = [0u32; SFC32X8];
+            _mm256_storeu_si256(result.as_mut_ptr() as *mut _, self.nextuv());
+            result
+        }
+    }
+
+    #[inline(always)]
+    pub fn nextf(&mut self) -> [f32; SFC32X8] {
+        self.nextu().map(|x| x as f32 * FSCALE32)
     }
 }
 
@@ -126,5 +285,7 @@ mod tests {
     use crate::{safe_test, unsafe_test};
 
     safe_test!(Sfc32);
+    unsafe_test!(Sfc32x4);
+    unsafe_test!(Sfc32x8);
     unsafe_test!(Sfc32x16);
 }

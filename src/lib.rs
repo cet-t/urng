@@ -41,7 +41,7 @@ pub mod cabi64;
 
 pub(crate) mod _internal;
 
-// #[cfg(feature = "wide")]
+#[cfg(feature = "wide")]
 /// Wide SIMD-accelerated random number generators (e.g., `Sfmt19937x8`).
 pub(crate) mod wide;
 

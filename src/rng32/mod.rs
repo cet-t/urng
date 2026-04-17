@@ -34,7 +34,7 @@ pub use mersenne::{
 };
 pub use pcg::{Pcg32, Pcg32Simd, Pcg32x8};
 pub use philox::{Philox32, Philox32x4, Philox32x4x4};
-pub use sfc::{Sfc32, Sfc32x16};
+pub use sfc::{Sfc32, Sfc32x4, Sfc32x8, Sfc32x16};
 pub use splitmix::{SplitMix32, SplitMix32Simd, SplitMix32x16};
 pub use squares::{Squares32, Squares32Simd, Squares32x8};
 pub use threefry::{Threefry32x2, Threefry32x4};
