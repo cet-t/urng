@@ -172,7 +172,7 @@ This crate exports a C-compatible ABI generic interface. Each generator has corr
 - `_free`
 - `_next_uXXs` (bulk generation)
 - `_next_fXXs` (bulk generation)
-- `_rand_uXXs` (bulk generation)
+- `_rand_iXXs` (bulk generation)
 - `_rand_fXXs` (bulk generation)
 
 Example for `Mt19937`:
