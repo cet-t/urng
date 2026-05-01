@@ -58,26 +58,24 @@ Implement `Rng32`, output `u32` natively.
 
 Implement `Rng64`, output `u64` natively.
 
-| Struct            | Algorithm           | Period / State   | Description                                   |
-| ----------------- | ------------------- | ---------------- | --------------------------------------------- |
-| `Xoshiro256Pp`    | xoshiro256++        | $2^{256}-1$      | **Recommended** all-purpose generator.        |
-| `Xoshiro256Ss`    | xoshiro256\*\*      | $2^{256}-1$      | **Recommended** all-purpose generator.        |
-| `SplitMix64`      | SplitMix64          | $2^{64}$         | Fast, used for initializing other states.     |
-| `Sfc64`           | SFC64               | $2^{256}$ approx | Small Fast Chaotic PRNG.                      |
-| `Mt1993764`       | Mersenne Twister 64 | $2^{19937}-1$    | 64-bit variant of MT.                         |
-| `Sfmt1993764`     | SFMT 64             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.          |
-| `Philox64`        | Philox 2x64         | -                | Counter-based.                                |
-| `Xorshift64`      | Xorshift            | $2^{64}-1$       | Simple and fast.                              |
-| `Xoroshiro128Pp`¹ | xoroshiro128++      | $2^{128}-1$      | Fast generator with 128-bit state.            |
-| `Xoroshiro128Ss`¹ | xoroshiro128\*\*    | $2^{128}-1$      | Fast generator with 128-bit state.            |
-| `TwistedGFSR`     | TGFSR               | $2^{800}$ approx | Generalized Feedback Shift Register.          |
-| `Cet64`           | CET                 | $2^{64}$         | Custom experimental generator.                |
-| `Cet256`          | CET                 | $2^{256}$        | Custom experimental generator.                |
-| `Lcg64`           | LCG                 | $m$              | Linear Congruential Generator.                |
-| `Threefish256`    | Threefish-256       | -                | Counter-based, 256-bit block cipher PRNG.     |
-| `Biski64`         | Biski64             | $2^{64}$         | Extremely fast pseudo-random number generator |
-
-> ¹ In the `urng::rng64::xoroshiro` submodule (not re-exported at `urng::rng64`).
+| Struct           | Algorithm           | Period / State   | Description                                   |
+| ---------------- | ------------------- | ---------------- | --------------------------------------------- |
+| `Xoshiro256Pp`   | xoshiro256++        | $2^{256}-1$      | **Recommended** all-purpose generator.        |
+| `Xoshiro256Ss`   | xoshiro256\*\*      | $2^{256}-1$      | **Recommended** all-purpose generator.        |
+| `SplitMix64`     | SplitMix64          | $2^{64}$         | Fast, used for initializing other states.     |
+| `Sfc64`          | SFC64               | $2^{256}$ approx | Small Fast Chaotic PRNG.                      |
+| `Mt1993764`      | Mersenne Twister 64 | $2^{19937}-1$    | 64-bit variant of MT.                         |
+| `Sfmt1993764`    | SFMT 64             | $2^{19937}-1$    | SIMD-oriented Fast Mersenne Twister.          |
+| `Philox64`       | Philox 2x64         | -                | Counter-based.                                |
+| `Xorshift64`     | Xorshift            | $2^{64}-1$       | Simple and fast.                              |
+| `Xoroshiro128Pp` | xoroshiro128++      | $2^{128}-1$      | Fast generator with 128-bit state.            |
+| `Xoroshiro128Ss` | xoroshiro128\*\*    | $2^{128}-1$      | Fast generator with 128-bit state.            |
+| `TwistedGFSR`    | TGFSR               | $2^{800}$ approx | Generalized Feedback Shift Register.          |
+| `Cet64`          | CET                 | $2^{64}$         | Custom experimental generator.                |
+| `Cet256`         | CET                 | $2^{256}$        | Custom experimental generator.                |
+| `Lcg64`          | LCG                 | $m$              | Linear Congruential Generator.                |
+| `Threefish256`   | Threefish-256       | -                | Counter-based, 256-bit block cipher PRNG.     |
+| `Biski64`        | Biski64             | $2^{64}$         | Extremely fast pseudo-random number generator |
 
 ### SIMD Generators
 
@@ -91,20 +89,20 @@ These generators do not implement `Rng32`/`Rng64` and instead expose a bulk-gene
 
 #### AVX-512 (`avx512f`)
 
-| Struct            | Algorithm          | Output   | Description                              |
-| ----------------- | ------------------ | -------- | ---------------------------------------- |
-| `Pcg32x8`         | PCG-XSH-RR x8      | 8×`u32`  | 8 independent PCG32 streams in parallel. |
-| `Philox32x4x4`    | Philox 4x32 x4     | 16×`u32` | Counter-based, 4 Philox4x32 streams.     |
-| `SplitMix32x16`   | SplitMix32 x16     | 16×`u32` | 16 independent SplitMix32 streams.       |
-| `Squares32x8`     | Squares x8         | 8×`u32`  | 8 counters processed in parallel.        |
-| `Xoshiro128Ppx16` | xoshiro128++ x16   | 16×`u32` | 16 independent xoshiro128++ streams.     |
-| `Xoshiro128Ssx16` | xoshiro128\*\* x16 | 16×`u32` | 16 independent xoshiro128\*\* streams.   |
-| `Jsf32x16`        | JSF32 x16          | 16×`u32` | 16 independent JSF32 streams.            |
-| `Sfc32x8`         | SFC32 x16          | 16×`u32` | 16 independent SFC64 streams.            |
-| `Xoshiro256Ssx2`  | xoshiro256\*\* x2  | 2×`u64`  | 2 independent xoshiro256\*\* streams.    |
-| `Sfc64x8`         | SFC64 x8           | 8×`u64`  | 8 independent SFC64 streams.             |
-| `Cet64x8`         | CET64 x8           | 8×`u64`  | 8 independent CET64 streams.             |
-| `Cet256x2`        | CET256 x2          | 2×`u64`  | 8 independent CET256 streams.            |
+| Struct            | Algorithm         | Output   | Description                              |
+| ----------------- | ----------------- | -------- | ---------------------------------------- |
+| `Pcg32x8`         | PCG-XSH-RR x8     | 8×`u32`  | 8 independent PCG32 streams in parallel. |
+| `Philox32x4x4`    | Philox 4x32 x4    | 16×`u32` | Counter-based, 4 Philox4x32 streams.     |
+| `SplitMix32x16`   | SplitMix32 x16    | 16×`u32` | 16 independent SplitMix32 streams.       |
+| `Squares32x8`     | Squares x8        | 8×`u32`  | 8 counters processed in parallel.        |
+| `Xoshiro128Ppx16` | xoshiro128++ x16  | 16×`u32` | 16 independent xoshiro128++ streams.     |
+| `Xoshiro128Ssx16` | xoshiro128 x16    | 16×`u32` | 16 independent xoshiro128\*\* streams.   |
+| `Jsf32x16`        | JSF32 x16         | 16×`u32` | 16 independent JSF32 streams.            |
+| `Sfc32x8`         | SFC32 x16         | 16×`u32` | 16 independent SFC64 streams.            |
+| `Xoshiro256Ssx2`  | xoshiro256\*\* x2 | 2×`u64`  | 2 independent xoshiro256\*\* streams.    |
+| `Sfc64x8`         | SFC64 x8          | 8×`u64`  | 8 independent SFC64 streams.             |
+| `Cet64x8`         | CET64 x8          | 8×`u64`  | 8 independent CET64 streams.             |
+| `Cet256x2`        | CET256 x2         | 2×`u64`  | 8 independent CET256 streams.            |
 
 ## Sampler
 

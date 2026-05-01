@@ -20,6 +20,8 @@ pub mod splitmix;
 pub mod squares;
 /// Threefry implementations.
 pub mod threefry;
+/// Xoroshiro implementations.
+pub mod xoroshiro;
 /// Xorshift and XORWOW implementations.
 pub mod xorshift;
 /// Xoshiro implementations.
@@ -38,6 +40,7 @@ pub use sfc::{Sfc32, Sfc32x4, Sfc32x8, Sfc32x16};
 pub use splitmix::{SplitMix32, SplitMix32Simd, SplitMix32x16};
 pub use squares::{Squares32, Squares32Simd, Squares32x8};
 pub use threefry::{Threefry32x2, Threefry32x4};
+pub use xoroshiro::{Xoroshiro64Ss, Xoroshiro64Ssx16};
 pub use xorshift::{Xorshift32, Xorshift128, Xorwow};
 pub use xoshiro::{Xoshiro128Pp, Xoshiro128Ppx16, Xoshiro128Ss, Xoshiro128Ssx16};
 

@@ -8,7 +8,7 @@ use urng::prelude::*;
 use urng::rng::{Rng32, Rng64};
 use urng::rng32::{
     Jsf32, Jsf32x16, Sfc32x4, Sfc32x8, Sfc32x16, Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253, Sfmt11213,
-    Sfmt44497, Sfmt86243, Sfmt132049, Sfmt216091,
+    Sfmt44497, Sfmt86243, Sfmt132049, Sfmt216091, Xoroshiro64Ssx16,
 };
 use urng::rng64::{Biski64, SplitMix64, Xorshift64};
 
@@ -438,6 +438,7 @@ fn build_suite() -> Result<Suite> {
     reg!(arr4f32 chi, monte, Sfc32x4);
     reg!(arr8f32 chi, monte, Sfc32x8);
     reg!(arr16f32 chi, monte, Sfc32x16);
+    reg!(arr16f32 chi, monte, Xoroshiro64Ssx16);
 
     // rng64  (nextu → u64 scalar, except Philox64 → [u64;2] and Threefish256 → [f64;4])
     reg!(s64 chi, monte, SplitMix64);

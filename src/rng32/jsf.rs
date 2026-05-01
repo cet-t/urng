@@ -24,12 +24,11 @@ impl Jsf32 {
     /// Creates a new `Jsf32` instance with the given seed.
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
-        let seed = seedgen.nextu();
         Self {
             a: 0xf1ea5eed,
-            b: seed,
-            c: seed,
-            d: seed,
+            b: seedgen.nextu(),
+            c: seedgen.nextu(),
+            d: seedgen.nextu(),
         }
     }
 }
@@ -68,8 +67,9 @@ pub struct Jsf32x16 {
 pub(crate) const JSF32X16: usize = 16;
 
 impl Jsf32x16 {
+    /// # Safety
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn new(seed: u32) -> Self {
+    pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         let mut sv = [[0u32; JSF32X16]; 3];
         for vals in sv.iter_mut() {
@@ -90,7 +90,7 @@ impl Jsf32x16 {
 
     #[inline]
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextu_vec(&mut self) -> __m512i {
+    pub(crate) fn nextu_vec(&mut self) -> __m512i {
         let e = _mm512_sub_epi32(self.a, _mm512_rol_epi32(self.b, 27));
         self.a = _mm512_xor_si512(self.b, _mm512_rol_epi32(self.c, 17));
         self.b = _mm512_add_epi32(self.c, self.d);
@@ -101,17 +101,17 @@ impl Jsf32x16 {
 
     #[inline]
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextf_vec_scaled(&mut self, scale: __m512) -> __m512 {
-        let v_u32 = unsafe { self.nextu_vec() };
+    pub(crate) fn nextf_vec_scaled(&mut self, scale: __m512) -> __m512 {
+        let v_u32 = self.nextu_vec();
         let v_f32 = _mm512_cvtepu32_ps(v_u32);
         _mm512_mul_ps(v_f32, scale)
     }
 
     #[inline]
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn randi_vec(&mut self, v_range: __m512i, v_min: __m512i) -> __m512i {
+    pub(crate) fn randi_vec(&mut self, v_range: __m512i, v_min: __m512i) -> __m512i {
         const MERGE_MASK: u16 = 0xAAAA;
-        let v_u32 = unsafe { self.nextu_vec() };
+        let v_u32 = self.nextu_vec();
         let prod_even = _mm512_mul_epu32(v_u32, v_range);
         let res_even = _mm512_srli_epi64(prod_even, 32);
         let v_u32_shifted = _mm512_srli_epi64(v_u32, 32);
@@ -122,8 +122,8 @@ impl Jsf32x16 {
 
     #[inline]
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn randf_vec(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
-        let v_u32 = unsafe { self.nextu_vec() };
+    pub(crate) fn randf_vec(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
+        let v_u32 = self.nextu_vec();
         let v_f32 = _mm512_cvtepu32_ps(v_u32);
         _mm512_add_ps(_mm512_mul_ps(v_f32, v_mult), v_min)
     }
@@ -137,6 +137,7 @@ impl Jsf32x16 {
         }
     }
 
+    #[inline(always)]
     pub fn nextf(&mut self) -> [f32; JSF32X16] {
         self.nextu().map(|x| x as f32 * FSCALE32)
     }
