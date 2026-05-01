@@ -314,14 +314,14 @@ unsafe fn xoshiro128ppx16_next_f32s_chunk(
 
     if aligned {
         while remaining >= XOSHIRO128X16_LANES {
-            let v = rng.nextf_vec_scaled(scale);
+            let v = rng.nextfv(scale);
             _mm512_stream_ps(out_ptr, v);
             out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
             remaining -= XOSHIRO128X16_LANES;
         }
     } else {
         while remaining >= XOSHIRO128X16_LANES {
-            let v = rng.nextf_vec_scaled(scale);
+            let v = rng.nextfv(scale);
             _mm512_storeu_ps(out_ptr, v);
             out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
             remaining -= XOSHIRO128X16_LANES;
@@ -330,7 +330,7 @@ unsafe fn xoshiro128ppx16_next_f32s_chunk(
 
     if remaining > 0 {
         let mut tmp = [0f32; XOSHIRO128X16_LANES];
-        let v = rng.nextf_vec_scaled(scale);
+        let v = rng.nextfv(scale);
         _mm512_storeu_ps(tmp.as_mut_ptr(), v);
         ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
     }
@@ -609,14 +609,14 @@ unsafe fn xoshiro128ssx16_next_f32s_chunk(
 
     if aligned {
         while remaining >= XOSHIRO128X16_LANES {
-            let v = rng.nextf_vec_scaled(scale);
+            let v = rng.nextfv(scale);
             _mm512_stream_ps(out_ptr, v);
             out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
             remaining -= XOSHIRO128X16_LANES;
         }
     } else {
         while remaining >= XOSHIRO128X16_LANES {
-            let v = rng.nextf_vec_scaled(scale);
+            let v = rng.nextfv(scale);
             _mm512_storeu_ps(out_ptr, v);
             out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
             remaining -= XOSHIRO128X16_LANES;
@@ -625,7 +625,7 @@ unsafe fn xoshiro128ssx16_next_f32s_chunk(
 
     if remaining > 0 {
         let mut tmp = [0f32; XOSHIRO128X16_LANES];
-        let v = rng.nextf_vec_scaled(scale);
+        let v = rng.nextfv(scale);
         _mm512_storeu_ps(tmp.as_mut_ptr(), v);
         ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
     }

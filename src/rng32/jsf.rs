@@ -101,7 +101,7 @@ impl Jsf32x16 {
 
     #[inline]
     #[target_feature(enable = "avx512f")]
-    pub(crate) fn nextf_vec_scaled(&mut self, scale: __m512) -> __m512 {
+    pub(crate) fn nextfv(&mut self, scale: __m512) -> __m512 {
         let v_u32 = self.nextu_vec();
         let v_f32 = _mm512_cvtepu32_ps(v_u32);
         _mm512_mul_ps(v_f32, scale)

@@ -241,10 +241,10 @@ unsafe fn jsf32x16_next_f32s_chunk(rng: &mut Jsf32x16, chunk: &mut [f32], scale:
 
     if aligned {
         while remaining >= UNROLL {
-            let v0 = rng.nextf_vec_scaled(scale);
-            let v1 = rng.nextf_vec_scaled(scale);
-            let v2 = rng.nextf_vec_scaled(scale);
-            let v3 = rng.nextf_vec_scaled(scale);
+            let v0 = rng.nextfv(scale);
+            let v1 = rng.nextfv(scale);
+            let v2 = rng.nextfv(scale);
+            let v3 = rng.nextfv(scale);
             _mm512_stream_ps(out_ptr, v0);
             _mm512_stream_ps(out_ptr.add(JSF32X16), v1);
             _mm512_stream_ps(out_ptr.add(JSF32X16 * 2), v2);
@@ -253,17 +253,17 @@ unsafe fn jsf32x16_next_f32s_chunk(rng: &mut Jsf32x16, chunk: &mut [f32], scale:
             remaining -= UNROLL;
         }
         while remaining >= JSF32X16 {
-            let v = rng.nextf_vec_scaled(scale);
+            let v = rng.nextfv(scale);
             _mm512_stream_ps(out_ptr, v);
             out_ptr = out_ptr.add(JSF32X16);
             remaining -= JSF32X16;
         }
     } else {
         while remaining >= UNROLL {
-            let v0 = rng.nextf_vec_scaled(scale);
-            let v1 = rng.nextf_vec_scaled(scale);
-            let v2 = rng.nextf_vec_scaled(scale);
-            let v3 = rng.nextf_vec_scaled(scale);
+            let v0 = rng.nextfv(scale);
+            let v1 = rng.nextfv(scale);
+            let v2 = rng.nextfv(scale);
+            let v3 = rng.nextfv(scale);
             _mm512_storeu_ps(out_ptr, v0);
             _mm512_storeu_ps(out_ptr.add(JSF32X16), v1);
             _mm512_storeu_ps(out_ptr.add(JSF32X16 * 2), v2);
@@ -272,7 +272,7 @@ unsafe fn jsf32x16_next_f32s_chunk(rng: &mut Jsf32x16, chunk: &mut [f32], scale:
             remaining -= UNROLL;
         }
         while remaining >= JSF32X16 {
-            let v = rng.nextf_vec_scaled(scale);
+            let v = rng.nextfv(scale);
             _mm512_storeu_ps(out_ptr, v);
             out_ptr = out_ptr.add(JSF32X16);
             remaining -= JSF32X16;
@@ -281,7 +281,7 @@ unsafe fn jsf32x16_next_f32s_chunk(rng: &mut Jsf32x16, chunk: &mut [f32], scale:
 
     if remaining > 0 {
         let mut tmp = [0f32; JSF32X16];
-        let v = rng.nextf_vec_scaled(scale);
+        let v = rng.nextfv(scale);
         _mm512_storeu_ps(tmp.as_mut_ptr(), v);
         ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
     }

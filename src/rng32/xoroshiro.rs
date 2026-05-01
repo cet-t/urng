@@ -34,7 +34,7 @@ impl Rng32 for Xoroshiro64Ss {
     }
 }
 
-const XOROSHIRO64SSX8: usize = 8;
+pub(crate) const XOROSHIRO64SSX8: usize = 8;
 
 #[cfg(target_arch = "x86_64")]
 #[repr(C, align(64))]
@@ -95,9 +95,36 @@ impl Xoroshiro64Ssx8 {
     pub fn nextu(&mut self) -> [u32; XOROSHIRO64SSX8] {
         unsafe { std::mem::transmute(self.nextuv()) }
     }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    pub(crate) fn nextfv(&mut self, scale: __m256) -> __m256 {
+        let v_f32 = _mm256_cvtepi32_ps(self.nextuv());
+        _mm256_mul_ps(v_f32, scale)
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    pub(crate) fn randiv(&mut self, v_range: __m256i, v_min: __m256i) -> __m256i {
+        let v = self.nextuv();
+        let res_even = _mm256_srli_epi64(_mm256_mul_epu32(v, v_range), 32);
+        let v_hi = _mm256_srli_epi64(v, 32);
+        let prod_odd = _mm256_slli_epi64(
+            _mm256_srli_epi64(_mm256_mul_epu32(v_hi, v_range), 32),
+            32,
+        );
+        _mm256_add_epi32(_mm256_or_si256(res_even, prod_odd), v_min)
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    pub(crate) fn randfv(&mut self, v_mult: __m256, v_min: __m256) -> __m256 {
+        let v_f32 = _mm256_cvtepi32_ps(self.nextuv());
+        _mm256_add_ps(_mm256_mul_ps(v_f32, v_mult), v_min)
+    }
 }
 
-const XOROSHIRO64SSX16: usize = 16;
+pub(crate) const XOROSHIRO64SSX16: usize = 16;
 
 #[cfg(target_arch = "x86_64")]
 #[repr(C, align(64))]
@@ -161,6 +188,31 @@ impl Xoroshiro64Ssx16 {
 
     pub fn nextf(&mut self) -> [f32; XOROSHIRO64SSX16] {
         self.nextu().map(|x| x as f32 * FSCALE32)
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx512f")]
+    pub(crate) fn nextfv(&mut self, scale: __m512) -> __m512 {
+        let v_f32 = _mm512_cvtepu32_ps(self.nextuv());
+        _mm512_mul_ps(v_f32, scale)
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx512f")]
+    pub(crate) fn randiv(&mut self, v_range: __m512i, v_min: __m512i) -> __m512i {
+        const MERGE_MASK: u16 = 0xAAAA;
+        let v = self.nextuv();
+        let res_even = _mm512_srli_epi64(_mm512_mul_epu32(v, v_range), 32);
+        let prod_odd = _mm512_mul_epu32(_mm512_srli_epi64(v, 32), v_range);
+        let merged = _mm512_mask_blend_epi32(MERGE_MASK, res_even, prod_odd);
+        _mm512_add_epi32(merged, v_min)
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx512f")]
+    pub(crate) fn randfv(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
+        let v_f32 = _mm512_cvtepu32_ps(self.nextuv());
+        _mm512_add_ps(_mm512_mul_ps(v_f32, v_mult), v_min)
     }
 }
 

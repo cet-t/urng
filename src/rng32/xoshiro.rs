@@ -203,7 +203,7 @@ impl Xoshiro128Ppx16 {
     /// Must only be called on a CPU that supports AVX-512F.
     #[inline]
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextf_vec_scaled(&mut self, scale: __m512) -> __m512 {
+    pub unsafe fn nextfv(&mut self, scale: __m512) -> __m512 {
         let v_u32 = unsafe { self.nextu_vec() };
         let v_f32 = _mm512_cvtepu32_ps(v_u32);
         _mm512_mul_ps(v_f32, scale)
@@ -262,7 +262,7 @@ impl Xoshiro128Ppx16 {
     #[target_feature(enable = "avx512f")]
     pub unsafe fn nextf(&mut self) -> [f32; 16] {
         let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
-        unsafe { std::mem::transmute(self.nextf_vec_scaled(scale)) }
+        unsafe { std::mem::transmute(self.nextfv(scale)) }
     }
 
     /// Generates 16 random `i32` values in the range [min, max].
@@ -376,7 +376,7 @@ impl Xoshiro128Ssx16 {
     /// Must only be called on a CPU that supports AVX-512F.
     #[inline]
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextf_vec_scaled(&mut self, scale: __m512) -> __m512 {
+    pub unsafe fn nextfv(&mut self, scale: __m512) -> __m512 {
         let v_u32 = unsafe { self.nextu_vec() };
         let v_f32 = _mm512_cvtepu32_ps(v_u32);
         _mm512_mul_ps(v_f32, scale)
@@ -435,7 +435,7 @@ impl Xoshiro128Ssx16 {
     #[target_feature(enable = "avx512f")]
     pub unsafe fn nextf(&mut self) -> [f32; 16] {
         let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
-        unsafe { std::mem::transmute(self.nextf_vec_scaled(scale)) }
+        unsafe { std::mem::transmute(self.nextfv(scale)) }
     }
 
     /// Generates 16 random `i32` values in the range [min, max].

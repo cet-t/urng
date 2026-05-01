@@ -1,8 +1,8 @@
 use std::time::Instant;
 use urng::rng::Rng32;
 use urng::rng32::{
-    Jsf32, Jsf32x16, Pcg32, Sfc32, Sfc32x4, Sfc32x8, Sfc32x16, SplitMix32, Xoshiro128Pp,
-    Xoshiro128Ppx16,
+    Jsf32, Jsf32x16, Pcg32, Sfc32, Sfc32x4, Sfc32x8, Sfc32x16, SplitMix32,
+    Xoroshiro64Ssx16, Xoshiro128Pp, Xoshiro128Ppx16,
 };
 
 const ITERS: u64 = 1_000_000_000;
@@ -53,7 +53,8 @@ fn main() {
     bench_arr!("Sfc32x8",          unsafe { Sfc32x8::new(1) },     8u64);
     bench_arr!("Sfc32x16",         unsafe { Sfc32x16::new(1) },    16u64);
     // Jsf32x16: new=safe (target_feature), nextu=safe (transmute)
-    bench_arr!("Jsf32x16",         unsafe { Jsf32x16::new(1) },    16u64);
+    bench_arr!("Jsf32x16",         unsafe { Jsf32x16::new(1) },        16u64);
+    bench_arr!("Xoroshiro64Ssx16", unsafe { Xoroshiro64Ssx16::new(1) }, 16u64);
 
     // Xoshiro128Ppx16: new=unsafe, nextu=unsafe
     {

@@ -148,10 +148,10 @@ unsafe fn sfc32x4_next_f32s_chunk(rng: &mut Sfc32x4, chunk: &mut [f32], scale: f
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
     while remaining >= SFC32X4_UNROLL {
-        let v0: [f32; SFC32X4] = bytemuck::cast(rng.nextfv_scaled(scale));
-        let v1: [f32; SFC32X4] = bytemuck::cast(rng.nextfv_scaled(scale));
-        let v2: [f32; SFC32X4] = bytemuck::cast(rng.nextfv_scaled(scale));
-        let v3: [f32; SFC32X4] = bytemuck::cast(rng.nextfv_scaled(scale));
+        let v0: [f32; SFC32X4] = bytemuck::cast(rng.nextfv(scale));
+        let v1: [f32; SFC32X4] = bytemuck::cast(rng.nextfv(scale));
+        let v2: [f32; SFC32X4] = bytemuck::cast(rng.nextfv(scale));
+        let v3: [f32; SFC32X4] = bytemuck::cast(rng.nextfv(scale));
         ptr::copy_nonoverlapping(v0.as_ptr(), out_ptr, SFC32X4);
         ptr::copy_nonoverlapping(v1.as_ptr(), out_ptr.add(SFC32X4), SFC32X4);
         ptr::copy_nonoverlapping(v2.as_ptr(), out_ptr.add(SFC32X4 * 2), SFC32X4);
@@ -160,13 +160,13 @@ unsafe fn sfc32x4_next_f32s_chunk(rng: &mut Sfc32x4, chunk: &mut [f32], scale: f
         remaining -= SFC32X4_UNROLL;
     }
     while remaining >= SFC32X4 {
-        let v: [f32; SFC32X4] = bytemuck::cast(rng.nextfv_scaled(scale));
+        let v: [f32; SFC32X4] = bytemuck::cast(rng.nextfv(scale));
         ptr::copy_nonoverlapping(v.as_ptr(), out_ptr, SFC32X4);
         out_ptr = out_ptr.add(SFC32X4);
         remaining -= SFC32X4;
     }
     if remaining > 0 {
-        let v: [f32; SFC32X4] = bytemuck::cast(rng.nextfv_scaled(scale));
+        let v: [f32; SFC32X4] = bytemuck::cast(rng.nextfv(scale));
         ptr::copy_nonoverlapping(v.as_ptr(), out_ptr, remaining);
     }
 }
@@ -422,29 +422,29 @@ unsafe fn sfc32x8_next_f32s_chunk(rng: &mut Sfc32x8, chunk: &mut [f32], scale: _
 
     if aligned {
         while remaining >= SFC32X8_UNROLL {
-            _mm256_stream_ps(out_ptr.add(SFC32X8 * 0), rng.nextfv_scaled(scale));
-            _mm256_stream_ps(out_ptr.add(SFC32X8 * 1), rng.nextfv_scaled(scale));
-            _mm256_stream_ps(out_ptr.add(SFC32X8 * 2), rng.nextfv_scaled(scale));
-            _mm256_stream_ps(out_ptr.add(SFC32X8 * 3), rng.nextfv_scaled(scale));
+            _mm256_stream_ps(out_ptr.add(SFC32X8 * 0), rng.nextfv(scale));
+            _mm256_stream_ps(out_ptr.add(SFC32X8 * 1), rng.nextfv(scale));
+            _mm256_stream_ps(out_ptr.add(SFC32X8 * 2), rng.nextfv(scale));
+            _mm256_stream_ps(out_ptr.add(SFC32X8 * 3), rng.nextfv(scale));
             out_ptr = out_ptr.add(SFC32X8_UNROLL);
             remaining -= SFC32X8_UNROLL;
         }
         while remaining >= SFC32X8 {
-            _mm256_stream_ps(out_ptr, rng.nextfv_scaled(scale));
+            _mm256_stream_ps(out_ptr, rng.nextfv(scale));
             out_ptr = out_ptr.add(SFC32X8);
             remaining -= SFC32X8;
         }
     } else {
         while remaining >= SFC32X8_UNROLL {
-            _mm256_storeu_ps(out_ptr.add(SFC32X8 * 0), rng.nextfv_scaled(scale));
-            _mm256_storeu_ps(out_ptr.add(SFC32X8 * 1), rng.nextfv_scaled(scale));
-            _mm256_storeu_ps(out_ptr.add(SFC32X8 * 2), rng.nextfv_scaled(scale));
-            _mm256_storeu_ps(out_ptr.add(SFC32X8 * 3), rng.nextfv_scaled(scale));
+            _mm256_storeu_ps(out_ptr.add(SFC32X8 * 0), rng.nextfv(scale));
+            _mm256_storeu_ps(out_ptr.add(SFC32X8 * 1), rng.nextfv(scale));
+            _mm256_storeu_ps(out_ptr.add(SFC32X8 * 2), rng.nextfv(scale));
+            _mm256_storeu_ps(out_ptr.add(SFC32X8 * 3), rng.nextfv(scale));
             out_ptr = out_ptr.add(SFC32X8_UNROLL);
             remaining -= SFC32X8_UNROLL;
         }
         while remaining >= SFC32X8 {
-            _mm256_storeu_ps(out_ptr, rng.nextfv_scaled(scale));
+            _mm256_storeu_ps(out_ptr, rng.nextfv(scale));
             out_ptr = out_ptr.add(SFC32X8);
             remaining -= SFC32X8;
         }
@@ -452,7 +452,7 @@ unsafe fn sfc32x8_next_f32s_chunk(rng: &mut Sfc32x8, chunk: &mut [f32], scale: _
 
     if remaining > 0 {
         let mut tmp = [0f32; SFC32X8];
-        _mm256_storeu_ps(tmp.as_mut_ptr(), rng.nextfv_scaled(scale));
+        _mm256_storeu_ps(tmp.as_mut_ptr(), rng.nextfv(scale));
         ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
     }
 }
@@ -786,10 +786,10 @@ unsafe fn sfc32x16_next_f32s_chunk(rng: &mut Sfc32x16, chunk: &mut [f32], scale:
 
     if aligned {
         while remaining >= SFC32X16_UNROLL {
-            let v0 = rng.nextfv_scaled(scale);
-            let v1 = rng.nextfv_scaled(scale);
-            let v2 = rng.nextfv_scaled(scale);
-            let v3 = rng.nextfv_scaled(scale);
+            let v0 = rng.nextfv(scale);
+            let v1 = rng.nextfv(scale);
+            let v2 = rng.nextfv(scale);
+            let v3 = rng.nextfv(scale);
             _mm512_stream_ps(out_ptr, v0);
             _mm512_stream_ps(out_ptr.add(SFC32X16), v1);
             _mm512_stream_ps(out_ptr.add(SFC32X16 * 2), v2);
@@ -798,17 +798,17 @@ unsafe fn sfc32x16_next_f32s_chunk(rng: &mut Sfc32x16, chunk: &mut [f32], scale:
             remaining -= SFC32X16_UNROLL;
         }
         while remaining >= SFC32X16 {
-            let v = rng.nextfv_scaled(scale);
+            let v = rng.nextfv(scale);
             _mm512_stream_ps(out_ptr, v);
             out_ptr = out_ptr.add(SFC32X16);
             remaining -= SFC32X16;
         }
     } else {
         while remaining >= SFC32X16_UNROLL {
-            let v0 = rng.nextfv_scaled(scale);
-            let v1 = rng.nextfv_scaled(scale);
-            let v2 = rng.nextfv_scaled(scale);
-            let v3 = rng.nextfv_scaled(scale);
+            let v0 = rng.nextfv(scale);
+            let v1 = rng.nextfv(scale);
+            let v2 = rng.nextfv(scale);
+            let v3 = rng.nextfv(scale);
             _mm512_storeu_ps(out_ptr, v0);
             _mm512_storeu_ps(out_ptr.add(SFC32X16), v1);
             _mm512_storeu_ps(out_ptr.add(SFC32X16 * 2), v2);
@@ -817,7 +817,7 @@ unsafe fn sfc32x16_next_f32s_chunk(rng: &mut Sfc32x16, chunk: &mut [f32], scale:
             remaining -= SFC32X16_UNROLL;
         }
         while remaining >= SFC32X16 {
-            let v = rng.nextfv_scaled(scale);
+            let v = rng.nextfv(scale);
             _mm512_storeu_ps(out_ptr, v);
             out_ptr = out_ptr.add(SFC32X16);
             remaining -= SFC32X16;
@@ -826,7 +826,7 @@ unsafe fn sfc32x16_next_f32s_chunk(rng: &mut Sfc32x16, chunk: &mut [f32], scale:
 
     if remaining > 0 {
         let mut tmp = [0f32; SFC32X16];
-        let v = rng.nextfv_scaled(scale);
+        let v = rng.nextfv(scale);
         _mm512_storeu_ps(tmp.as_mut_ptr(), v);
         ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
     }

@@ -96,7 +96,7 @@ impl Sfc32x4 {
     }
 
     #[inline(always)]
-    pub(crate) fn nextfv_scaled(&mut self, scale: f32x4) -> f32x4 {
+    pub(crate) fn nextfv(&mut self, scale: f32x4) -> f32x4 {
         let arr: [u32; 4] = bytemuck::cast(self.nextuv());
         f32x4::from([arr[0] as f32, arr[1] as f32, arr[2] as f32, arr[3] as f32]) * scale
     }
@@ -184,7 +184,7 @@ impl Sfc32x8 {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    pub(crate) unsafe fn nextfv_scaled(&mut self, scale: __m256) -> __m256 {
+    pub(crate) unsafe fn nextfv(&mut self, scale: __m256) -> __m256 {
         let v_f32 = _mm256_cvtepi32_ps(unsafe { self.nextuv() });
         _mm256_mul_ps(v_f32, scale)
     }
@@ -273,7 +273,7 @@ impl Sfc32x16 {
 
     #[inline]
     #[target_feature(enable = "avx512f")]
-    pub(crate) unsafe fn nextfv_scaled(&mut self, scale: __m512) -> __m512 {
+    pub(crate) unsafe fn nextfv(&mut self, scale: __m512) -> __m512 {
         let v_u32 = unsafe { self.nextuv() };
         let v_f32 = _mm512_cvtepu32_ps(v_u32);
         _mm512_mul_ps(v_f32, scale)

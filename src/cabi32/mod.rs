@@ -18,6 +18,8 @@ pub mod splitmix;
 pub mod squares;
 /// Threefry C ABI exports.
 pub mod threefry;
+/// Xoroshiro C ABI exports.
+pub mod xoroshiro;
 /// Xorshift and XORWOW C ABI exports.
 pub mod xorshift;
 /// Xoshiro C ABI exports.
@@ -32,5 +34,6 @@ pub use sfc::*;
 pub use splitmix::*;
 pub use squares::*;
 pub use threefry::*;
+pub use xoroshiro::*;
 pub use xorshift::*;
 pub use xoshiro::*;
