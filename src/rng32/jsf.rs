@@ -130,11 +130,7 @@ impl Jsf32x16 {
 
     #[inline(always)]
     pub fn nextu(&mut self) -> [u32; JSF32X16] {
-        unsafe {
-            let mut result = [0u32; JSF32X16];
-            _mm512_storeu_si512(result.as_mut_ptr() as *mut __m512i, self.nextu_vec());
-            result
-        }
+        unsafe { std::mem::transmute(self.nextu_vec()) }
     }
 
     #[inline(always)]

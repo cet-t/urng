@@ -106,9 +106,7 @@ impl SplitMix32x16 {
             self.state,
             _mm512_set1_epi32(SPLITMIX32_GAMMA.wrapping_mul(SPLITMIX32x16 as u32) as i32),
         );
-        let mut out = [0u32; SPLITMIX32x16];
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr() as *mut _, v) };
-        out
+        unsafe { std::mem::transmute(v) }
     }
 }
 

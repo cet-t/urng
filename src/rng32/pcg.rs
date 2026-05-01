@@ -110,9 +110,7 @@ impl Pcg32x8 {
         let mult_hi = _mm512_set1_epi64(0x5851F42D_i64);
         let mask32 = _mm512_set1_epi64(0xFFFFFFFF_i64);
         let out256 = Self::step_u32(&mut self.state, self.inc, mult_lo, mult_hi, mask32);
-        let mut out = [0u32; PCG32X8_LANE];
-        _mm256_storeu_si256(out.as_mut_ptr() as *mut __m256i, out256);
-        out
+        std::mem::transmute(out256)
     }
 
     #[cfg(target_arch = "x86_64")]

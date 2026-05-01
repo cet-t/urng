@@ -3,7 +3,7 @@ use std::{
         __m512, __m512i, _mm512_add_epi32, _mm512_add_ps, _mm512_cvtepu32_ps, _mm512_loadu_si512,
         _mm512_mask_blend_epi32, _mm512_mul_epu32, _mm512_mul_ps, _mm512_or_si512,
         _mm512_set1_epi32, _mm512_set1_epi64, _mm512_set1_ps, _mm512_slli_epi32, _mm512_srli_epi32,
-        _mm512_srli_epi64, _mm512_storeu_ps, _mm512_storeu_si512, _mm512_xor_epi32,
+        _mm512_srli_epi64, _mm512_storeu_ps, _mm512_xor_epi32,
     },
     num::Wrapping,
 };
@@ -251,9 +251,7 @@ impl Xoshiro128Ppx16 {
     #[inline]
     #[target_feature(enable = "avx512f")]
     pub unsafe fn nextu(&mut self) -> [u32; 16] {
-        let mut out = [0u32; 16];
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr() as *mut _, self.nextu_vec()) };
-        out
+        unsafe { std::mem::transmute(self.nextu_vec()) }
     }
 
     /// Generates 16 random `f32` values in the range [0, 1).
@@ -264,9 +262,7 @@ impl Xoshiro128Ppx16 {
     #[target_feature(enable = "avx512f")]
     pub unsafe fn nextf(&mut self) -> [f32; 16] {
         let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
-        let mut out = [0f32; 16];
-        unsafe { _mm512_storeu_ps(out.as_mut_ptr(), self.nextf_vec_scaled(scale)) };
-        out
+        unsafe { std::mem::transmute(self.nextf_vec_scaled(scale)) }
     }
 
     /// Generates 16 random `i32` values in the range [min, max].
@@ -278,9 +274,7 @@ impl Xoshiro128Ppx16 {
     pub unsafe fn randi(&mut self, min: i32, max: i32) -> [i32; 16] {
         let v_range = _mm512_set1_epi64((max as i64 - min as i64 + 1) as i64);
         let v_min = _mm512_set1_epi32(min);
-        let mut out = [0i32; 16];
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr() as *mut _, self.randi_vec(v_range, v_min)) };
-        out
+        unsafe { std::mem::transmute(self.randi_vec(v_range, v_min)) }
     }
 
     /// Generates 16 random `f32` values in the range [min, max).
@@ -292,9 +286,7 @@ impl Xoshiro128Ppx16 {
     pub unsafe fn randf(&mut self, min: f32, max: f32) -> [f32; 16] {
         let v_mult = _mm512_set1_ps((max - min) * (1.0 / (u32::MAX as f32 + 1.0)));
         let v_min = _mm512_set1_ps(min);
-        let mut out = [0f32; 16];
-        unsafe { _mm512_storeu_ps(out.as_mut_ptr(), self.randf_vec(v_mult, v_min)) };
-        out
+        unsafe { std::mem::transmute(self.randf_vec(v_mult, v_min)) }
     }
 }
 
@@ -432,9 +424,7 @@ impl Xoshiro128Ssx16 {
     #[inline]
     #[target_feature(enable = "avx512f")]
     pub unsafe fn nextu(&mut self) -> [u32; 16] {
-        let mut out = [0u32; 16];
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr() as *mut _, self.nextu_vec()) };
-        out
+        unsafe { std::mem::transmute(self.nextu_vec()) }
     }
 
     /// Generates 16 random `f32` values in the range [0, 1).
@@ -445,9 +435,7 @@ impl Xoshiro128Ssx16 {
     #[target_feature(enable = "avx512f")]
     pub unsafe fn nextf(&mut self) -> [f32; 16] {
         let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
-        let mut out = [0f32; 16];
-        unsafe { _mm512_storeu_ps(out.as_mut_ptr(), self.nextf_vec_scaled(scale)) };
-        out
+        unsafe { std::mem::transmute(self.nextf_vec_scaled(scale)) }
     }
 
     /// Generates 16 random `i32` values in the range [min, max].
@@ -459,9 +447,7 @@ impl Xoshiro128Ssx16 {
     pub unsafe fn randi(&mut self, min: i32, max: i32) -> [i32; 16] {
         let v_range = _mm512_set1_epi64((max as i64 - min as i64 + 1) as i64);
         let v_min = _mm512_set1_epi32(min);
-        let mut out = [0i32; 16];
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr() as *mut _, self.randi_vec(v_range, v_min)) };
-        out
+        unsafe { std::mem::transmute(self.randi_vec(v_range, v_min)) }
     }
 
     /// Generates 16 random `f32` values in the range [min, max).

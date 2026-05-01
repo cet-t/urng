@@ -209,11 +209,7 @@ impl Sfc32x8 {
 
     #[inline(always)]
     pub fn nextu(&mut self) -> [u32; SFC32X8] {
-        unsafe {
-            let mut result = [0u32; SFC32X8];
-            _mm256_storeu_si256(result.as_mut_ptr() as *mut _, self.nextuv());
-            result
-        }
+        unsafe { std::mem::transmute(self.nextuv()) }
     }
 
     #[inline(always)]
@@ -306,11 +302,7 @@ impl Sfc32x16 {
 
     #[inline(always)]
     pub fn nextu(&mut self) -> [u32; SFC32X16] {
-        unsafe {
-            let mut result = [0u32; SFC32X16];
-            _mm512_storeu_si512(result.as_mut_ptr() as *mut __m512i, self.nextuv());
-            result
-        }
+        unsafe { std::mem::transmute(self.nextuv()) }
     }
 
     pub fn nextf(&mut self) -> [f32; SFC32X16] {

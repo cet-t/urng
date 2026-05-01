@@ -240,11 +240,7 @@ impl Philox32x4x4 {
         step!();
         step!(fin);
 
-        unsafe {
-            let mut out = [0u32; PHILOX32x16];
-            _mm512_storeu_si512(out.as_mut_ptr() as *mut _, x);
-            out
-        }
+        unsafe { std::mem::transmute(x) }
     }
 
     /// Generates the next block of random numbers.

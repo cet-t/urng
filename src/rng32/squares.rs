@@ -159,9 +159,7 @@ impl Squares32x8 {
         unsafe {
             let v = Self::compute(self.c, self.k);
             self.c = _mm512_add_epi64(self.c, _mm512_set1_epi64(8));
-            let mut out = [0u32; SQUARES32x8];
-            _mm256_storeu_si256(out.as_mut_ptr() as *mut _, v);
-            out
+            std::mem::transmute(v)
         }
     }
 

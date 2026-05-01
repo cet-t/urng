@@ -24,7 +24,7 @@ impl Rng32 for Xoroshiro64Ss {
     fn nextu(&mut self) -> u32 {
         let s0 = self.s[0];
         let mut s1 = self.s[1];
-        let result = (s0 * 0x9E3779BB).rotate_left(5) * 5;
+        let result = s0.wrapping_mul(0x9E3779BB).rotate_left(5).wrapping_mul(5);
 
         s1 ^= s0;
         self.s[0] = s0.rotate_left(26) ^ s1 ^ (s1 << 9);
@@ -93,11 +93,7 @@ impl Xoroshiro64Ssx8 {
 
     #[inline(always)]
     pub fn nextu(&mut self) -> [u32; XOROSHIRO64SSX8] {
-        let mut result = [0u32; XOROSHIRO64SSX8];
-        unsafe {
-            _mm256_storeu_si256(result.as_mut_ptr() as *mut __m256i, self.nextuv());
-        }
-        result
+        unsafe { std::mem::transmute(self.nextuv()) }
     }
 }
 
@@ -160,11 +156,7 @@ impl Xoroshiro64Ssx16 {
 
     #[inline(always)]
     pub fn nextu(&mut self) -> [u32; XOROSHIRO64SSX16] {
-        let mut result = [0u32; XOROSHIRO64SSX16];
-        unsafe {
-            _mm512_storeu_si512(result.as_mut_ptr() as *mut __m512i, self.nextuv());
-        }
-        result
+        unsafe { std::mem::transmute(self.nextuv()) }
     }
 
     pub fn nextf(&mut self) -> [f32; XOROSHIRO64SSX16] {
