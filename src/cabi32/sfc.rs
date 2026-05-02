@@ -375,7 +375,7 @@ unsafe fn sfc32x8_next_u32s_chunk(rng: &mut Sfc32x8, chunk: &mut [u32]) {
 
     if aligned {
         while remaining >= SFC32X8_UNROLL {
-            _mm256_stream_si256(out_ptr.add(SFC32X8 * 0) as *mut _, rng.nextuv());
+            _mm256_stream_si256(out_ptr as *mut _, rng.nextuv());
             _mm256_stream_si256(out_ptr.add(SFC32X8 * 1) as *mut _, rng.nextuv());
             _mm256_stream_si256(out_ptr.add(SFC32X8 * 2) as *mut _, rng.nextuv());
             _mm256_stream_si256(out_ptr.add(SFC32X8 * 3) as *mut _, rng.nextuv());
@@ -390,7 +390,7 @@ unsafe fn sfc32x8_next_u32s_chunk(rng: &mut Sfc32x8, chunk: &mut [u32]) {
         }
     } else {
         while remaining >= SFC32X8_UNROLL {
-            _mm256_storeu_si256(out_ptr.add(SFC32X8 * 0) as *mut _, rng.nextuv());
+            _mm256_storeu_si256(out_ptr as *mut _, rng.nextuv());
             _mm256_storeu_si256(out_ptr.add(SFC32X8 * 1) as *mut _, rng.nextuv());
             _mm256_storeu_si256(out_ptr.add(SFC32X8 * 2) as *mut _, rng.nextuv());
             _mm256_storeu_si256(out_ptr.add(SFC32X8 * 3) as *mut _, rng.nextuv());
@@ -422,7 +422,7 @@ unsafe fn sfc32x8_next_f32s_chunk(rng: &mut Sfc32x8, chunk: &mut [f32], scale: _
 
     if aligned {
         while remaining >= SFC32X8_UNROLL {
-            _mm256_stream_ps(out_ptr.add(SFC32X8 * 0), rng.nextfv(scale));
+            _mm256_stream_ps(out_ptr, rng.nextfv(scale));
             _mm256_stream_ps(out_ptr.add(SFC32X8 * 1), rng.nextfv(scale));
             _mm256_stream_ps(out_ptr.add(SFC32X8 * 2), rng.nextfv(scale));
             _mm256_stream_ps(out_ptr.add(SFC32X8 * 3), rng.nextfv(scale));
@@ -436,7 +436,7 @@ unsafe fn sfc32x8_next_f32s_chunk(rng: &mut Sfc32x8, chunk: &mut [f32], scale: _
         }
     } else {
         while remaining >= SFC32X8_UNROLL {
-            _mm256_storeu_ps(out_ptr.add(SFC32X8 * 0), rng.nextfv(scale));
+            _mm256_storeu_ps(out_ptr, rng.nextfv(scale));
             _mm256_storeu_ps(out_ptr.add(SFC32X8 * 1), rng.nextfv(scale));
             _mm256_storeu_ps(out_ptr.add(SFC32X8 * 2), rng.nextfv(scale));
             _mm256_storeu_ps(out_ptr.add(SFC32X8 * 3), rng.nextfv(scale));
@@ -473,7 +473,7 @@ unsafe fn sfc32x8_rand_i32s_chunk(
     if aligned {
         while remaining >= SFC32X8_UNROLL {
             _mm256_stream_si256(
-                out_ptr.add(SFC32X8 * 0) as *mut _,
+                out_ptr as *mut _,
                 rng.randiv(v_range, v_min),
             );
             _mm256_stream_si256(
@@ -499,7 +499,7 @@ unsafe fn sfc32x8_rand_i32s_chunk(
     } else {
         while remaining >= SFC32X8_UNROLL {
             _mm256_storeu_si256(
-                out_ptr.add(SFC32X8 * 0) as *mut _,
+                out_ptr as *mut _,
                 rng.randiv(v_range, v_min),
             );
             _mm256_storeu_si256(
@@ -546,7 +546,7 @@ unsafe fn sfc32x8_rand_f32s_chunk(
 
     if aligned {
         while remaining >= SFC32X8_UNROLL {
-            _mm256_stream_ps(out_ptr.add(SFC32X8 * 0), rng.randfv(v_mult, v_min));
+            _mm256_stream_ps(out_ptr, rng.randfv(v_mult, v_min));
             _mm256_stream_ps(out_ptr.add(SFC32X8 * 1), rng.randfv(v_mult, v_min));
             _mm256_stream_ps(out_ptr.add(SFC32X8 * 2), rng.randfv(v_mult, v_min));
             _mm256_stream_ps(out_ptr.add(SFC32X8 * 3), rng.randfv(v_mult, v_min));
@@ -560,7 +560,7 @@ unsafe fn sfc32x8_rand_f32s_chunk(
         }
     } else {
         while remaining >= SFC32X8_UNROLL {
-            _mm256_storeu_ps(out_ptr.add(SFC32X8 * 0), rng.randfv(v_mult, v_min));
+            _mm256_storeu_ps(out_ptr, rng.randfv(v_mult, v_min));
             _mm256_storeu_ps(out_ptr.add(SFC32X8 * 1), rng.randfv(v_mult, v_min));
             _mm256_storeu_ps(out_ptr.add(SFC32X8 * 2), rng.randfv(v_mult, v_min));
             _mm256_storeu_ps(out_ptr.add(SFC32X8 * 3), rng.randfv(v_mult, v_min));

@@ -189,7 +189,7 @@ unsafe fn xoroshiro64ssx8_next_u32s_chunk(rng: &mut Xoroshiro64Ssx8, chunk: &mut
 
     if aligned {
         while remaining >= XOROSHIRO64SSX8_UNROLL {
-            _mm256_stream_si256(out_ptr.add(XOROSHIRO64SSX8 * 0) as *mut _, rng.nextuv());
+            _mm256_stream_si256(out_ptr as *mut _, rng.nextuv());
             _mm256_stream_si256(out_ptr.add(XOROSHIRO64SSX8 * 1) as *mut _, rng.nextuv());
             _mm256_stream_si256(out_ptr.add(XOROSHIRO64SSX8 * 2) as *mut _, rng.nextuv());
             _mm256_stream_si256(out_ptr.add(XOROSHIRO64SSX8 * 3) as *mut _, rng.nextuv());
@@ -203,7 +203,7 @@ unsafe fn xoroshiro64ssx8_next_u32s_chunk(rng: &mut Xoroshiro64Ssx8, chunk: &mut
         }
     } else {
         while remaining >= XOROSHIRO64SSX8_UNROLL {
-            _mm256_storeu_si256(out_ptr.add(XOROSHIRO64SSX8 * 0) as *mut _, rng.nextuv());
+            _mm256_storeu_si256(out_ptr as *mut _, rng.nextuv());
             _mm256_storeu_si256(out_ptr.add(XOROSHIRO64SSX8 * 1) as *mut _, rng.nextuv());
             _mm256_storeu_si256(out_ptr.add(XOROSHIRO64SSX8 * 2) as *mut _, rng.nextuv());
             _mm256_storeu_si256(out_ptr.add(XOROSHIRO64SSX8 * 3) as *mut _, rng.nextuv());
@@ -233,7 +233,7 @@ unsafe fn xoroshiro64ssx8_next_f32s_chunk(rng: &mut Xoroshiro64Ssx8, chunk: &mut
 
     if aligned {
         while remaining >= XOROSHIRO64SSX8_UNROLL {
-            _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8 * 0), rng.nextfv(scale));
+            _mm256_stream_ps(out_ptr, rng.nextfv(scale));
             _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8 * 1), rng.nextfv(scale));
             _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8 * 2), rng.nextfv(scale));
             _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8 * 3), rng.nextfv(scale));
@@ -247,7 +247,7 @@ unsafe fn xoroshiro64ssx8_next_f32s_chunk(rng: &mut Xoroshiro64Ssx8, chunk: &mut
         }
     } else {
         while remaining >= XOROSHIRO64SSX8_UNROLL {
-            _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8 * 0), rng.nextfv(scale));
+            _mm256_storeu_ps(out_ptr, rng.nextfv(scale));
             _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8 * 1), rng.nextfv(scale));
             _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8 * 2), rng.nextfv(scale));
             _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8 * 3), rng.nextfv(scale));
@@ -282,7 +282,7 @@ unsafe fn xoroshiro64ssx8_rand_i32s_chunk(
 
     if aligned {
         while remaining >= XOROSHIRO64SSX8_UNROLL {
-            _mm256_stream_si256(out_ptr.add(XOROSHIRO64SSX8 * 0) as *mut _, rng.randiv(v_range, v_min));
+            _mm256_stream_si256(out_ptr as *mut _, rng.randiv(v_range, v_min));
             _mm256_stream_si256(out_ptr.add(XOROSHIRO64SSX8 * 1) as *mut _, rng.randiv(v_range, v_min));
             _mm256_stream_si256(out_ptr.add(XOROSHIRO64SSX8 * 2) as *mut _, rng.randiv(v_range, v_min));
             _mm256_stream_si256(out_ptr.add(XOROSHIRO64SSX8 * 3) as *mut _, rng.randiv(v_range, v_min));
@@ -296,7 +296,7 @@ unsafe fn xoroshiro64ssx8_rand_i32s_chunk(
         }
     } else {
         while remaining >= XOROSHIRO64SSX8_UNROLL {
-            _mm256_storeu_si256(out_ptr.add(XOROSHIRO64SSX8 * 0) as *mut _, rng.randiv(v_range, v_min));
+            _mm256_storeu_si256(out_ptr as *mut _, rng.randiv(v_range, v_min));
             _mm256_storeu_si256(out_ptr.add(XOROSHIRO64SSX8 * 1) as *mut _, rng.randiv(v_range, v_min));
             _mm256_storeu_si256(out_ptr.add(XOROSHIRO64SSX8 * 2) as *mut _, rng.randiv(v_range, v_min));
             _mm256_storeu_si256(out_ptr.add(XOROSHIRO64SSX8 * 3) as *mut _, rng.randiv(v_range, v_min));
@@ -331,7 +331,7 @@ unsafe fn xoroshiro64ssx8_rand_f32s_chunk(
 
     if aligned {
         while remaining >= XOROSHIRO64SSX8_UNROLL {
-            _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8 * 0), rng.randfv(v_mult, v_min));
+            _mm256_stream_ps(out_ptr, rng.randfv(v_mult, v_min));
             _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8 * 1), rng.randfv(v_mult, v_min));
             _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8 * 2), rng.randfv(v_mult, v_min));
             _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8 * 3), rng.randfv(v_mult, v_min));
@@ -345,7 +345,7 @@ unsafe fn xoroshiro64ssx8_rand_f32s_chunk(
         }
     } else {
         while remaining >= XOROSHIRO64SSX8_UNROLL {
-            _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8 * 0), rng.randfv(v_mult, v_min));
+            _mm256_storeu_ps(out_ptr, rng.randfv(v_mult, v_min));
             _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8 * 1), rng.randfv(v_mult, v_min));
             _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8 * 2), rng.randfv(v_mult, v_min));
             _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8 * 3), rng.randfv(v_mult, v_min));
@@ -498,7 +498,7 @@ unsafe fn xoroshiro64ssx16_next_u32s_chunk(rng: &mut Xoroshiro64Ssx16, chunk: &m
 
     if aligned {
         while remaining >= XOROSHIRO64SSX16_UNROLL {
-            _mm512_stream_si512(out_ptr.add(XOROSHIRO64SSX16 * 0) as *mut _, rng.nextuv());
+            _mm512_stream_si512(out_ptr as *mut _, rng.nextuv());
             _mm512_stream_si512(out_ptr.add(XOROSHIRO64SSX16 * 1) as *mut _, rng.nextuv());
             _mm512_stream_si512(out_ptr.add(XOROSHIRO64SSX16 * 2) as *mut _, rng.nextuv());
             _mm512_stream_si512(out_ptr.add(XOROSHIRO64SSX16 * 3) as *mut _, rng.nextuv());
@@ -512,7 +512,7 @@ unsafe fn xoroshiro64ssx16_next_u32s_chunk(rng: &mut Xoroshiro64Ssx16, chunk: &m
         }
     } else {
         while remaining >= XOROSHIRO64SSX16_UNROLL {
-            _mm512_storeu_si512(out_ptr.add(XOROSHIRO64SSX16 * 0) as *mut _, rng.nextuv());
+            _mm512_storeu_si512(out_ptr as *mut _, rng.nextuv());
             _mm512_storeu_si512(out_ptr.add(XOROSHIRO64SSX16 * 1) as *mut _, rng.nextuv());
             _mm512_storeu_si512(out_ptr.add(XOROSHIRO64SSX16 * 2) as *mut _, rng.nextuv());
             _mm512_storeu_si512(out_ptr.add(XOROSHIRO64SSX16 * 3) as *mut _, rng.nextuv());
@@ -542,7 +542,7 @@ unsafe fn xoroshiro64ssx16_next_f32s_chunk(rng: &mut Xoroshiro64Ssx16, chunk: &m
 
     if aligned {
         while remaining >= XOROSHIRO64SSX16_UNROLL {
-            _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16 * 0), rng.nextfv(scale));
+            _mm512_stream_ps(out_ptr, rng.nextfv(scale));
             _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16 * 1), rng.nextfv(scale));
             _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16 * 2), rng.nextfv(scale));
             _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16 * 3), rng.nextfv(scale));
@@ -556,7 +556,7 @@ unsafe fn xoroshiro64ssx16_next_f32s_chunk(rng: &mut Xoroshiro64Ssx16, chunk: &m
         }
     } else {
         while remaining >= XOROSHIRO64SSX16_UNROLL {
-            _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16 * 0), rng.nextfv(scale));
+            _mm512_storeu_ps(out_ptr, rng.nextfv(scale));
             _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16 * 1), rng.nextfv(scale));
             _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16 * 2), rng.nextfv(scale));
             _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16 * 3), rng.nextfv(scale));
@@ -591,7 +591,7 @@ unsafe fn xoroshiro64ssx16_rand_i32s_chunk(
 
     if aligned {
         while remaining >= XOROSHIRO64SSX16_UNROLL {
-            _mm512_stream_si512(out_ptr.add(XOROSHIRO64SSX16 * 0) as *mut _, rng.randiv(v_range, v_min));
+            _mm512_stream_si512(out_ptr as *mut _, rng.randiv(v_range, v_min));
             _mm512_stream_si512(out_ptr.add(XOROSHIRO64SSX16 * 1) as *mut _, rng.randiv(v_range, v_min));
             _mm512_stream_si512(out_ptr.add(XOROSHIRO64SSX16 * 2) as *mut _, rng.randiv(v_range, v_min));
             _mm512_stream_si512(out_ptr.add(XOROSHIRO64SSX16 * 3) as *mut _, rng.randiv(v_range, v_min));
@@ -605,7 +605,7 @@ unsafe fn xoroshiro64ssx16_rand_i32s_chunk(
         }
     } else {
         while remaining >= XOROSHIRO64SSX16_UNROLL {
-            _mm512_storeu_si512(out_ptr.add(XOROSHIRO64SSX16 * 0) as *mut _, rng.randiv(v_range, v_min));
+            _mm512_storeu_si512(out_ptr as *mut _, rng.randiv(v_range, v_min));
             _mm512_storeu_si512(out_ptr.add(XOROSHIRO64SSX16 * 1) as *mut _, rng.randiv(v_range, v_min));
             _mm512_storeu_si512(out_ptr.add(XOROSHIRO64SSX16 * 2) as *mut _, rng.randiv(v_range, v_min));
             _mm512_storeu_si512(out_ptr.add(XOROSHIRO64SSX16 * 3) as *mut _, rng.randiv(v_range, v_min));
@@ -640,7 +640,7 @@ unsafe fn xoroshiro64ssx16_rand_f32s_chunk(
 
     if aligned {
         while remaining >= XOROSHIRO64SSX16_UNROLL {
-            _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16 * 0), rng.randfv(v_mult, v_min));
+            _mm512_stream_ps(out_ptr, rng.randfv(v_mult, v_min));
             _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16 * 1), rng.randfv(v_mult, v_min));
             _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16 * 2), rng.randfv(v_mult, v_min));
             _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16 * 3), rng.randfv(v_mult, v_min));
@@ -654,7 +654,7 @@ unsafe fn xoroshiro64ssx16_rand_f32s_chunk(
         }
     } else {
         while remaining >= XOROSHIRO64SSX16_UNROLL {
-            _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16 * 0), rng.randfv(v_mult, v_min));
+            _mm512_storeu_ps(out_ptr, rng.randfv(v_mult, v_min));
             _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16 * 1), rng.randfv(v_mult, v_min));
             _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16 * 2), rng.randfv(v_mult, v_min));
             _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16 * 3), rng.randfv(v_mult, v_min));
