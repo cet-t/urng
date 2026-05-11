@@ -1,7 +1,7 @@
 #[cfg(target_arch = "x86_64")]
 use crate::rng32::jsf::JSF32X16;
 use crate::{
-    rng::Rng32,
+    rng::{Rng32, Rng32V512},
     rng32::{Jsf32, jsf::Jsf32x16},
 };
 use rayon::prelude::*;
@@ -184,10 +184,10 @@ unsafe fn jsf32x16_next_u32s_chunk(rng: &mut Jsf32x16, chunk: &mut [u32]) {
 
     if aligned {
         while remaining >= UNROLL {
-            let v0 = rng.nextu_vec();
-            let v1 = rng.nextu_vec();
-            let v2 = rng.nextu_vec();
-            let v3 = rng.nextu_vec();
+            let v0 = rng.nextuv();
+            let v1 = rng.nextuv();
+            let v2 = rng.nextuv();
+            let v3 = rng.nextuv();
             _mm512_stream_si512(out_ptr as *mut _, v0);
             _mm512_stream_si512(out_ptr.add(JSF32X16) as *mut _, v1);
             _mm512_stream_si512(out_ptr.add(JSF32X16 * 2) as *mut _, v2);
@@ -196,17 +196,17 @@ unsafe fn jsf32x16_next_u32s_chunk(rng: &mut Jsf32x16, chunk: &mut [u32]) {
             remaining -= UNROLL;
         }
         while remaining >= JSF32X16 {
-            let v = rng.nextu_vec();
+            let v = rng.nextuv();
             _mm512_stream_si512(out_ptr as *mut _, v);
             out_ptr = out_ptr.add(JSF32X16);
             remaining -= JSF32X16;
         }
     } else {
         while remaining >= UNROLL {
-            let v0 = rng.nextu_vec();
-            let v1 = rng.nextu_vec();
-            let v2 = rng.nextu_vec();
-            let v3 = rng.nextu_vec();
+            let v0 = rng.nextuv();
+            let v1 = rng.nextuv();
+            let v2 = rng.nextuv();
+            let v3 = rng.nextuv();
             _mm512_storeu_si512(out_ptr as *mut _, v0);
             _mm512_storeu_si512(out_ptr.add(JSF32X16) as *mut _, v1);
             _mm512_storeu_si512(out_ptr.add(JSF32X16 * 2) as *mut _, v2);
@@ -215,7 +215,7 @@ unsafe fn jsf32x16_next_u32s_chunk(rng: &mut Jsf32x16, chunk: &mut [u32]) {
             remaining -= UNROLL;
         }
         while remaining >= JSF32X16 {
-            let v = rng.nextu_vec();
+            let v = rng.nextuv();
             _mm512_storeu_si512(out_ptr as *mut _, v);
             out_ptr = out_ptr.add(JSF32X16);
             remaining -= JSF32X16;
@@ -224,7 +224,7 @@ unsafe fn jsf32x16_next_u32s_chunk(rng: &mut Jsf32x16, chunk: &mut [u32]) {
 
     if remaining > 0 {
         let mut tmp = [0u32; JSF32X16];
-        let v = rng.nextu_vec();
+        let v = rng.nextuv();
         _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
         ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
     }
@@ -303,10 +303,10 @@ unsafe fn jsf32x16_rand_i32s_chunk(
 
     if aligned {
         while remaining >= UNROLL {
-            let v0 = rng.randi_vec(v_range, v_min);
-            let v1 = rng.randi_vec(v_range, v_min);
-            let v2 = rng.randi_vec(v_range, v_min);
-            let v3 = rng.randi_vec(v_range, v_min);
+            let v0 = rng.randiv(v_range, v_min);
+            let v1 = rng.randiv(v_range, v_min);
+            let v2 = rng.randiv(v_range, v_min);
+            let v3 = rng.randiv(v_range, v_min);
             _mm512_stream_si512(out_ptr as *mut _, v0);
             _mm512_stream_si512(out_ptr.add(JSF32X16) as *mut _, v1);
             _mm512_stream_si512(out_ptr.add(JSF32X16 * 2) as *mut _, v2);
@@ -315,17 +315,17 @@ unsafe fn jsf32x16_rand_i32s_chunk(
             remaining -= UNROLL;
         }
         while remaining >= JSF32X16 {
-            let v = rng.randi_vec(v_range, v_min);
+            let v = rng.randiv(v_range, v_min);
             _mm512_stream_si512(out_ptr as *mut _, v);
             out_ptr = out_ptr.add(JSF32X16);
             remaining -= JSF32X16;
         }
     } else {
         while remaining >= UNROLL {
-            let v0 = rng.randi_vec(v_range, v_min);
-            let v1 = rng.randi_vec(v_range, v_min);
-            let v2 = rng.randi_vec(v_range, v_min);
-            let v3 = rng.randi_vec(v_range, v_min);
+            let v0 = rng.randiv(v_range, v_min);
+            let v1 = rng.randiv(v_range, v_min);
+            let v2 = rng.randiv(v_range, v_min);
+            let v3 = rng.randiv(v_range, v_min);
             _mm512_storeu_si512(out_ptr as *mut _, v0);
             _mm512_storeu_si512(out_ptr.add(JSF32X16) as *mut _, v1);
             _mm512_storeu_si512(out_ptr.add(JSF32X16 * 2) as *mut _, v2);
@@ -334,7 +334,7 @@ unsafe fn jsf32x16_rand_i32s_chunk(
             remaining -= UNROLL;
         }
         while remaining >= JSF32X16 {
-            let v = rng.randi_vec(v_range, v_min);
+            let v = rng.randiv(v_range, v_min);
             _mm512_storeu_si512(out_ptr as *mut _, v);
             out_ptr = out_ptr.add(JSF32X16);
             remaining -= JSF32X16;
@@ -343,7 +343,7 @@ unsafe fn jsf32x16_rand_i32s_chunk(
 
     if remaining > 0 {
         let mut tmp = [0i32; JSF32X16];
-        let v = rng.randi_vec(v_range, v_min);
+        let v = rng.randiv(v_range, v_min);
         _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
         ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
     }
@@ -365,10 +365,10 @@ unsafe fn jsf32x16_rand_f32s_chunk(
 
     if aligned {
         while remaining >= UNROLL {
-            let v0 = rng.randf_vec(v_mult, v_min);
-            let v1 = rng.randf_vec(v_mult, v_min);
-            let v2 = rng.randf_vec(v_mult, v_min);
-            let v3 = rng.randf_vec(v_mult, v_min);
+            let v0 = rng.randfv(v_mult, v_min);
+            let v1 = rng.randfv(v_mult, v_min);
+            let v2 = rng.randfv(v_mult, v_min);
+            let v3 = rng.randfv(v_mult, v_min);
             _mm512_stream_ps(out_ptr, v0);
             _mm512_stream_ps(out_ptr.add(JSF32X16), v1);
             _mm512_stream_ps(out_ptr.add(JSF32X16 * 2), v2);
@@ -377,17 +377,17 @@ unsafe fn jsf32x16_rand_f32s_chunk(
             remaining -= UNROLL;
         }
         while remaining >= JSF32X16 {
-            let v = rng.randf_vec(v_mult, v_min);
+            let v = rng.randfv(v_mult, v_min);
             _mm512_stream_ps(out_ptr, v);
             out_ptr = out_ptr.add(JSF32X16);
             remaining -= JSF32X16;
         }
     } else {
         while remaining >= UNROLL {
-            let v0 = rng.randf_vec(v_mult, v_min);
-            let v1 = rng.randf_vec(v_mult, v_min);
-            let v2 = rng.randf_vec(v_mult, v_min);
-            let v3 = rng.randf_vec(v_mult, v_min);
+            let v0 = rng.randfv(v_mult, v_min);
+            let v1 = rng.randfv(v_mult, v_min);
+            let v2 = rng.randfv(v_mult, v_min);
+            let v3 = rng.randfv(v_mult, v_min);
             _mm512_storeu_ps(out_ptr, v0);
             _mm512_storeu_ps(out_ptr.add(JSF32X16), v1);
             _mm512_storeu_ps(out_ptr.add(JSF32X16 * 2), v2);
@@ -396,7 +396,7 @@ unsafe fn jsf32x16_rand_f32s_chunk(
             remaining -= UNROLL;
         }
         while remaining >= JSF32X16 {
-            let v = rng.randf_vec(v_mult, v_min);
+            let v = rng.randfv(v_mult, v_min);
             _mm512_storeu_ps(out_ptr, v);
             out_ptr = out_ptr.add(JSF32X16);
             remaining -= JSF32X16;
@@ -405,7 +405,7 @@ unsafe fn jsf32x16_rand_f32s_chunk(
 
     if remaining > 0 {
         let mut tmp = [0f32; JSF32X16];
-        let v = rng.randf_vec(v_mult, v_min);
+        let v = rng.randfv(v_mult, v_min);
         _mm512_storeu_ps(tmp.as_mut_ptr(), v);
         ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
     }
@@ -435,7 +435,7 @@ pub extern "C" fn jsf32x16_next_u32s(ptr: *mut Jsf32x16, out: *mut u32, count: u
     unsafe {
         let rng = &mut *ptr;
         let mut tmp = [0u32; JSF32X16];
-        let v = rng.nextu_vec();
+        let v = rng.nextuv();
         _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
         let base_seed = tmp[0];
 
@@ -459,7 +459,7 @@ pub extern "C" fn jsf32x16_next_f32s(ptr: *mut Jsf32x16, out: *mut f32, count: u
     unsafe {
         let rng = &mut *ptr;
         let mut tmp = [0u32; JSF32X16];
-        let v = rng.nextu_vec();
+        let v = rng.nextuv();
         _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
         let base_seed = tmp[0];
 
@@ -490,7 +490,7 @@ pub extern "C" fn jsf32x16_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let mut tmp = [0u32; JSF32X16];
-        let v = rng.nextu_vec();
+        let v = rng.nextuv();
         _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
         let base_seed = tmp[0];
 
@@ -500,7 +500,7 @@ pub extern "C" fn jsf32x16_rand_i32s(
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Jsf32x16::new(jsf32x16_chunk_seed(base_seed, chunk_idx));
-                let v_range = _mm512_set1_epi64((max as i64 - min as i64 + 1) as i64);
+                let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1);
                 let v_min = _mm512_set1_epi32(min);
                 jsf32x16_rand_i32s_chunk(&mut local_rng, chunk, v_range, v_min);
             });
@@ -522,7 +522,7 @@ pub extern "C" fn jsf32x16_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let mut tmp = [0u32; JSF32X16];
-        let v = rng.nextu_vec();
+        let v = rng.nextuv();
         _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
         let base_seed = tmp[0];
 

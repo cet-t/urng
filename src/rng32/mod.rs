@@ -27,7 +27,7 @@ pub mod xorshift;
 /// Xoshiro implementations.
 pub mod xoshiro;
 
-pub use jsf::{Jsf32, Jsf32x16};
+pub use jsf::{Jsf32, Jsf32x8, Jsf32x16};
 #[allow(deprecated)]
 pub use lcg::Lcg32;
 pub use mersenne::{

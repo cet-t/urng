@@ -1,4 +1,8 @@
-use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
+use crate::{
+    _internal::FSCALE32,
+    rng::{Rng32, Rng32V256, Rng32V512},
+    rng32::SplitMix32,
+};
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
@@ -45,6 +49,57 @@ impl Rng32 for Jsf32 {
     }
 }
 
+#[repr(C, align(64))]
+pub struct Jsf32x8 {
+    pub(crate) a: __m256i,
+    pub(crate) b: __m256i,
+    pub(crate) c: __m256i,
+    pub(crate) d: __m256i,
+}
+
+pub(crate) const JSF32X8: usize = 8;
+
+impl Jsf32x8 {
+    /// # Safety
+    #[target_feature(enable = "avx2")]
+    pub fn new(seed: u32) -> Self {
+        let mut seedgen = SplitMix32::new(seed);
+        let mut sv = [[0u32; JSF32X8]; 3];
+        for vals in sv.iter_mut() {
+            for v in vals.iter_mut() {
+                *v = seedgen.nextu();
+            }
+        }
+        let a = [0xf1ea5eedu32; JSF32X8];
+        unsafe {
+            Self {
+                a: _mm256_loadu_si256(a.as_ptr() as *const __m256i),
+                b: _mm256_loadu_si256(sv[0].as_ptr() as *const __m256i),
+                c: _mm256_loadu_si256(sv[1].as_ptr() as *const __m256i),
+                d: _mm256_loadu_si256(sv[2].as_ptr() as *const __m256i),
+            }
+        }
+    }
+}
+
+impl Rng32V256 for Jsf32x8 {
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn nextuv(&mut self) -> __m256i {
+        let e = _mm256_sub_epi32(self.a, unsafe { _mm256_rol_epi32(self.b, 27) });
+        self.a = _mm256_xor_si256(self.b, unsafe { _mm256_rol_epi32(self.c, 17) });
+        self.b = _mm256_add_epi32(self.c, self.d);
+        self.c = _mm256_add_epi32(self.d, e);
+        self.d = _mm256_add_epi32(e, self.a);
+        self.d
+    }
+
+    #[inline(always)]
+    fn nextu(&mut self) -> [u32; JSF32X8] {
+        unsafe { std::mem::transmute(self.nextuv()) }
+    }
+}
+
 /// 16-way SIMD implementation of JSF (Jenkins Small Fast) 32-bit RNG.
 /// This implementation uses AVX-512 instructions to generate 16 random numbers in parallel.
 ///
@@ -77,65 +132,28 @@ impl Jsf32x16 {
                 *v = seedgen.nextu();
             }
         }
-        let a = [0xf1ea5eedu32; JSF32X16];
+        const A: [u32; JSF32X16] = [0xf1ea5eedu32; JSF32X16];
         unsafe {
             Self {
-                a: _mm512_loadu_si512(a.as_ptr() as *const __m512i),
+                a: _mm512_loadu_si512(A.as_ptr() as *const __m512i),
                 b: _mm512_loadu_si512(sv[0].as_ptr() as *const __m512i),
                 c: _mm512_loadu_si512(sv[1].as_ptr() as *const __m512i),
                 d: _mm512_loadu_si512(sv[2].as_ptr() as *const __m512i),
             }
         }
     }
+}
 
+impl Rng32V512 for Jsf32x16 {
     #[inline]
     #[target_feature(enable = "avx512f")]
-    pub(crate) fn nextu_vec(&mut self) -> __m512i {
+    unsafe fn nextuv(&mut self) -> __m512i {
         let e = _mm512_sub_epi32(self.a, _mm512_rol_epi32(self.b, 27));
         self.a = _mm512_xor_si512(self.b, _mm512_rol_epi32(self.c, 17));
         self.b = _mm512_add_epi32(self.c, self.d);
         self.c = _mm512_add_epi32(self.d, e);
         self.d = _mm512_add_epi32(e, self.a);
         self.d
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub(crate) fn nextfv(&mut self, scale: __m512) -> __m512 {
-        let v_u32 = self.nextu_vec();
-        let v_f32 = _mm512_cvtepu32_ps(v_u32);
-        _mm512_mul_ps(v_f32, scale)
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub(crate) fn randi_vec(&mut self, v_range: __m512i, v_min: __m512i) -> __m512i {
-        const MERGE_MASK: u16 = 0xAAAA;
-        let v_u32 = self.nextu_vec();
-        let prod_even = _mm512_mul_epu32(v_u32, v_range);
-        let res_even = _mm512_srli_epi64(prod_even, 32);
-        let v_u32_shifted = _mm512_srli_epi64(v_u32, 32);
-        let prod_odd = _mm512_mul_epu32(v_u32_shifted, v_range);
-        let merged = _mm512_mask_blend_epi32(MERGE_MASK, res_even, prod_odd);
-        _mm512_add_epi32(merged, v_min)
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub(crate) fn randf_vec(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
-        let v_u32 = self.nextu_vec();
-        let v_f32 = _mm512_cvtepu32_ps(v_u32);
-        _mm512_add_ps(_mm512_mul_ps(v_f32, v_mult), v_min)
-    }
-
-    #[inline(always)]
-    pub fn nextu(&mut self) -> [u32; JSF32X16] {
-        unsafe { std::mem::transmute(self.nextu_vec()) }
-    }
-
-    #[inline(always)]
-    pub fn nextf(&mut self) -> [f32; JSF32X16] {
-        self.nextu().map(|x| x as f32 * FSCALE32)
     }
 }
 
@@ -145,5 +163,6 @@ mod tests {
     use crate::{safe_test, unsafe_test};
 
     safe_test!(Jsf32);
+    unsafe_test!(Jsf32x8);
     unsafe_test!(Jsf32x16);
 }
