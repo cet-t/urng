@@ -1,15 +1,16 @@
 mod stat;
 
 use anyhow::Result;
-use stat::{chisq, monte_carlo, scatter};
 use std::fs;
 use std::sync::OnceLock;
 use urng::prelude::*;
-use urng::rng::{Rng32, Rng64};
+use urng::rng::{Rng32, Rng32V512, Rng64};
 use urng::rng32::{
     Jsf32, Jsf32x16, Sfc32x4, Sfc32x8, Sfc32x16, Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253, Sfmt11213,
     Sfmt44497, Sfmt86243, Sfmt132049, Sfmt216091, Xoroshiro64Ssx16,
 };
+
+use crate::stat::{chisq, monte_carlo, scatter};
 use urng::rng64::{Biski64, SplitMix64, Xorshift64};
 
 const LOG_DIR: &str = "tests/logs";

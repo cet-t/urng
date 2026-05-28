@@ -1,5 +1,4 @@
 use crate::{
-    _internal::FSCALE32,
     rng::{Rng32, Rng32V256, Rng32V512},
     rng32::SplitMix32,
 };
@@ -105,7 +104,7 @@ impl Rng32V256 for Jsf32x8 {
 ///
 /// # Example
 /// ```
-/// use urng::rng::Rng32;
+/// use urng::rng::{Rng32, Rng32V512};
 /// use urng::rng32::Jsf32x16;
 ///
 /// let mut rng = unsafe { Jsf32x16::new(12345) };
