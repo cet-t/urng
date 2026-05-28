@@ -77,6 +77,14 @@ fn regex_replace_version(content: &str, version: &str) -> String {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // バージョン変更時に README.md を更新するため Cargo.toml の変更を追跡
+    println!("cargo:rerun-if-changed=Cargo.toml");
+
+    // docs.rs では read-only filesystem につき書き込みをスキップ
+    if std::env::var("DOCS_RS").is_ok() {
+        return Ok(());
+    }
+
     update_readme_version()?;
 
     let cs_path = "./target/release/RngNative.cs";

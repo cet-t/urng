@@ -1,6 +1,6 @@
 [package]
 name = "urng"
-version = "0.4.6"
+version = "0.4.8"
 edition = "2024"
 license = "MIT"
 authors = ["cet"]
@@ -21,7 +21,6 @@ csbindgen = "1.9.7"
 [dev-dependencies]
 colored = "3.1.1"
 thousands = "0.2.0"
-criterion = "0.5"
 plotters = "0.3"
 anyhow = "1"
 
