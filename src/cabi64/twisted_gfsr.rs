@@ -1,6 +1,5 @@
 use crate::rng::Rng64;
 use crate::rng64::TwistedGFSR;
-use std::slice::from_raw_parts_mut;
 
 /// Creates a new heap-allocated `TwistedGFSR` using the built-in default seed array.
 /// The `_seed` argument is currently unused. The caller must free the result with
@@ -22,10 +21,7 @@ pub extern "C" fn twisted_gfsr_free(ptr: *mut TwistedGFSR) {
 pub extern "C" fn twisted_gfsr_next_u64s(ptr: *mut TwistedGFSR, out: *mut u64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextu());
     }
 }
 /// Fills `out[0..count]` with `f64` values uniformly distributed in `[0, 1)`.
@@ -33,10 +29,7 @@ pub extern "C" fn twisted_gfsr_next_u64s(ptr: *mut TwistedGFSR, out: *mut u64, c
 pub extern "C" fn twisted_gfsr_next_f64s(ptr: *mut TwistedGFSR, out: *mut f64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextf());
     }
 }
 /// Fills `out[0..count]` with `i64` values uniformly distributed in `[min, max]`.
@@ -50,10 +43,7 @@ pub extern "C" fn twisted_gfsr_rand_i64s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randi(min, max));
     }
 }
 /// Fills `out[0..count]` with `f64` values uniformly distributed in `[min, max)`.
@@ -67,9 +57,6 @@ pub extern "C" fn twisted_gfsr_rand_f64s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randf(min, max));
     }
 }

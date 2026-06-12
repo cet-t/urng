@@ -63,13 +63,11 @@ pub extern "C" fn philox64_next_u64s(ptr: *mut Philox64, out: *mut u64, count: u
                     }
 
                     let result = Philox64::compute(c, k);
-                    for j in 0..rem.len() {
-                        rem[j] = result[j];
-                    }
+                    rem.copy_from_slice(&result[..rem.len()]);
                 }
             });
 
-        let num_blocks = ((count + 1) / 2) as u64;
+        let num_blocks = count.div_ceil(2) as u64;
         let (new_c0, carry) = rng.c[0].overflowing_add(num_blocks);
         rng.c[0] = new_c0;
         if carry {
@@ -128,7 +126,7 @@ pub extern "C" fn philox64_next_f64s(ptr: *mut Philox64, out: *mut f64, count: u
                 }
             });
 
-        let num_blocks = ((count + 1) / 2) as u64;
+        let num_blocks = count.div_ceil(2) as u64;
         let (new_c0, carry) = rng.c[0].overflowing_add(num_blocks);
         rng.c[0] = new_c0;
         if carry {
@@ -192,7 +190,7 @@ pub extern "C" fn philox64_rand_i64s(
                 }
             });
 
-        let num_blocks = ((count + 1) / 2) as u64;
+        let num_blocks = count.div_ceil(2) as u64;
         let (new_c0, carry) = rng.c[0].overflowing_add(num_blocks);
         rng.c[0] = new_c0;
         if carry {
@@ -257,7 +255,7 @@ pub extern "C" fn philox64_rand_f64s(
                 }
             });
 
-        let num_blocks = ((count + 1) / 2) as u64;
+        let num_blocks = count.div_ceil(2) as u64;
         let (new_c0, carry) = rng.c[0].overflowing_add(num_blocks);
         rng.c[0] = new_c0;
         if carry {

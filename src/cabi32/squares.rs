@@ -80,9 +80,7 @@ unsafe fn squares32x8_next_u32s_chunk(
             let v = Squares32x8::compute_yz(y0, _mm512_add_epi64(y0, kx1));
             let mut tmp = [0u32; SQUARES32x8];
             _mm256_storeu_si256(tmp.as_mut_ptr() as *mut _, v);
-            for j in 0..final_rem.len() {
-                final_rem[j] = tmp[j];
-            }
+            final_rem.copy_from_slice(&tmp[..final_rem.len()]);
         }
     }
 }

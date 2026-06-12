@@ -1,7 +1,6 @@
 use crate::rng::Rng64;
 #[allow(deprecated)]
 use crate::rng64::Lcg64;
-use std::slice::from_raw_parts_mut;
 
 /// Creates a new heap-allocated `Lcg64` with the given parameters and warm-up count.
 /// The caller is responsible for freeing it with [`lcg64_free`].
@@ -27,10 +26,7 @@ pub extern "C" fn lcg64_free(ptr: *mut Lcg64) {
 pub extern "C" fn lcg64_next_u64s(ptr: *mut Lcg64, out: *mut u64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextu());
     }
 }
 
@@ -40,10 +36,7 @@ pub extern "C" fn lcg64_next_u64s(ptr: *mut Lcg64, out: *mut u64, count: usize) 
 pub extern "C" fn lcg64_next_f64s(ptr: *mut Lcg64, out: *mut f64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextf());
     }
 }
 
@@ -59,10 +52,7 @@ pub extern "C" fn lcg64_rand_i64s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randi(min, max));
     }
 }
 
@@ -78,9 +68,6 @@ pub extern "C" fn lcg64_rand_f64s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randf(min, max));
     }
 }

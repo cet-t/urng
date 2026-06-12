@@ -62,13 +62,11 @@ pub extern "C" fn threefry32x4_next_u32s(ptr: *mut Threefry32x4, out: *mut u32, 
                     let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
 
                     let result = Threefry32x4::compute(c, &k, &tw);
-                    for j in 0..rem.len() {
-                        rem[j] = result[j];
-                    }
+                    rem.copy_from_slice(&result[..rem.len()]);
                 }
             });
 
-        let num_blocks = (count + 3) / 4;
+        let num_blocks = count.div_ceil(4);
         let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
         let new_c64 = c0_64.wrapping_add(num_blocks as u64);
         rng.c[0] = new_c64 as u32;
@@ -129,7 +127,7 @@ pub extern "C" fn threefry32x4_next_f32s(ptr: *mut Threefry32x4, out: *mut f32, 
                 }
             });
 
-        let num_blocks = (count + 3) / 4;
+        let num_blocks = count.div_ceil(4);
         let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
         let new_c64 = c0_64.wrapping_add(num_blocks as u64);
         rng.c[0] = new_c64 as u32;
@@ -196,7 +194,7 @@ pub extern "C" fn threefry32x4_rand_i32s(
                 }
             });
 
-        let num_blocks = (count + 3) / 4;
+        let num_blocks = count.div_ceil(4);
         let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
         let new_c64 = c0_64.wrapping_add(num_blocks as u64);
         rng.c[0] = new_c64 as u32;
@@ -264,7 +262,7 @@ pub extern "C" fn threefry32x4_rand_f32s(
                 }
             });
 
-        let num_blocks = (count + 3) / 4;
+        let num_blocks = count.div_ceil(4);
         let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
         let new_c64 = c0_64.wrapping_add(num_blocks as u64);
         rng.c[0] = new_c64 as u32;
@@ -335,13 +333,11 @@ pub extern "C" fn threefry32x2_next_u32s(ptr: *mut Threefry32x2, out: *mut u32, 
                     let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
 
                     let result = Threefry32x2::compute(c, &k);
-                    for j in 0..rem.len() {
-                        rem[j] = result[j];
-                    }
+                    rem.copy_from_slice(&result[..rem.len()]);
                 }
             });
 
-        let num_blocks = (count + 1) / 2;
+        let num_blocks = count.div_ceil(2);
         let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
         let new_c64 = c0_64.wrapping_add(num_blocks as u64);
         rng.c[0] = new_c64 as u32;
@@ -393,7 +389,7 @@ pub extern "C" fn threefry32x2_next_f32s(ptr: *mut Threefry32x2, out: *mut f32, 
                 }
             });
 
-        let num_blocks = (count + 1) / 2;
+        let num_blocks = count.div_ceil(2);
         let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
         let new_c64 = c0_64.wrapping_add(num_blocks as u64);
         rng.c[0] = new_c64 as u32;
@@ -451,7 +447,7 @@ pub extern "C" fn threefry32x2_rand_i32s(
                 }
             });
 
-        let num_blocks = (count + 1) / 2;
+        let num_blocks = count.div_ceil(2);
         let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
         let new_c64 = c0_64.wrapping_add(num_blocks as u64);
         rng.c[0] = new_c64 as u32;
@@ -510,7 +506,7 @@ pub extern "C" fn threefry32x2_rand_f32s(
                 }
             });
 
-        let num_blocks = (count + 1) / 2;
+        let num_blocks = count.div_ceil(2);
         let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
         let new_c64 = c0_64.wrapping_add(num_blocks as u64);
         rng.c[0] = new_c64 as u32;

@@ -124,6 +124,10 @@ impl Biski64x8 {
     }
 
     /// Generates 8 random `f64` values in [0, 1) and writes them to `out`.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f` target feature.
     #[inline(always)]
     pub unsafe fn nextf(&mut self) -> [f64; 8] {
         unsafe {
@@ -137,6 +141,11 @@ impl Biski64x8 {
         }
     }
 
+    /// Generates 8 random `i64` values in [min, max].
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f` target feature.
     #[inline(always)]
     pub unsafe fn randi(&mut self, min: i64, max: i64) -> [i64; 8] {
         unsafe {
@@ -151,6 +160,10 @@ impl Biski64x8 {
     }
 
     /// Generates 8 random `f64` values in [min, max) and writes them to `out`.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f` target feature.
     #[inline(always)]
     pub unsafe fn randf(&mut self, min: f64, max: f64) -> [f64; 8] {
         unsafe {

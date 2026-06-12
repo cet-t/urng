@@ -1,6 +1,7 @@
 #[cfg(target_arch = "x86_64")]
 use crate::rng32::jsf::JSF32X16;
 use crate::{
+    _internal::chunk_seed32,
     rng::{Rng32, Rng32V512},
     rng32::{Jsf32, jsf::Jsf32x16},
 };
@@ -160,18 +161,6 @@ pub extern "C" fn jsf32_rand_f32s(
 
 #[cfg(target_arch = "x86_64")]
 const JSF32X16_PAR_CHUNK: usize = 1 << 20;
-
-#[cfg(target_arch = "x86_64")]
-#[inline]
-fn jsf32x16_chunk_seed(base_seed: u32, chunk_idx: usize) -> u32 {
-    let x = base_seed.wrapping_add((chunk_idx as u32).wrapping_mul(0x9E37_79B9));
-    let mut z = x as u64;
-    z ^= z >> 16;
-    z = z.wrapping_mul(0xFF51_AFD7_ED55_8CCD);
-    z ^= z >> 16;
-    z = z.wrapping_mul(0xC4CE_B9FE_1A85_EC53);
-    (z ^ (z >> 16)) as u32
-}
 
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
@@ -444,7 +433,7 @@ pub extern "C" fn jsf32x16_next_u32s(ptr: *mut Jsf32x16, out: *mut u32, count: u
             .par_chunks_mut(JSF32X16_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Jsf32x16::new(jsf32x16_chunk_seed(base_seed, chunk_idx));
+                let mut local_rng = Jsf32x16::new(chunk_seed32(base_seed, chunk_idx));
                 jsf32x16_next_u32s_chunk(&mut local_rng, chunk);
             });
     }
@@ -468,7 +457,7 @@ pub extern "C" fn jsf32x16_next_f32s(ptr: *mut Jsf32x16, out: *mut f32, count: u
             .par_chunks_mut(JSF32X16_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Jsf32x16::new(jsf32x16_chunk_seed(base_seed, chunk_idx));
+                let mut local_rng = Jsf32x16::new(chunk_seed32(base_seed, chunk_idx));
                 let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
                 jsf32x16_next_f32s_chunk(&mut local_rng, chunk, scale);
             });
@@ -499,7 +488,7 @@ pub extern "C" fn jsf32x16_rand_i32s(
             .par_chunks_mut(JSF32X16_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Jsf32x16::new(jsf32x16_chunk_seed(base_seed, chunk_idx));
+                let mut local_rng = Jsf32x16::new(chunk_seed32(base_seed, chunk_idx));
                 let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1);
                 let v_min = _mm512_set1_epi32(min);
                 jsf32x16_rand_i32s_chunk(&mut local_rng, chunk, v_range, v_min);
@@ -531,7 +520,7 @@ pub extern "C" fn jsf32x16_rand_f32s(
             .par_chunks_mut(JSF32X16_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Jsf32x16::new(jsf32x16_chunk_seed(base_seed, chunk_idx));
+                let mut local_rng = Jsf32x16::new(chunk_seed32(base_seed, chunk_idx));
                 let v_mult = _mm512_set1_ps((max - min) * (1.0 / (u32::MAX as f32 + 1.0)));
                 let v_min = _mm512_set1_ps(min);
                 jsf32x16_rand_f32s_chunk(&mut local_rng, chunk, v_mult, v_min);

@@ -272,7 +272,7 @@ impl Xoshiro128Ppx16 {
     /// Must only be called on a CPU that supports AVX-512F.
     #[target_feature(enable = "avx512f")]
     pub unsafe fn randi(&mut self, min: i32, max: i32) -> [i32; 16] {
-        let v_range = _mm512_set1_epi64((max as i64 - min as i64 + 1) as i64);
+        let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1  );
         let v_min = _mm512_set1_epi32(min);
         unsafe { std::mem::transmute(self.randi_vec(v_range, v_min)) }
     }
@@ -445,7 +445,7 @@ impl Xoshiro128Ssx16 {
     /// Must only be called on a CPU that supports AVX-512F.
     #[target_feature(enable = "avx512f")]
     pub unsafe fn randi(&mut self, min: i32, max: i32) -> [i32; 16] {
-        let v_range = _mm512_set1_epi64((max as i64 - min as i64 + 1) as i64);
+        let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1  );
         let v_min = _mm512_set1_epi32(min);
         unsafe { std::mem::transmute(self.randi_vec(v_range, v_min)) }
     }

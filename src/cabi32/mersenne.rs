@@ -40,10 +40,7 @@ pub extern "C" fn mt19937_next_u32s(ptr: *mut Mt19937, out: *mut u32, count: usi
 pub extern "C" fn mt19937_next_f32s(ptr: *mut Mt19937, out: *mut f32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.nextf();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextf());
     }
 }
 
@@ -58,10 +55,7 @@ pub extern "C" fn mt19937_rand_i32s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.randi(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randi(min, max));
     }
 }
 
@@ -76,10 +70,7 @@ pub extern "C" fn mt19937_rand_f32s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.randf(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randf(min, max));
     }
 }
 
@@ -118,10 +109,7 @@ pub extern "C" fn sfmt19937_next_u32s(ptr: *mut Sfmt19937, out: *mut u32, count:
 pub extern "C" fn sfmt19937_next_f32s(ptr: *mut Sfmt19937, out: *mut f32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.nextf();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextf());
     }
 }
 
@@ -136,10 +124,7 @@ pub extern "C" fn sfmt19937_rand_i32s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.randi(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randi(min, max));
     }
 }
 
@@ -154,10 +139,7 @@ pub extern "C" fn sfmt19937_rand_f32s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.randf(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randf(min, max));
     }
 }
 
@@ -201,10 +183,7 @@ macro_rules! impl_sfmt_cabi {
         pub extern "C" fn $next_f32s_fn(ptr: *mut $ty, out: *mut f32, count: usize) {
             unsafe {
                 let rng = &mut *ptr;
-                let buffer = from_raw_parts_mut(out, count);
-                for x in buffer {
-                    *x = rng.nextf();
-                }
+                crate::_internal::fill_with(out, count, || rng.nextf());
             }
         }
 
@@ -218,10 +197,7 @@ macro_rules! impl_sfmt_cabi {
         ) {
             unsafe {
                 let rng = &mut *ptr;
-                let buffer = from_raw_parts_mut(out, count);
-                for x in buffer {
-                    *x = rng.randi(min, max);
-                }
+                crate::_internal::fill_with(out, count, || rng.randi(min, max));
             }
         }
 
@@ -235,10 +211,7 @@ macro_rules! impl_sfmt_cabi {
         ) {
             unsafe {
                 let rng = &mut *ptr;
-                let buffer = from_raw_parts_mut(out, count);
-                for x in buffer {
-                    *x = rng.randf(min, max);
-                }
+                crate::_internal::fill_with(out, count, || rng.randf(min, max));
             }
         }
     };

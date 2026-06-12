@@ -1,6 +1,5 @@
 use crate::rng::Rng32;
 use crate::rng32::{Xorshift32, Xorshift128};
-use std::slice::from_raw_parts_mut;
 
 /// Creates a new `Xorshift32` instance.
 /// The caller is responsible for freeing the memory using `xorshift32_free`.
@@ -24,10 +23,7 @@ pub extern "C" fn xorshift32_free(ptr: *mut Xorshift32) {
 pub extern "C" fn xorshift32_next_u32s(ptr: *mut Xorshift32, out: *mut u32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.nextu();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextu());
     }
 }
 
@@ -36,10 +32,7 @@ pub extern "C" fn xorshift32_next_u32s(ptr: *mut Xorshift32, out: *mut u32, coun
 pub extern "C" fn xorshift32_next_f32s(ptr: *mut Xorshift32, out: *mut f32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.nextf();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextf());
     }
 }
 
@@ -54,10 +47,7 @@ pub extern "C" fn xorshift32_rand_i32s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.randi(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randi(min, max));
     }
 }
 
@@ -72,10 +62,7 @@ pub extern "C" fn xorshift32_rand_f32s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.randf(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randf(min, max));
     }
 }
 
@@ -98,10 +85,7 @@ pub extern "C" fn xorshift128_free(ptr: *mut Xorshift128) {
 pub extern "C" fn xorshift128_next_u32s(ptr: *mut Xorshift128, out: *mut u32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextu());
     }
 }
 /// Fills `out[0..count]` with `f32` values in `[0, 1)`.
@@ -109,10 +93,7 @@ pub extern "C" fn xorshift128_next_u32s(ptr: *mut Xorshift128, out: *mut u32, co
 pub extern "C" fn xorshift128_next_f32s(ptr: *mut Xorshift128, out: *mut f32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextf());
     }
 }
 /// Fills `out[0..count]` with `i32` values in `[min, max]`.
@@ -126,10 +107,7 @@ pub extern "C" fn xorshift128_rand_i32s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randi(min, max));
     }
 }
 /// Fills `out[0..count]` with `f32` values in `[min, max)`.
@@ -143,9 +121,6 @@ pub extern "C" fn xorshift128_rand_f32s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randf(min, max));
     }
 }

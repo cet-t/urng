@@ -127,6 +127,10 @@ impl Cet64x8 {
     }
 
     /// Generates 8 random `u64` values simultaneously.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f,avx512dq` target feature.
     #[target_feature(enable = "avx512f,avx512dq")]
     #[allow(unsafe_op_in_unsafe_fn)]
     pub unsafe fn nextu(&mut self) -> [u64; 8] {
@@ -147,6 +151,10 @@ impl Cet64x8 {
         out
     }
 
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f,avx512dq` target feature.
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn nextf(&mut self) -> [f64; 8] {
         let u = unsafe { self.nextu() };
@@ -158,6 +166,10 @@ impl Cet64x8 {
         out
     }
 
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f,avx512dq` target feature.
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn randi(&mut self, min: i64, max: i64) -> [i64; 8] {
         let u = unsafe { self.nextu() };
@@ -169,6 +181,10 @@ impl Cet64x8 {
         out
     }
 
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f,avx512dq` target feature.
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn randf(&mut self, min: f64, max: f64) -> [f64; 8] {
         let u = unsafe { self.nextu() };
@@ -205,6 +221,10 @@ impl Cet256x2 {
     }
 
     /// Generates 2 random `u64` values simultaneously.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f,avx512dq` target feature.
     #[target_feature(enable = "avx512f,avx512dq")]
     #[allow(unsafe_op_in_unsafe_fn)]
     pub unsafe fn nextu(&mut self) -> [u64; 2] {
@@ -240,6 +260,10 @@ impl Cet256x2 {
         [out_lanes[0], out_lanes[4]]
     }
 
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f,avx512dq` target feature.
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn nextf(&mut self) -> [f64; 2] {
         let u = unsafe { self.nextu() };
@@ -247,6 +271,10 @@ impl Cet256x2 {
         [u[0] as f64 * scale, u[1] as f64 * scale]
     }
 
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f,avx512dq` target feature.
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn randi(&mut self, min: i64, max: i64) -> [i64; 2] {
         let u = unsafe { self.nextu() };
@@ -257,6 +285,10 @@ impl Cet256x2 {
         ]
     }
 
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f,avx512dq` target feature.
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn randf(&mut self, min: f64, max: f64) -> [f64; 2] {
         let u = unsafe { self.nextu() };

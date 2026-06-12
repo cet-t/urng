@@ -101,6 +101,10 @@ pub struct Squares32x8 {
 impl Squares32x8 {
     /// Creates a new `Squares32x8` instance from a 32-bit seed.
     /// The seed is used to initialize the counters and keys.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f` target feature.
     #[target_feature(enable = "avx512f")]
     pub unsafe fn new(seed: u32) -> Self {
         let mut k = [0u64; SQUARES32x8];
@@ -125,6 +129,10 @@ impl Squares32x8 {
     /// # Arguments
     /// * `y` - Pre-computed y = ctr * key.
     /// * `z` - Pre-computed z = y + key.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f,avx512dq` target feature.
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn compute_yz(y: __m512i, z: __m512i) -> __m256i {
         let mut x = _mm512_add_epi64(_mm512_mullo_epi64(y, y), y);
@@ -154,6 +162,10 @@ impl Squares32x8 {
 
     /// Generates 8 new `u32` random numbers.
     /// Increments the internal counters by 8.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f,avx512dq` target feature.
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn nextu(&mut self) -> [u32; SQUARES32x8] {
         unsafe {
@@ -164,6 +176,10 @@ impl Squares32x8 {
     }
 
     /// Generates 8 random `f32` values in the range [0, 1).
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f,avx512dq` target feature.
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn nextf(&mut self) -> [f32; SQUARES32x8] {
         let out = unsafe { self.nextu() };

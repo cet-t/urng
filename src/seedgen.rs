@@ -162,15 +162,15 @@ impl<'a, R: Rng64> SeedGen64<'a, R> {
 fn hardware_noise32() -> Option<u32> {
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     {
-        if std::arch::is_x86_feature_detected!("rdseed") {
-            if let Some(v) = unsafe { rdseed32_once() } {
-                return Some(v);
-            }
+        if std::arch::is_x86_feature_detected!("rdseed")
+            && let Some(v) = unsafe { rdseed32_once() }
+        {
+            return Some(v);
         }
-        if std::arch::is_x86_feature_detected!("rdrand") {
-            if let Some(v) = unsafe { rdrand32_once() } {
-                return Some(v);
-            }
+        if std::arch::is_x86_feature_detected!("rdrand")
+            && let Some(v) = unsafe { rdrand32_once() }
+        {
+            return Some(v);
         }
     }
     None
@@ -180,15 +180,15 @@ fn hardware_noise64() -> Option<u64> {
     // x86_64: native 64-bit instructions
     #[cfg(target_arch = "x86_64")]
     {
-        if std::arch::is_x86_feature_detected!("rdseed") {
-            if let Some(v) = unsafe { rdseed64_once() } {
-                return Some(v);
-            }
+        if std::arch::is_x86_feature_detected!("rdseed")
+            && let Some(v) = unsafe { rdseed64_once() }
+        {
+            return Some(v);
         }
-        if std::arch::is_x86_feature_detected!("rdrand") {
-            if let Some(v) = unsafe { rdrand64_once() } {
-                return Some(v);
-            }
+        if std::arch::is_x86_feature_detected!("rdrand")
+            && let Some(v) = unsafe { rdrand64_once() }
+        {
+            return Some(v);
         }
     }
 
