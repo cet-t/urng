@@ -1,7 +1,7 @@
 #[cfg(target_arch = "x86_64")]
 use crate::rng32::xoroshiro::{XOROSHIRO64SSX8, XOROSHIRO64SSX16};
 use crate::{
-    _internal::chunk_seed32,
+    _internal::{chunk_seed32, fill_chunk_auto},
     rng::Rng32,
     rng32::{Xoroshiro64Ss, xoroshiro::{Xoroshiro64Ssx8, Xoroshiro64Ssx16}},
 };
@@ -24,7 +24,34 @@ pub extern "C" fn xoroshiro64ss_free(ptr: *mut Xoroshiro64Ss) {
     }
 }
 
-const XOROSHIRO64SS_PAR_CHUNK: usize = 0x1000;
+const XOROSHIRO64SS_PAR_CHUNK: usize = 0x20000;
+
+/// Fills `buffer` in parallel: each chunk runs its own decorrelated
+/// `Xoroshiro64Ss`, producing one element per `step` call. Sixteen
+/// outputs (64 bytes for 4-byte `T`) are batched per generator call so
+/// the non-temporal path can stream whole cache lines.
+#[inline(always)]
+fn xoro64ss_fill<T, M>(buffer: &mut [T], seed: u32, step: M)
+where
+    T: Copy + Default + Send,
+    M: Fn(&mut Xoroshiro64Ss) -> T + Sync,
+{
+    buffer
+        .par_chunks_mut(XOROSHIRO64SS_PAR_CHUNK)
+        .enumerate()
+        .for_each(|(chunk_idx, chunk)| {
+            let mut local_rng = Xoroshiro64Ss::new(seed.wrapping_add(chunk_idx as u32));
+            unsafe {
+                fill_chunk_auto(chunk, || {
+                    let mut out = [T::default(); 16];
+                    for v in &mut out {
+                        *v = step(&mut local_rng);
+                    }
+                    out
+                });
+            }
+        });
+}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn xoroshiro64ss_next_u32s(ptr: *mut Xoroshiro64Ss, out: *mut u32, count: usize) {
@@ -35,22 +62,7 @@ pub extern "C" fn xoroshiro64ss_next_u32s(ptr: *mut Xoroshiro64Ss, out: *mut u32
         let rng = &mut *ptr;
         let seed = rng.nextu();
         let buffer = from_raw_parts_mut(out, count);
-        buffer
-            .par_chunks_mut(XOROSHIRO64SS_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                let mut local_rng = Xoroshiro64Ss::new(seed.wrapping_add(i as u32));
-                let mut chunks4 = chunk.chunks_exact_mut(4);
-                for c in chunks4.by_ref() {
-                    c[0] = local_rng.nextu();
-                    c[1] = local_rng.nextu();
-                    c[2] = local_rng.nextu();
-                    c[3] = local_rng.nextu();
-                }
-                for x in chunks4.into_remainder() {
-                    *x = local_rng.nextu();
-                }
-            });
+        xoro64ss_fill(buffer, seed, |r| r.nextu());
     }
 }
 
@@ -63,22 +75,7 @@ pub extern "C" fn xoroshiro64ss_next_f32s(ptr: *mut Xoroshiro64Ss, out: *mut f32
         let rng = &mut *ptr;
         let seed = rng.nextu();
         let buffer = from_raw_parts_mut(out, count);
-        buffer
-            .par_chunks_mut(XOROSHIRO64SS_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                let mut local_rng = Xoroshiro64Ss::new(seed.wrapping_add(i as u32));
-                let mut chunks4 = chunk.chunks_exact_mut(4);
-                for c in chunks4.by_ref() {
-                    c[0] = local_rng.nextf();
-                    c[1] = local_rng.nextf();
-                    c[2] = local_rng.nextf();
-                    c[3] = local_rng.nextf();
-                }
-                for x in chunks4.into_remainder() {
-                    *x = local_rng.nextf();
-                }
-            });
+        xoro64ss_fill(buffer, seed, |r| r.nextf());
     }
 }
 
@@ -97,22 +94,7 @@ pub extern "C" fn xoroshiro64ss_rand_i32s(
         let rng = &mut *ptr;
         let seed = rng.nextu();
         let buffer = from_raw_parts_mut(out, count);
-        buffer
-            .par_chunks_mut(XOROSHIRO64SS_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                let mut local_rng = Xoroshiro64Ss::new(seed.wrapping_add(i as u32));
-                let mut chunks4 = chunk.chunks_exact_mut(4);
-                for c in chunks4.by_ref() {
-                    c[0] = local_rng.randi(min, max);
-                    c[1] = local_rng.randi(min, max);
-                    c[2] = local_rng.randi(min, max);
-                    c[3] = local_rng.randi(min, max);
-                }
-                for x in chunks4.into_remainder() {
-                    *x = local_rng.randi(min, max);
-                }
-            });
+        xoro64ss_fill(buffer, seed, |r| r.randi(min, max));
     }
 }
 
@@ -131,22 +113,7 @@ pub extern "C" fn xoroshiro64ss_rand_f32s(
         let rng = &mut *ptr;
         let seed = rng.nextu();
         let buffer = from_raw_parts_mut(out, count);
-        buffer
-            .par_chunks_mut(XOROSHIRO64SS_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                let mut local_rng = Xoroshiro64Ss::new(seed.wrapping_add(i as u32));
-                let mut chunks4 = chunk.chunks_exact_mut(4);
-                for c in chunks4.by_ref() {
-                    c[0] = local_rng.randf(min, max);
-                    c[1] = local_rng.randf(min, max);
-                    c[2] = local_rng.randf(min, max);
-                    c[3] = local_rng.randf(min, max);
-                }
-                for x in chunks4.into_remainder() {
-                    *x = local_rng.randf(min, max);
-                }
-            });
+        xoro64ss_fill(buffer, seed, |r| r.randf(min, max));
     }
 }
 

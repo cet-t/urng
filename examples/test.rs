@@ -30,6 +30,9 @@ use urng::{
         squares32x8_free, squares32x8_new, squares32x8_next_u32s,
         threefry32x2_free, threefry32x2_new, threefry32x2_next_u32s,
         threefry32x4_free, threefry32x4_new, threefry32x4_next_u32s,
+        xoroshiro64ss_free, xoroshiro64ss_new, xoroshiro64ss_next_u32s,
+        xoroshiro64ssx8_free, xoroshiro64ssx8_new, xoroshiro64ssx8_next_u32s,
+        xoroshiro64ssx16_free, xoroshiro64ssx16_new, xoroshiro64ssx16_next_u32s,
         xoshiro128pp_free, xoshiro128pp_new, xoshiro128pp_next_u32s,
         xoshiro128ppx16_free, xoshiro128ppx16_new, xoshiro128ppx16_next_u32s,
         xoshiro128ss_free, xoshiro128ss_new, xoshiro128ss_next_u32s,
@@ -51,6 +54,8 @@ use urng::{
         cet256_free, cet256_new, cet256_next_u64s,
         cet256x2_free, cet256x2_new, cet256x2_next_u64s,
         threefish256_free, threefish256_new, threefish256_next_u64s,
+        xoroshiro128pp_free, xoroshiro128pp_new, xoroshiro128pp_next_u64s,
+        xoroshiro128ss_free, xoroshiro128ss_new, xoroshiro128ss_next_u64s,
         xoshiro256pp_free, xoshiro256pp_new, xoshiro256pp_next_u64s,
         xoshiro256ss_free, xoshiro256ss_new, xoshiro256ss_next_u64s,
         xoshiro256ssx2_free, xoshiro256ssx2_new, xoshiro256ssx2_next_u64s,
@@ -63,6 +68,59 @@ use urng::{
 
 const N: usize = 100_000_000;
 const G: f64 = 1_000_000_000f64;
+
+/// Parallel non-temporal memset: measures this machine's pure DRAM
+/// write-bandwidth ceiling, against which every RNG is scored.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+unsafe fn nt_memset_chunk(chunk: &mut [u32]) {
+    use std::arch::x86_64::*;
+    unsafe {
+        let v = _mm256_set1_epi32(0x9E37_79B9u32 as i32);
+        let mut p = chunk.as_mut_ptr();
+        let mut rem = chunk.len();
+        while (p as usize & 31) != 0 && rem > 0 {
+            *p = 1;
+            p = p.add(1);
+            rem -= 1;
+        }
+        while rem >= 32 {
+            _mm256_stream_si256(p as *mut _, v);
+            _mm256_stream_si256(p.add(8) as *mut _, v);
+            _mm256_stream_si256(p.add(16) as *mut _, v);
+            _mm256_stream_si256(p.add(24) as *mut _, v);
+            p = p.add(32);
+            rem -= 32;
+        }
+        while rem >= 8 {
+            _mm256_stream_si256(p as *mut _, v);
+            p = p.add(8);
+            rem -= 8;
+        }
+        while rem > 0 {
+            *p = 1;
+            p = p.add(1);
+            rem -= 1;
+        }
+        _mm_sfence();
+    }
+}
+
+/// Measure the NT-store write ceiling in GB/s on a warmed buffer.
+fn measure_write_ceiling(buf: &mut [u32]) -> f64 {
+    use rayon::prelude::*;
+    let mut best = 0.0f64;
+    for _ in 0..RUNS {
+        let start = Instant::now();
+        buf.par_chunks_mut(0x20000)
+            .for_each(|c| unsafe { nt_memset_chunk(c) });
+        let gbps = (buf.len() * 4) as f64 / start.elapsed().as_secs_f64() / G;
+        if gbps > best {
+            best = gbps;
+        }
+    }
+    best
+}
 
 /// Number of timed runs per algorithm; best (max throughput) is reported.
 const RUNS: usize = 3;
@@ -122,7 +180,7 @@ where
     best
 }
 
-fn print_group(results: &[(&str, f64)]) {
+fn print_group(results: &[(&str, f64)], elem_bytes: usize, ceiling_gbps: f64) {
     let max_gs = results.iter().map(|(_, gs)| *gs).fold(0.0f64, f64::max);
     let hi = max_gs * 0.75;
     let mid = max_gs * 0.50;
@@ -135,11 +193,17 @@ fn print_group(results: &[(&str, f64)]) {
         } else {
             bar.bright_red()
         };
+        let gbps = gs * elem_bytes as f64;
+        let pct = gbps / ceiling_gbps * 100.0;
         println!(
-            "{:<16}: {} {}  {}",
+            "{:<16}: {} {} {} {} {} {}  {}",
             name.bright_green(),
-            format!("{:.2}", gs).bright_cyan().bold(),
+            format!("{:5.2}", gs).bright_cyan().bold(),
             "GS/s".bright_black(),
+            format!("{:5.1}", gbps).bright_white(),
+            "GB/s".bright_black(),
+            format!("{:3.0}%", pct).bright_magenta(),
+            "ceil".bright_black(),
             bar_colored,
         );
     }
@@ -191,6 +255,15 @@ fn main() {
         jsf32x16_free(ptr);
     }
 
+    let ceiling_gbps = measure_write_ceiling(&mut buf32);
+    println!(
+        "NT-store write ceiling: {} GB/s (= {:.2} GS/s u32, {:.2} GS/s u64)",
+        format!("{:.1}", ceiling_gbps).bright_magenta().bold(),
+        ceiling_gbps / 4.0,
+        ceiling_gbps / 8.0,
+    );
+    println!("{}", "─".repeat(72).bright_black());
+
     let mut r32 = Vec::new();
     bench32!(buf32, r32, philox32x4x4, philox32x4, philox32);
     bench32!(buf32, r32, threefry32x4, threefry32x2);
@@ -203,9 +276,10 @@ fn main() {
         sfmt132049, sfmt216091
     );
     bench32!(buf32, r32, xoshiro128pp, xoshiro128ppx16, xoshiro128ssx16);
+    bench32!(buf32, r32, xoroshiro64ss, xoroshiro64ssx8, xoroshiro64ssx16);
     bench32!(buf32, r32, jsf32, jsf32x16);
     bench32!(buf32, r32, sfc32, sfc32x4, sfc32x8, sfc32x16);
-    print_group(&r32);
+    print_group(&r32, 4, ceiling_gbps);
 
     println!("{}", "─".repeat(72).bright_black());
 
@@ -225,7 +299,8 @@ fn main() {
     bench64!(buf64, r64, mt1993764, sfmt1993764);
     bench64!(buf64, r64, threefish256);
     bench64!(buf64, r64, xoshiro256pp, xoshiro256ss, xoshiro256ssx2);
+    bench64!(buf64, r64, xoroshiro128pp, xoroshiro128ss);
     bench64!(buf64, r64, sfc64, sfc64x8);
     bench64!(buf64, r64, biski64, biski64x8);
-    print_group(&r64);
+    print_group(&r64, 8, ceiling_gbps);
 }

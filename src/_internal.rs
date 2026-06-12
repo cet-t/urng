@@ -51,6 +51,67 @@ pub(crate) unsafe fn fill_chunk<T: Copy, const N: usize, F: FnMut() -> [T; N]>(
     }
 }
 
+/// Non-temporal variant of [`fill_chunk`]: streams each generated batch
+/// straight to memory, bypassing the cache (no RFO read traffic).
+/// Requires `N * size_of::<T>()` to be a multiple of 32 bytes.
+/// Falls back to cached stores when `chunk` is not 32-byte aligned.
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "avx2")]
+#[allow(unsafe_op_in_unsafe_fn)]
+pub(crate) unsafe fn fill_chunk_nt<T: Copy, const N: usize, F: FnMut() -> [T; N]>(
+    chunk: &mut [T],
+    mut generate: F,
+) {
+    use std::arch::x86_64::*;
+    debug_assert!((N * size_of::<T>()) % 32 == 0);
+    let words = (N * size_of::<T>()) / 32;
+    let mut p = chunk.as_mut_ptr();
+    let mut rem = chunk.len();
+    if (p as usize) & 31 == 0 {
+        while rem >= N {
+            let v = generate();
+            let src = v.as_ptr() as *const __m256i;
+            for i in 0..words {
+                _mm256_stream_si256(
+                    (p as *mut u8).add(i * 32) as *mut __m256i,
+                    _mm256_loadu_si256(src.add(i)),
+                );
+            }
+            p = p.add(N);
+            rem -= N;
+        }
+        _mm_sfence();
+    } else {
+        while rem >= N {
+            let v = generate();
+            std::ptr::copy_nonoverlapping(v.as_ptr(), p, N);
+            p = p.add(N);
+            rem -= N;
+        }
+    }
+    if rem > 0 {
+        let v = generate();
+        std::ptr::copy_nonoverlapping(v.as_ptr(), p, rem);
+    }
+}
+
+/// Dispatches to [`fill_chunk_nt`] when AVX2 is available, else [`fill_chunk`].
+///
+/// # Safety
+///
+/// Same contract as [`fill_chunk`].
+#[inline(always)]
+pub(crate) unsafe fn fill_chunk_auto<T: Copy, const N: usize, F: FnMut() -> [T; N]>(
+    chunk: &mut [T],
+    generate: F,
+) {
+    #[cfg(target_arch = "x86_64")]
+    if std::arch::is_x86_feature_detected!("avx2") {
+        return unsafe { fill_chunk_nt(chunk, generate) };
+    }
+    unsafe { fill_chunk(chunk, generate) }
+}
+
 /// Derives a decorrelated per-chunk seed for parallel buffer fills
 /// (golden-ratio sequence + 64-bit avalanche mix).
 #[inline]
