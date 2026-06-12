@@ -90,15 +90,29 @@ pub extern "C" fn sfc32x4_free(ptr: *mut Sfc32x4) {
 #[cfg(target_arch = "x86_64")]
 #[allow(unsafe_op_in_unsafe_fn)]
 #[inline(always)]
-unsafe fn sfc32x4_next_u32s_chunk(rng: &mut Sfc32x4, chunk: &mut [u32]) {
-    crate::_internal::fill_chunk(chunk, || bytemuck::cast::<_, [u32; SFC32X4]>(rng.nextuv()));
+unsafe fn sfc32x4_next_u32s_chunk(rng: &mut Sfc32x4, chunk: &mut [u32], nt: bool) {
+    crate::_internal::fill_chunk_auto(chunk, nt, || {
+        bytemuck::cast::<_, [u32; SFC32X4 * 4]>([
+            rng.nextuv(),
+            rng.nextuv(),
+            rng.nextuv(),
+            rng.nextuv(),
+        ])
+    });
 }
 
 #[cfg(target_arch = "x86_64")]
 #[allow(unsafe_op_in_unsafe_fn)]
 #[inline(always)]
-unsafe fn sfc32x4_next_f32s_chunk(rng: &mut Sfc32x4, chunk: &mut [f32], scale: f32x4) {
-    crate::_internal::fill_chunk(chunk, || bytemuck::cast::<_, [f32; SFC32X4]>(rng.nextfv(scale)));
+unsafe fn sfc32x4_next_f32s_chunk(rng: &mut Sfc32x4, chunk: &mut [f32], nt: bool, scale: f32x4) {
+    crate::_internal::fill_chunk_auto(chunk, nt, || {
+        bytemuck::cast::<_, [f32; SFC32X4 * 4]>([
+            rng.nextfv(scale),
+            rng.nextfv(scale),
+            rng.nextfv(scale),
+            rng.nextfv(scale),
+        ])
+    });
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -106,12 +120,17 @@ unsafe fn sfc32x4_next_f32s_chunk(rng: &mut Sfc32x4, chunk: &mut [f32], scale: f
 #[inline(always)]
 unsafe fn sfc32x4_rand_i32s_chunk(
     rng: &mut Sfc32x4,
-    chunk: &mut [i32],
+    chunk: &mut [i32], nt: bool,
     v_range: u32x4,
     v_min: i32x4,
 ) {
-    crate::_internal::fill_chunk(chunk, || {
-        bytemuck::cast::<_, [i32; SFC32X4]>(rng.randiv(v_range, v_min))
+    crate::_internal::fill_chunk_auto(chunk, nt, || {
+        bytemuck::cast::<_, [i32; SFC32X4 * 4]>([
+            rng.randiv(v_range, v_min),
+            rng.randiv(v_range, v_min),
+            rng.randiv(v_range, v_min),
+            rng.randiv(v_range, v_min),
+        ])
     });
 }
 
@@ -120,12 +139,17 @@ unsafe fn sfc32x4_rand_i32s_chunk(
 #[inline(always)]
 unsafe fn sfc32x4_rand_f32s_chunk(
     rng: &mut Sfc32x4,
-    chunk: &mut [f32],
+    chunk: &mut [f32], nt: bool,
     v_mult: f32x4,
     v_min: f32x4,
 ) {
-    crate::_internal::fill_chunk(chunk, || {
-        bytemuck::cast::<_, [f32; SFC32X4]>(rng.randfv(v_mult, v_min))
+    crate::_internal::fill_chunk_auto(chunk, nt, || {
+        bytemuck::cast::<_, [f32; SFC32X4 * 4]>([
+            rng.randfv(v_mult, v_min),
+            rng.randfv(v_mult, v_min),
+            rng.randfv(v_mult, v_min),
+            rng.randfv(v_mult, v_min),
+        ])
     });
 }
 
@@ -143,7 +167,7 @@ pub extern "C" fn sfc32x4_next_u32s(ptr: *mut Sfc32x4, out: *mut u32, count: usi
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Sfc32x4::new(chunk_seed32(base_seed, chunk_idx));
-                sfc32x4_next_u32s_chunk(&mut local_rng, chunk);
+                sfc32x4_next_u32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk));
             });
     }
 }
@@ -163,7 +187,7 @@ pub extern "C" fn sfc32x4_next_f32s(ptr: *mut Sfc32x4, out: *mut f32, count: usi
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Sfc32x4::new(chunk_seed32(base_seed, chunk_idx));
-                sfc32x4_next_f32s_chunk(&mut local_rng, chunk, scale);
+                sfc32x4_next_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), scale);
             });
     }
 }
@@ -190,7 +214,7 @@ pub extern "C" fn sfc32x4_rand_i32s(
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Sfc32x4::new(chunk_seed32(base_seed, chunk_idx));
-                sfc32x4_rand_i32s_chunk(&mut local_rng, chunk, v_range, v_min);
+                sfc32x4_rand_i32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_range, v_min);
             });
     }
 }
@@ -217,7 +241,7 @@ pub extern "C" fn sfc32x4_rand_f32s(
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Sfc32x4::new(chunk_seed32(base_seed, chunk_idx));
-                sfc32x4_rand_f32s_chunk(&mut local_rng, chunk, v_mult, v_min);
+                sfc32x4_rand_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_mult, v_min);
             });
     }
 }
@@ -244,10 +268,10 @@ const SFC32X8_UNROLL: usize = SFC32X8 << 2;
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
 #[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn sfc32x8_next_u32s_chunk(rng: &mut Sfc32x8, chunk: &mut [u32]) {
+unsafe fn sfc32x8_next_u32s_chunk(rng: &mut Sfc32x8, chunk: &mut [u32], nt: bool) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X8_UNROLL {
@@ -291,10 +315,10 @@ unsafe fn sfc32x8_next_u32s_chunk(rng: &mut Sfc32x8, chunk: &mut [u32]) {
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
 #[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn sfc32x8_next_f32s_chunk(rng: &mut Sfc32x8, chunk: &mut [f32], scale: __m256) {
+unsafe fn sfc32x8_next_f32s_chunk(rng: &mut Sfc32x8, chunk: &mut [f32], nt: bool, scale: __m256) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X8_UNROLL {
@@ -338,13 +362,13 @@ unsafe fn sfc32x8_next_f32s_chunk(rng: &mut Sfc32x8, chunk: &mut [f32], scale: _
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn sfc32x8_rand_i32s_chunk(
     rng: &mut Sfc32x8,
-    chunk: &mut [i32],
+    chunk: &mut [i32], nt: bool,
     v_range: __m256i,
     v_min: __m256i,
 ) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X8_UNROLL {
@@ -412,13 +436,13 @@ unsafe fn sfc32x8_rand_i32s_chunk(
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn sfc32x8_rand_f32s_chunk(
     rng: &mut Sfc32x8,
-    chunk: &mut [f32],
+    chunk: &mut [f32], nt: bool,
     v_mult: __m256,
     v_min: __m256,
 ) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X8_UNROLL {
@@ -474,7 +498,7 @@ pub extern "C" fn sfc32x8_next_u32s(ptr: *mut Sfc32x8, out: *mut u32, count: usi
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Sfc32x8::new(chunk_seed32(base_seed, chunk_idx));
-                sfc32x8_next_u32s_chunk(&mut local_rng, chunk);
+                sfc32x8_next_u32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk));
             });
     }
 }
@@ -498,7 +522,7 @@ pub extern "C" fn sfc32x8_next_f32s(ptr: *mut Sfc32x8, out: *mut f32, count: usi
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Sfc32x8::new(chunk_seed32(base_seed, chunk_idx));
-                sfc32x8_next_f32s_chunk(&mut local_rng, chunk, scale);
+                sfc32x8_next_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), scale);
             });
     }
 }
@@ -529,7 +553,7 @@ pub extern "C" fn sfc32x8_rand_i32s(
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Sfc32x8::new(chunk_seed32(base_seed, chunk_idx));
-                sfc32x8_rand_i32s_chunk(&mut local_rng, chunk, v_range, v_min);
+                sfc32x8_rand_i32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_range, v_min);
             });
     }
 }
@@ -560,7 +584,7 @@ pub extern "C" fn sfc32x8_rand_f32s(
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Sfc32x8::new(chunk_seed32(base_seed, chunk_idx));
-                sfc32x8_rand_f32s_chunk(&mut local_rng, chunk, v_mult, v_min);
+                sfc32x8_rand_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_mult, v_min);
             });
     }
 }
@@ -587,10 +611,10 @@ const SFC32X16_UNROLL: usize = SFC32X16 << 2;
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 #[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn sfc32x16_next_u32s_chunk(rng: &mut Sfc32x16, chunk: &mut [u32]) {
+unsafe fn sfc32x16_next_u32s_chunk(rng: &mut Sfc32x16, chunk: &mut [u32], nt: bool) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X16_UNROLL {
@@ -643,10 +667,10 @@ unsafe fn sfc32x16_next_u32s_chunk(rng: &mut Sfc32x16, chunk: &mut [u32]) {
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 #[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn sfc32x16_next_f32s_chunk(rng: &mut Sfc32x16, chunk: &mut [f32], scale: __m512) {
+unsafe fn sfc32x16_next_f32s_chunk(rng: &mut Sfc32x16, chunk: &mut [f32], nt: bool, scale: __m512) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X16_UNROLL {
@@ -701,13 +725,13 @@ unsafe fn sfc32x16_next_f32s_chunk(rng: &mut Sfc32x16, chunk: &mut [f32], scale:
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn sfc32x16_rand_i32s_chunk(
     rng: &mut Sfc32x16,
-    chunk: &mut [i32],
+    chunk: &mut [i32], nt: bool,
     v_range: __m512i,
     v_min: __m512i,
 ) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X16_UNROLL {
@@ -762,13 +786,13 @@ unsafe fn sfc32x16_rand_i32s_chunk(
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn sfc32x16_rand_f32s_chunk(
     rng: &mut Sfc32x16,
-    chunk: &mut [f32],
+    chunk: &mut [f32], nt: bool,
     v_mult: __m512,
     v_min: __m512,
 ) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X16_UNROLL {
@@ -836,7 +860,7 @@ pub extern "C" fn sfc32x16_next_u32s(ptr: *mut Sfc32x16, out: *mut u32, count: u
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Sfc32x16::new(chunk_seed32(base_seed, chunk_idx));
-                sfc32x16_next_u32s_chunk(&mut local_rng, chunk);
+                sfc32x16_next_u32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk));
             });
     }
 }
@@ -861,7 +885,7 @@ pub extern "C" fn sfc32x16_next_f32s(ptr: *mut Sfc32x16, out: *mut f32, count: u
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Sfc32x16::new(chunk_seed32(base_seed, chunk_idx));
-                sfc32x16_next_f32s_chunk(&mut local_rng, chunk, scale);
+                sfc32x16_next_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), scale);
             });
     }
 }
@@ -893,7 +917,7 @@ pub extern "C" fn sfc32x16_rand_i32s(
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Sfc32x16::new(chunk_seed32(base_seed, chunk_idx));
-                sfc32x16_rand_i32s_chunk(&mut local_rng, chunk, v_range, v_min);
+                sfc32x16_rand_i32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_range, v_min);
             });
     }
 }
@@ -925,7 +949,7 @@ pub extern "C" fn sfc32x16_rand_f32s(
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Sfc32x16::new(chunk_seed32(base_seed, chunk_idx));
-                sfc32x16_rand_f32s_chunk(&mut local_rng, chunk, v_mult, v_min);
+                sfc32x16_rand_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_mult, v_min);
             });
     }
 }

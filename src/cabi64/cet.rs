@@ -255,7 +255,7 @@ pub extern "C" fn cet64x8_free(ptr: *mut Cet64x8) {
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f,avx512dq")]
 #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
-unsafe fn cet64x8_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], seed: u64) {
+unsafe fn cet64x8_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], nt: bool, seed: u64) {
     let chunk_base = seed.wrapping_add((chunk_idx as u64).wrapping_mul(STRIDE));
     let sp1 = _mm512_set1_epi64(CET_SP1 as i64);
     let p1 = _mm512_set1_epi64(CET_P1 as i64);
@@ -350,7 +350,7 @@ unsafe fn cet64x8_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], seed: u64
         }};
     }
 
-    let is_aligned = (chunk.as_ptr() as usize) & 63 == 0;
+    let is_aligned = nt && (chunk.as_ptr() as usize) & 63 == 0;
     let mut chunks_exact = chunk.chunks_exact_mut(64);
 
     if is_aligned {
@@ -414,7 +414,7 @@ pub extern "C" fn cet64x8_next_u64s(ptr: *mut Cet64x8, out: *mut u64, count: usi
             .par_chunks_mut(CET64X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                cet64x8_next_u64s_chunk(chunk_idx, chunk, seed);
+                cet64x8_next_u64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed);
             });
 
         let next_seed = SplitMix64::compute(seed.wrapping_add((count as u64).wrapping_mul(STRIDE)));
@@ -437,7 +437,7 @@ pub extern "C" fn cet256x2_free(ptr: *mut Cet256x2) {
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f,avx512dq")]
 #[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn cet256x2_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], seed: u64) {
+unsafe fn cet256x2_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], nt: bool, seed: u64) {
     let chunk_seed =
         SplitMix64::compute(seed.wrapping_add((chunk_idx as u64).wrapping_mul(STRIDE)));
     let mut local = Cet256x2::new(chunk_seed);
@@ -471,7 +471,7 @@ pub extern "C" fn cet256x2_next_u64s(ptr: *mut Cet256x2, out: *mut u64, count: u
             .par_chunks_mut(CET256X2_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                cet256x2_next_u64s_chunk(chunk_idx, chunk, seed);
+                cet256x2_next_u64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed);
             });
 
         let next_seed = SplitMix64::compute(seed.wrapping_add((count as u64).wrapping_mul(STRIDE)));

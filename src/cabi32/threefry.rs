@@ -1,4 +1,4 @@
-use crate::_internal::fill_chunk_auto;
+use crate::_internal::{fill_chunk_auto, prefer_nt};
 use crate::rng32::{Threefry32x2, Threefry32x4};
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
@@ -34,6 +34,7 @@ where
     T: Copy + Default + Send,
     M: Fn(u32) -> T + Sync,
 {
+    let nt = prefer_nt::<T>(buffer.len());
     buffer
         .par_chunks_mut(THREEFRY32_PAR_CHUNK)
         .enumerate()
@@ -42,7 +43,7 @@ where
             let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
             let mut c64 = c0_64.wrapping_add(chunk_base);
             unsafe {
-                fill_chunk_auto(chunk, || {
+                fill_chunk_auto(chunk, nt, || {
                     let mut out = [T::default(); 64];
                     for b in 0..16 {
                         let cc = c64.wrapping_add(b as u64);
@@ -174,6 +175,7 @@ where
     T: Copy + Default + Send,
     M: Fn(u32) -> T + Sync,
 {
+    let nt = prefer_nt::<T>(buffer.len());
     buffer
         .par_chunks_mut(THREEFRY32X2_PAR_CHUNK)
         .enumerate()
@@ -182,7 +184,7 @@ where
             let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
             let mut c64 = c0_64.wrapping_add(chunk_base);
             unsafe {
-                fill_chunk_auto(chunk, || {
+                fill_chunk_auto(chunk, nt, || {
                     let mut out = [T::default(); 64];
                     for b in 0..32 {
                         let cc = c64.wrapping_add(b as u64);

@@ -125,6 +125,14 @@ fn measure_write_ceiling(buf: &mut [u32]) -> f64 {
 /// Number of timed runs per algorithm; best (max throughput) is reported.
 const RUNS: usize = 3;
 
+/// L3-resident mode: 16 MB working set (fits in L3, below the library's
+/// 24 MB NT threshold so adaptive fills use cached stores) looped to the
+/// same 100M total outputs.
+const N_L3_32: usize = 4_000_000;
+const N_L3_64: usize = 2_000_000;
+const L3_LOOPS_32: usize = N / N_L3_32;
+const L3_LOOPS_64: usize = N / N_L3_64;
+
 /// Bar chart width in full-block characters.
 const BAR_WIDTH: usize = 40;
 
@@ -173,6 +181,26 @@ where
         let start = Instant::now();
         f(buf.as_mut_ptr(), N);
         let t = N as f64 / start.elapsed().as_secs_f64() / G;
+        if t > best {
+            best = t;
+        }
+    }
+    best
+}
+
+/// Measure throughput over an L3-resident working set of `n` elements,
+/// looped `loops` times per timed run.
+fn measure_l3<T, F>(buf: &mut [T], n: usize, loops: usize, mut f: F) -> f64
+where
+    F: FnMut(*mut T, usize),
+{
+    let mut best = 0.0f64;
+    for _ in 0..RUNS {
+        let start = Instant::now();
+        for _ in 0..loops {
+            f(buf.as_mut_ptr(), n);
+        }
+        let t = (n * loops) as f64 / start.elapsed().as_secs_f64() / G;
         if t > best {
             best = t;
         }
@@ -234,6 +262,28 @@ macro_rules! bench64 {
     };
     ($buf:ident, $results:ident, $($name:ident),+) => {
         $(bench64!($buf, $results, $name);)+
+    };
+}
+
+macro_rules! bench32_l3 {
+    ($buf:ident, $results:ident, $($name:ident),+ $(,)?) => {
+        $(paste::paste! {
+            let ptr = [<$name _new>](0);
+            let gs = measure_l3(&mut $buf, N_L3_32, L3_LOOPS_32, |p, n| [<$name _next_u32s>](ptr, p, n));
+            [<$name _free>](ptr);
+            $results.push((stringify!($name), gs));
+        })+
+    };
+}
+
+macro_rules! bench64_l3 {
+    ($buf:ident, $results:ident, $($name:ident),+ $(,)?) => {
+        $(paste::paste! {
+            let ptr = [<$name _new>](0);
+            let gs = measure_l3(&mut $buf, N_L3_64, L3_LOOPS_64, |p, n| [<$name _next_u64s>](ptr, p, n));
+            [<$name _free>](ptr);
+            $results.push((stringify!($name), gs));
+        })+
     };
 }
 
@@ -303,4 +353,45 @@ fn main() {
     bench64!(buf64, r64, sfc64, sfc64x8);
     bench64!(buf64, r64, biski64, biski64x8);
     print_group(&r64, 8, ceiling_gbps);
+
+    println!("{}", "─".repeat(72).bright_black());
+    println!(
+        "L3-resident mode (16 MB working set x {} loops = same totals)",
+        L3_LOOPS_32.to_string().bright_yellow(),
+    );
+    println!("{}", "─".repeat(72).bright_black());
+
+    let mut r32_l3 = Vec::new();
+    bench32_l3!(
+        buf32,
+        r32_l3,
+        philox32x4x4,
+        philox32,
+        threefry32x4,
+        squares32x8,
+        pcg32x8,
+        splitmix32x16,
+        xoshiro128ppx16,
+        xoroshiro64ss,
+        xoroshiro64ssx16,
+        jsf32x16,
+        sfc32x8,
+    );
+    print_group(&r32_l3, 4, ceiling_gbps);
+
+    println!("{}", "─".repeat(72).bright_black());
+
+    let mut r64_l3 = Vec::new();
+    bench64_l3!(
+        buf64,
+        r64_l3,
+        philox64,
+        splitmix64,
+        xoroshiro128pp,
+        xoshiro256ssx2,
+        cet64x8,
+        sfc64x8,
+        biski64x8,
+    );
+    print_group(&r64_l3, 8, ceiling_gbps);
 }

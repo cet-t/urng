@@ -63,8 +63,12 @@ pub(crate) unsafe fn fill_chunk_nt<T: Copy, const N: usize, F: FnMut() -> [T; N]
     mut generate: F,
 ) {
     use std::arch::x86_64::*;
-    debug_assert!((N * size_of::<T>()) % 32 == 0);
     let words = (N * size_of::<T>()) / 32;
+    // A batch smaller than one 32-byte store cannot be streamed; silently
+    // dropping stores would corrupt the output, so fall back instead.
+    if words == 0 || (N * size_of::<T>()) % 32 != 0 {
+        return fill_chunk(chunk, generate);
+    }
     let mut p = chunk.as_mut_ptr();
     let mut rem = chunk.len();
     if (p as usize) & 31 == 0 {
@@ -95,7 +99,28 @@ pub(crate) unsafe fn fill_chunk_nt<T: Copy, const N: usize, F: FnMut() -> [T; N]
     }
 }
 
-/// Dispatches to [`fill_chunk_nt`] when AVX2 is available, else [`fill_chunk`].
+/// Buffers larger than this are streamed past the cache (NT stores);
+/// smaller ones use cached stores so an L3-resident working set never
+/// touches DRAM. Compare against the *whole* destination buffer size,
+/// not the per-thread chunk.
+pub(crate) const NT_THRESHOLD_BYTES: usize = 24 << 20;
+
+/// Returns whether a fill of `total_bytes` should use non-temporal stores.
+#[inline(always)]
+pub(crate) fn prefer_nt<T>(total_elems: usize) -> bool {
+    total_elems * size_of::<T>() > NT_THRESHOLD_BYTES
+}
+
+/// [`prefer_nt`] with the element type inferred from a sample slice
+/// (typically the per-thread chunk; pass the *total* element count).
+#[inline(always)]
+pub(crate) fn prefer_nt_for<T>(total_elems: usize, _sample: &[T]) -> bool {
+    total_elems * size_of::<T>() > NT_THRESHOLD_BYTES
+}
+
+/// Dispatches to [`fill_chunk_nt`] when requested and AVX2 is available,
+/// else [`fill_chunk`]. Pass `nt = prefer_nt::<T>(buffer.len())` computed
+/// on the whole destination buffer.
 ///
 /// # Safety
 ///
@@ -103,12 +128,14 @@ pub(crate) unsafe fn fill_chunk_nt<T: Copy, const N: usize, F: FnMut() -> [T; N]
 #[inline(always)]
 pub(crate) unsafe fn fill_chunk_auto<T: Copy, const N: usize, F: FnMut() -> [T; N]>(
     chunk: &mut [T],
+    nt: bool,
     generate: F,
 ) {
     #[cfg(target_arch = "x86_64")]
-    if std::arch::is_x86_feature_detected!("avx2") {
+    if nt && std::arch::is_x86_feature_detected!("avx2") {
         return unsafe { fill_chunk_nt(chunk, generate) };
     }
+    let _ = nt;
     unsafe { fill_chunk(chunk, generate) }
 }
 
@@ -123,4 +150,65 @@ pub(crate) fn chunk_seed32(base_seed: u32, chunk_idx: usize) -> u32 {
     z ^= z >> 16;
     z = z.wrapping_mul(0xC4CE_B9FE_1A85_EC53);
     (z ^ (z >> 16)) as u32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Sequential counter generator: makes dropped or duplicated batches
+    /// detectable as exact-value mismatches.
+    fn counter_batches<const N: usize>() -> impl FnMut() -> [u32; N] {
+        let mut next = 0u32;
+        move || {
+            let mut out = [0u32; N];
+            for v in &mut out {
+                *v = next;
+                next += 1;
+            }
+            out
+        }
+    }
+
+    fn check_fill(buf: &[u32], len: usize) {
+        for (i, &v) in buf[..len].iter().enumerate() {
+            assert_eq!(v as usize, i, "element {i} wrong");
+        }
+    }
+
+    #[test]
+    fn fill_chunk_writes_every_element() {
+        for len in [0usize, 1, 7, 16, 63, 64, 65, 1000] {
+            let mut buf = vec![u32::MAX; len];
+            unsafe { fill_chunk::<u32, 16, _>(&mut buf, counter_batches()) };
+            check_fill(&buf, len);
+        }
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn fill_chunk_nt_writes_every_element() {
+        if !std::arch::is_x86_feature_detected!("avx2") {
+            return;
+        }
+        for len in [0usize, 1, 7, 16, 63, 64, 65, 1000] {
+            let mut buf = vec![u32::MAX; len];
+            unsafe { fill_chunk_nt::<u32, 16, _>(&mut buf, counter_batches()) };
+            check_fill(&buf, len);
+        }
+    }
+
+    /// Batches smaller than one 32-byte store must fall back to cached
+    /// stores instead of silently dropping every store (regression test:
+    /// sfc32x4 once produced 4-element batches and wrote nothing).
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn fill_chunk_nt_small_batch_falls_back() {
+        if !std::arch::is_x86_feature_detected!("avx2") {
+            return;
+        }
+        let mut buf = vec![u32::MAX; 100];
+        unsafe { fill_chunk_nt::<u32, 4, _>(&mut buf, counter_batches()) };
+        check_fill(&buf, 100);
+    }
 }

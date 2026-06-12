@@ -1,4 +1,4 @@
-use crate::_internal::fill_chunk_auto;
+use crate::_internal::{fill_chunk_auto, prefer_nt};
 use crate::rng::Rng64;
 use crate::rng64::{
     SplitMix64,
@@ -20,6 +20,7 @@ where
     N: Fn(u64) -> R + Sync,
     M: Fn(&mut R) -> T + Sync,
 {
+    let nt = prefer_nt::<T>(buffer.len());
     buffer
         .par_chunks_mut(XOROSHIRO128_PAR_CHUNK)
         .enumerate()
@@ -29,7 +30,7 @@ where
             );
             let mut rng = new_rng(chunk_seed);
             unsafe {
-                fill_chunk_auto(chunk, || {
+                fill_chunk_auto(chunk, nt, || {
                     let mut out = [T::default(); 8];
                     for v in &mut out {
                         *v = step(&mut rng);

@@ -147,7 +147,7 @@ const SFC64X8_PAR_CHUNK: usize = 0x1000;
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
-unsafe fn sfc64x8_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], seed: u64) {
+unsafe fn sfc64x8_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], nt: bool, seed: u64) {
     const STRIDE: u64 = 0x9E3779B97F4A7C15u64;
     let chunk_base = seed.wrapping_add((chunk_idx as u64).wrapping_mul(STRIDE));
 
@@ -223,7 +223,7 @@ unsafe fn sfc64x8_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], seed: u64
         }};
     }
 
-    let is_aligned = (chunk.as_ptr() as usize) & 63 == 0;
+    let is_aligned = nt && (chunk.as_ptr() as usize) & 63 == 0;
     let mut chunks_exact = chunk.chunks_exact_mut(48);
 
     if is_aligned {
@@ -281,7 +281,7 @@ pub extern "C" fn sfc64x8_next_u64s(ptr: *mut Sfc64x8, out: *mut u64, count: usi
             .par_chunks_mut(SFC64X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                sfc64x8_next_u64s_chunk(chunk_idx, chunk, seed);
+                sfc64x8_next_u64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed);
             });
 
         let seed =

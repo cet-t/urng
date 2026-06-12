@@ -1,4 +1,4 @@
-use crate::_internal::fill_chunk_auto;
+use crate::_internal::{fill_chunk_auto, prefer_nt};
 use crate::rng64::SplitMix64;
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
@@ -31,13 +31,14 @@ where
     T: Copy + Default + Send,
     M: Fn(u64) -> T + Sync,
 {
+    let nt = prefer_nt::<T>(buffer.len());
     buffer
         .par_chunks_mut(SPLITMIX64_PAR_CHUNK)
         .enumerate()
         .for_each(|(chunk_idx, chunk)| {
             let mut idx = (chunk_idx * SPLITMIX64_PAR_CHUNK) as u64;
             unsafe {
-                fill_chunk_auto(chunk, || {
+                fill_chunk_auto(chunk, nt, || {
                     let mut out = [T::default(); 8];
                     for v in &mut out {
                         idx += 1;

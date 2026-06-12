@@ -1,4 +1,4 @@
-use crate::_internal::fill_chunk_auto;
+use crate::_internal::{fill_chunk_auto, prefer_nt};
 use crate::rng64::Philox64;
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
@@ -31,13 +31,14 @@ where
     T: Copy + Default + Send,
     M: Fn(u64) -> T + Sync,
 {
+    let nt = prefer_nt::<T>(buffer.len());
     buffer
         .par_chunks_mut(PHILOX64_PAR_CHUNK)
         .enumerate()
         .for_each(|(chunk_idx, chunk)| {
             let mut block = ((chunk_idx * PHILOX64_PAR_CHUNK) / 2) as u64;
             unsafe {
-                fill_chunk_auto(chunk, || {
+                fill_chunk_auto(chunk, nt, || {
                     let mut out = [T::default(); 8];
                     for blk in out.chunks_exact_mut(2) {
                         let mut c = c0;

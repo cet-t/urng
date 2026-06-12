@@ -144,7 +144,7 @@ const XOSHIRO256SSX2_PAR_CHUNK: usize = 131_072;
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
-unsafe fn xoshiro256ssx2_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], base_seed: u64) {
+unsafe fn xoshiro256ssx2_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], nt: bool, base_seed: u64) {
     // 4-way interleaved xoshiro256++ with AVX-512 SoA layout.
     // Each group holds 8 independent xoshiro256++ streams (SoA: one __m512i per state word).
     // 4 groups × 8 streams = 32 independent streams total, producing 32 u64 per iteration.
@@ -234,7 +234,7 @@ unsafe fn xoshiro256ssx2_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], ba
         }};
     }
 
-    let is_aligned = (chunk.as_ptr() as usize) & 63 == 0;
+    let is_aligned = nt && (chunk.as_ptr() as usize) & 63 == 0;
     let mut chunks_exact = chunk.chunks_exact_mut(32);
 
     if is_aligned {
@@ -293,7 +293,7 @@ pub extern "C" fn xoshiro256ssx2_next_u64s(ptr: *mut Xoshiro256Ssx2, out: *mut u
             .par_chunks_mut(XOSHIRO256SSX2_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                xoshiro256ssx2_next_u64s_chunk(chunk_idx, chunk, base_seed);
+                xoshiro256ssx2_next_u64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), base_seed);
             });
 
         // Advance RNG state so next call produces a different sequence
