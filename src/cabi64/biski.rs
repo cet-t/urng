@@ -265,7 +265,7 @@ unsafe fn u64x8_to_f64x8(u: __m512i, exp_bits: __m512i, ones: __m512d) -> __m512
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
-unsafe fn biski64x8_next_f64s_chunk(chunk_idx: usize, chunk: &mut [f64], nt: bool, seed: u64) {
+unsafe fn biski64x8_next_f64s_chunk(chunk_idx: usize, chunk: &mut [f64], _nt: bool, seed: u64) {
     let chunk_base = seed.wrapping_add((chunk_idx as u64).wrapping_mul(STRIDE));
     let inc = _mm512_set1_epi64(crate::rng64::biski::INC as i64);
     let exp_bits = _mm512_set1_epi64(0x3FF0000000000000u64 as i64);
@@ -373,7 +373,7 @@ unsafe fn biski64x8_next_f64s_chunk(chunk_idx: usize, chunk: &mut [f64], nt: boo
 #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
 unsafe fn biski64x8_rand_i64s_chunk(
     chunk_idx: usize,
-    chunk: &mut [i64], nt: bool,
+    chunk: &mut [i64], _nt: bool,
     seed: u64,
     min: i64,
     max: i64,
@@ -480,7 +480,7 @@ unsafe fn biski64x8_rand_i64s_chunk(
 #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
 unsafe fn biski64x8_rand_f64s_chunk(
     chunk_idx: usize,
-    chunk: &mut [f64], nt: bool,
+    chunk: &mut [f64], _nt: bool,
     seed: u64,
     min: f64,
     max: f64,

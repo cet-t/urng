@@ -49,6 +49,8 @@ impl Mt19937 {
         }
     }
 
+    /// Kept for sequential single-threaded block fills (cabi now fills in parallel).
+    #[allow(dead_code)]
     #[inline]
     pub(crate) fn fill_next_u32s(&mut self, out: &mut [u32]) {
         let mut written = 0;
@@ -268,6 +270,8 @@ impl Sfmt19937 {
         }
     }
 
+    /// Kept for sequential single-threaded block fills (cabi now fills in parallel).
+    #[allow(dead_code)]
     #[inline]
     pub(crate) fn fill_next_u32s(&mut self, out: &mut [u32]) {
         let mut written = 0;
@@ -440,6 +444,8 @@ macro_rules! define_sfmt_variant {
                     }
                 }
 
+                /// Kept for sequential single-threaded block fills (cabi now fills in parallel).
+                #[allow(dead_code)]
                 #[inline]
                 pub(crate) fn fill_next_u32s(&mut self, out: &mut [u32]) {
                     let mut written = 0;

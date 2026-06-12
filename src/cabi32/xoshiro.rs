@@ -59,7 +59,8 @@ pub extern "C" fn xoshiro128pp_next_u32s(ptr: *mut Xoshiro128Pp, out: *mut u32, 
     }
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.nextu());
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Pp::new, |r| r.nextu());
     }
 }
 
@@ -71,7 +72,8 @@ pub extern "C" fn xoshiro128pp_next_f32s(ptr: *mut Xoshiro128Pp, out: *mut f32, 
     }
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.nextf());
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Pp::new, |r| r.nextf());
     }
 }
 
@@ -89,7 +91,8 @@ pub extern "C" fn xoshiro128pp_rand_i32s(
     }
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.randi(min, max));
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Pp::new, |r| r.randi(min, max));
     }
 }
 
@@ -107,7 +110,8 @@ pub extern "C" fn xoshiro128pp_rand_f32s(
     }
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.randf(min, max));
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Pp::new, |r| r.randf(min, max));
     }
 }
 
@@ -138,7 +142,8 @@ pub extern "C" fn xoshiro128ss_next_u32s(ptr: *mut Xoshiro128Ss, out: *mut u32, 
     }
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.nextu());
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Ss::new, |r| r.nextu());
     }
 }
 
@@ -150,7 +155,8 @@ pub extern "C" fn xoshiro128ss_next_f32s(ptr: *mut Xoshiro128Ss, out: *mut f32, 
     }
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.nextf());
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Ss::new, |r| r.nextf());
     }
 }
 
@@ -168,7 +174,8 @@ pub extern "C" fn xoshiro128ss_rand_i32s(
     }
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.randi(min, max));
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Ss::new, |r| r.randi(min, max));
     }
 }
 
@@ -186,7 +193,8 @@ pub extern "C" fn xoshiro128ss_rand_f32s(
     }
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.randf(min, max));
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Ss::new, |r| r.randf(min, max));
     }
 }
 

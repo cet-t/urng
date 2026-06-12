@@ -437,7 +437,7 @@ pub extern "C" fn cet256x2_free(ptr: *mut Cet256x2) {
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f,avx512dq")]
 #[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn cet256x2_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], nt: bool, seed: u64) {
+unsafe fn cet256x2_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], _nt: bool, seed: u64) {
     let chunk_seed =
         SplitMix64::compute(seed.wrapping_add((chunk_idx as u64).wrapping_mul(STRIDE)));
     let mut local = Cet256x2::new(chunk_seed);

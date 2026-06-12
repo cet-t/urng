@@ -139,6 +139,78 @@ pub(crate) unsafe fn fill_chunk_auto<T: Copy, const N: usize, F: FnMut() -> [T; 
     unsafe { fill_chunk(chunk, generate) }
 }
 
+/// Parallel bulk fill for sequential 32-bit-seeded RNGs: each 512KB chunk
+/// runs its own RNG reseeded via [`chunk_seed32`], 16 outputs are batched
+/// per generator call (64B for 4-byte `T`), and stores are size-adaptive
+/// (cached for L3-resident buffers, non-temporal for larger ones).
+pub(crate) fn par_fill_reseed32<R, T, NF, SF>(
+    buffer: &mut [T],
+    base_seed: u32,
+    new_rng: NF,
+    step: SF,
+) where
+    T: Copy + Default + Send,
+    NF: Fn(u32) -> R + Sync,
+    SF: Fn(&mut R) -> T + Sync,
+{
+    use rayon::iter::{IndexedParallelIterator, ParallelIterator};
+    use rayon::slice::ParallelSliceMut;
+    const PAR_CHUNK: usize = 0x20000;
+    let nt = prefer_nt::<T>(buffer.len());
+    buffer
+        .par_chunks_mut(PAR_CHUNK)
+        .enumerate()
+        .for_each(|(chunk_idx, chunk)| {
+            let mut rng = new_rng(chunk_seed32(base_seed, chunk_idx));
+            unsafe {
+                fill_chunk_auto(chunk, nt, || {
+                    let mut out = [T::default(); 16];
+                    for v in &mut out {
+                        *v = step(&mut rng);
+                    }
+                    out
+                });
+            }
+        });
+}
+
+/// 64-bit counterpart of [`par_fill_reseed32`]: 8 outputs per batch
+/// (64B for 8-byte `T`), chunk seeds decorrelated by golden-ratio steps
+/// plus the SplitMix64 finalizer.
+pub(crate) fn par_fill_reseed64<R, T, NF, SF>(
+    buffer: &mut [T],
+    base_seed: u64,
+    new_rng: NF,
+    step: SF,
+) where
+    T: Copy + Default + Send,
+    NF: Fn(u64) -> R + Sync,
+    SF: Fn(&mut R) -> T + Sync,
+{
+    use rayon::iter::{IndexedParallelIterator, ParallelIterator};
+    use rayon::slice::ParallelSliceMut;
+    const PAR_CHUNK: usize = 0x20000;
+    let nt = prefer_nt::<T>(buffer.len());
+    buffer
+        .par_chunks_mut(PAR_CHUNK)
+        .enumerate()
+        .for_each(|(chunk_idx, chunk)| {
+            let chunk_seed = crate::rng64::SplitMix64::compute(
+                base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
+            );
+            let mut rng = new_rng(chunk_seed);
+            unsafe {
+                fill_chunk_auto(chunk, nt, || {
+                    let mut out = [T::default(); 8];
+                    for v in &mut out {
+                        *v = step(&mut rng);
+                    }
+                    out
+                });
+            }
+        });
+}
+
 /// Derives a decorrelated per-chunk seed for parallel buffer fills
 /// (golden-ratio sequence + 64-bit avalanche mix).
 #[inline]

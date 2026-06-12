@@ -31,7 +31,8 @@ pub extern "C" fn splitmix32_free(ptr: *mut SplitMix32) {
 pub extern "C" fn splitmix32_next_u32s(ptr: *mut SplitMix32, out: *mut u32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.nextu());
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), SplitMix32::new, |r| r.nextu());
     }
 }
 
@@ -40,7 +41,8 @@ pub extern "C" fn splitmix32_next_u32s(ptr: *mut SplitMix32, out: *mut u32, coun
 pub extern "C" fn splitmix32_next_f32s(ptr: *mut SplitMix32, out: *mut f32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.nextf());
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), SplitMix32::new, |r| r.nextf());
     }
 }
 
@@ -55,7 +57,8 @@ pub extern "C" fn splitmix32_rand_i32s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.randi(min, max));
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), SplitMix32::new, |r| r.randi(min, max));
     }
 }
 
@@ -70,7 +73,8 @@ pub extern "C" fn splitmix32_rand_f32s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.randf(min, max));
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), SplitMix32::new, |r| r.randf(min, max));
     }
 }
 

@@ -25,7 +25,7 @@ pub extern "C" fn mt1993764_next_u64s(ptr: *mut Mt1993764, out: *mut u64, count:
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        rng.fill_next_u64s(buffer);
+        crate::_internal::par_fill_reseed64(buffer, rng.nextu(), Mt1993764::new, |r| r.nextu());
     }
 }
 /// Fills `out[0..count]` with `f64` values uniformly distributed in `[0, 1)`.
@@ -33,7 +33,8 @@ pub extern "C" fn mt1993764_next_u64s(ptr: *mut Mt1993764, out: *mut u64, count:
 pub extern "C" fn mt1993764_next_f64s(ptr: *mut Mt1993764, out: *mut f64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.nextf());
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed64(buffer, rng.nextu(), Mt1993764::new, |r| r.nextf());
     }
 }
 /// Fills `out[0..count]` with `i64` values uniformly distributed in `[min, max]`.
@@ -47,7 +48,8 @@ pub extern "C" fn mt1993764_rand_i64s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.randi(min, max));
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed64(buffer, rng.nextu(), Mt1993764::new, |r| r.randi(min, max));
     }
 }
 /// Fills `out[0..count]` with `f64` values uniformly distributed in `[min, max)`.
@@ -61,7 +63,8 @@ pub extern "C" fn mt1993764_rand_f64s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.randf(min, max));
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed64(buffer, rng.nextu(), Mt1993764::new, |r| r.randf(min, max));
     }
 }
 
@@ -88,7 +91,7 @@ pub extern "C" fn sfmt1993764_next_u64s(ptr: *mut Sfmt1993764, out: *mut u64, co
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        rng.fill_next_u64s(buffer);
+        crate::_internal::par_fill_reseed64(buffer, rng.nextu(), Sfmt1993764::new, |r| r.nextu());
     }
 }
 /// Fills `out[0..count]` with `f64` values uniformly distributed in `[0, 1)`.
@@ -96,7 +99,8 @@ pub extern "C" fn sfmt1993764_next_u64s(ptr: *mut Sfmt1993764, out: *mut u64, co
 pub extern "C" fn sfmt1993764_next_f64s(ptr: *mut Sfmt1993764, out: *mut f64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.nextf());
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed64(buffer, rng.nextu(), Sfmt1993764::new, |r| r.nextf());
     }
 }
 /// Fills `out[0..count]` with `i64` values uniformly distributed in `[min, max]`.
@@ -110,7 +114,8 @@ pub extern "C" fn sfmt1993764_rand_i64s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.randi(min, max));
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed64(buffer, rng.nextu(), Sfmt1993764::new, |r| r.randi(min, max));
     }
 }
 /// Fills `out[0..count]` with `f64` values uniformly distributed in `[min, max)`.
@@ -124,6 +129,7 @@ pub extern "C" fn sfmt_rand_f64s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        crate::_internal::fill_with(out, count, || rng.randf(min, max));
+        let buffer = from_raw_parts_mut(out, count);
+        crate::_internal::par_fill_reseed64(buffer, rng.nextu(), Sfmt1993764::new, |r| r.randf(min, max));
     }
 }

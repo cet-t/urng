@@ -27,8 +27,6 @@ pub extern "C" fn jsf32_free(ptr: *mut Jsf32) {
     }
 }
 
-const JSF32_PAR_CHUNK: usize = 0x1000;
-
 /// Fills the output buffer with the next random `u32` values.
 #[unsafe(no_mangle)]
 pub extern "C" fn jsf32_next_u32s(ptr: *mut Jsf32, out: *mut u32, count: usize) {
@@ -39,22 +37,7 @@ pub extern "C" fn jsf32_next_u32s(ptr: *mut Jsf32, out: *mut u32, count: usize) 
         let rng = &mut *ptr;
         let seed = rng.nextu();
         let buffer = from_raw_parts_mut(out, count);
-        buffer
-            .par_chunks_mut(JSF32_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                let mut local_rng = Jsf32::new(seed.wrapping_add(i as u32));
-                let mut chunks4 = chunk.chunks_exact_mut(4);
-                for c in chunks4.by_ref() {
-                    c[0] = local_rng.nextu();
-                    c[1] = local_rng.nextu();
-                    c[2] = local_rng.nextu();
-                    c[3] = local_rng.nextu();
-                }
-                for x in chunks4.into_remainder() {
-                    *x = local_rng.nextu();
-                }
-            });
+        crate::_internal::par_fill_reseed32(buffer, seed, Jsf32::new, |r| r.nextu());
     }
 }
 
@@ -68,22 +51,7 @@ pub extern "C" fn jsf32_next_f32s(ptr: *mut Jsf32, out: *mut f32, count: usize) 
         let rng = &mut *ptr;
         let base_seed = rng.nextu();
         let buffer = from_raw_parts_mut(out, count);
-        buffer
-            .par_chunks_mut(JSF32_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                let mut local_rng = Jsf32::new(base_seed.wrapping_add(i as u32));
-                let mut chunks4 = chunk.chunks_exact_mut(4);
-                for c in chunks4.by_ref() {
-                    c[0] = local_rng.nextf();
-                    c[1] = local_rng.nextf();
-                    c[2] = local_rng.nextf();
-                    c[3] = local_rng.nextf();
-                }
-                for x in chunks4.into_remainder() {
-                    *x = local_rng.nextf();
-                }
-            });
+        crate::_internal::par_fill_reseed32(buffer, base_seed, Jsf32::new, |r| r.nextf());
     }
 }
 
@@ -103,22 +71,7 @@ pub extern "C" fn jsf32_rand_i32s(
         let rng = &mut *ptr;
         let base_seed = rng.nextu();
         let buffer = from_raw_parts_mut(out, count);
-        buffer
-            .par_chunks_mut(JSF32_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                let mut local_rng = Jsf32::new(base_seed.wrapping_add(i as u32));
-                let mut chunks4 = chunk.chunks_exact_mut(4);
-                for c in chunks4.by_ref() {
-                    c[0] = local_rng.randi(min, max);
-                    c[1] = local_rng.randi(min, max);
-                    c[2] = local_rng.randi(min, max);
-                    c[3] = local_rng.randi(min, max);
-                }
-                for x in chunks4.into_remainder() {
-                    *x = local_rng.randi(min, max);
-                }
-            });
+        crate::_internal::par_fill_reseed32(buffer, base_seed, Jsf32::new, |r| r.randi(min, max));
     }
 }
 
@@ -138,22 +91,7 @@ pub extern "C" fn jsf32_rand_f32s(
         let rng = &mut *ptr;
         let base_seed = rng.nextu();
         let buffer = from_raw_parts_mut(out, count);
-        buffer
-            .par_chunks_mut(JSF32_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                let mut local_rng = Jsf32::new(base_seed.wrapping_add(i as u32));
-                let mut chunks4 = chunk.chunks_exact_mut(4);
-                for c in chunks4.by_ref() {
-                    c[0] = local_rng.randf(min, max);
-                    c[1] = local_rng.randf(min, max);
-                    c[2] = local_rng.randf(min, max);
-                    c[3] = local_rng.randf(min, max);
-                }
-                for x in chunks4.into_remainder() {
-                    *x = local_rng.randf(min, max);
-                }
-            });
+        crate::_internal::par_fill_reseed32(buffer, base_seed, Jsf32::new, |r| r.randf(min, max));
     }
 }
 
