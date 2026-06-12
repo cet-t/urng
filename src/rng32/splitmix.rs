@@ -72,6 +72,10 @@ pub struct SplitMix32x16 {
 #[cfg(target_arch = "x86_64")]
 impl SplitMix32x16 {
     /// Creates a new `SplitMix32x16` instance.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f` target feature.
     #[target_feature(enable = "avx512f")]
     pub unsafe fn new(seed: u32) -> Self {
         let base = seed | 1;
@@ -84,8 +88,12 @@ impl SplitMix32x16 {
         }
     }
 
-    #[target_feature(enable = "avx512f")]
     /// Computes the SplitMix32 output for 16 lanes at once.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f` target feature.
+    #[target_feature(enable = "avx512f")]
     pub unsafe fn compute(state: __m512i) -> __m512i {
         let c1 = _mm512_set1_epi32(0x85EB_CA6Bu32 as i32);
         let c2 = _mm512_set1_epi32(0xC2B2_AE35u32 as i32);
@@ -98,8 +106,12 @@ impl SplitMix32x16 {
         _mm512_xor_si512(z, _mm512_srli_epi32(z, 16))
     }
 
-    #[target_feature(enable = "avx512f")]
     /// Generates the next 16 random `u32` values.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f` target feature.
+    #[target_feature(enable = "avx512f")]
     pub unsafe fn nextu(&mut self) -> [u32; SPLITMIX32x16] {
         let v = unsafe { Self::compute(self.state) };
         self.state = _mm512_add_epi32(

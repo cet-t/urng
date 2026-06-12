@@ -1,4 +1,3 @@
-use csbindgen;
 use std::result::Result;
 
 fn strip_struct_fields(content: &str) -> String {

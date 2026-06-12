@@ -1,6 +1,7 @@
 #[cfg(target_arch = "x86_64")]
 use crate::rng32::jsf::JSF32X16;
 use crate::{
+    _internal::chunk_seed32,
     rng::{Rng32, Rng32V512},
     rng32::{Jsf32, jsf::Jsf32x16},
 };
@@ -26,8 +27,6 @@ pub extern "C" fn jsf32_free(ptr: *mut Jsf32) {
     }
 }
 
-const JSF32_PAR_CHUNK: usize = 0x1000;
-
 /// Fills the output buffer with the next random `u32` values.
 #[unsafe(no_mangle)]
 pub extern "C" fn jsf32_next_u32s(ptr: *mut Jsf32, out: *mut u32, count: usize) {
@@ -38,22 +37,7 @@ pub extern "C" fn jsf32_next_u32s(ptr: *mut Jsf32, out: *mut u32, count: usize) 
         let rng = &mut *ptr;
         let seed = rng.nextu();
         let buffer = from_raw_parts_mut(out, count);
-        buffer
-            .par_chunks_mut(JSF32_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                let mut local_rng = Jsf32::new(seed.wrapping_add(i as u32));
-                let mut chunks4 = chunk.chunks_exact_mut(4);
-                for c in chunks4.by_ref() {
-                    c[0] = local_rng.nextu();
-                    c[1] = local_rng.nextu();
-                    c[2] = local_rng.nextu();
-                    c[3] = local_rng.nextu();
-                }
-                for x in chunks4.into_remainder() {
-                    *x = local_rng.nextu();
-                }
-            });
+        crate::_internal::par_fill_reseed32(buffer, seed, Jsf32::new, |r| r.nextu());
     }
 }
 
@@ -67,22 +51,7 @@ pub extern "C" fn jsf32_next_f32s(ptr: *mut Jsf32, out: *mut f32, count: usize) 
         let rng = &mut *ptr;
         let base_seed = rng.nextu();
         let buffer = from_raw_parts_mut(out, count);
-        buffer
-            .par_chunks_mut(JSF32_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                let mut local_rng = Jsf32::new(base_seed.wrapping_add(i as u32));
-                let mut chunks4 = chunk.chunks_exact_mut(4);
-                for c in chunks4.by_ref() {
-                    c[0] = local_rng.nextf();
-                    c[1] = local_rng.nextf();
-                    c[2] = local_rng.nextf();
-                    c[3] = local_rng.nextf();
-                }
-                for x in chunks4.into_remainder() {
-                    *x = local_rng.nextf();
-                }
-            });
+        crate::_internal::par_fill_reseed32(buffer, base_seed, Jsf32::new, |r| r.nextf());
     }
 }
 
@@ -102,22 +71,7 @@ pub extern "C" fn jsf32_rand_i32s(
         let rng = &mut *ptr;
         let base_seed = rng.nextu();
         let buffer = from_raw_parts_mut(out, count);
-        buffer
-            .par_chunks_mut(JSF32_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                let mut local_rng = Jsf32::new(base_seed.wrapping_add(i as u32));
-                let mut chunks4 = chunk.chunks_exact_mut(4);
-                for c in chunks4.by_ref() {
-                    c[0] = local_rng.randi(min, max);
-                    c[1] = local_rng.randi(min, max);
-                    c[2] = local_rng.randi(min, max);
-                    c[3] = local_rng.randi(min, max);
-                }
-                for x in chunks4.into_remainder() {
-                    *x = local_rng.randi(min, max);
-                }
-            });
+        crate::_internal::par_fill_reseed32(buffer, base_seed, Jsf32::new, |r| r.randi(min, max));
     }
 }
 
@@ -137,22 +91,7 @@ pub extern "C" fn jsf32_rand_f32s(
         let rng = &mut *ptr;
         let base_seed = rng.nextu();
         let buffer = from_raw_parts_mut(out, count);
-        buffer
-            .par_chunks_mut(JSF32_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(i, chunk)| {
-                let mut local_rng = Jsf32::new(base_seed.wrapping_add(i as u32));
-                let mut chunks4 = chunk.chunks_exact_mut(4);
-                for c in chunks4.by_ref() {
-                    c[0] = local_rng.randf(min, max);
-                    c[1] = local_rng.randf(min, max);
-                    c[2] = local_rng.randf(min, max);
-                    c[3] = local_rng.randf(min, max);
-                }
-                for x in chunks4.into_remainder() {
-                    *x = local_rng.randf(min, max);
-                }
-            });
+        crate::_internal::par_fill_reseed32(buffer, base_seed, Jsf32::new, |r| r.randf(min, max));
     }
 }
 
@@ -162,24 +101,12 @@ pub extern "C" fn jsf32_rand_f32s(
 const JSF32X16_PAR_CHUNK: usize = 1 << 20;
 
 #[cfg(target_arch = "x86_64")]
-#[inline]
-fn jsf32x16_chunk_seed(base_seed: u32, chunk_idx: usize) -> u32 {
-    let x = base_seed.wrapping_add((chunk_idx as u32).wrapping_mul(0x9E37_79B9));
-    let mut z = x as u64;
-    z ^= z >> 16;
-    z = z.wrapping_mul(0xFF51_AFD7_ED55_8CCD);
-    z ^= z >> 16;
-    z = z.wrapping_mul(0xC4CE_B9FE_1A85_EC53);
-    (z ^ (z >> 16)) as u32
-}
-
-#[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 #[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn jsf32x16_next_u32s_chunk(rng: &mut Jsf32x16, chunk: &mut [u32]) {
+unsafe fn jsf32x16_next_u32s_chunk(rng: &mut Jsf32x16, chunk: &mut [u32], nt: bool) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
     const UNROLL: usize = JSF32X16 * 4;
 
     if aligned {
@@ -233,10 +160,10 @@ unsafe fn jsf32x16_next_u32s_chunk(rng: &mut Jsf32x16, chunk: &mut [u32]) {
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 #[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn jsf32x16_next_f32s_chunk(rng: &mut Jsf32x16, chunk: &mut [f32], scale: __m512) {
+unsafe fn jsf32x16_next_f32s_chunk(rng: &mut Jsf32x16, chunk: &mut [f32], nt: bool, scale: __m512) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
     const UNROLL: usize = JSF32X16 * 4;
 
     if aligned {
@@ -292,13 +219,13 @@ unsafe fn jsf32x16_next_f32s_chunk(rng: &mut Jsf32x16, chunk: &mut [f32], scale:
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn jsf32x16_rand_i32s_chunk(
     rng: &mut Jsf32x16,
-    chunk: &mut [i32],
+    chunk: &mut [i32], nt: bool,
     v_range: __m512i,
     v_min: __m512i,
 ) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
     const UNROLL: usize = JSF32X16 * 4;
 
     if aligned {
@@ -354,13 +281,13 @@ unsafe fn jsf32x16_rand_i32s_chunk(
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn jsf32x16_rand_f32s_chunk(
     rng: &mut Jsf32x16,
-    chunk: &mut [f32],
+    chunk: &mut [f32], nt: bool,
     v_mult: __m512,
     v_min: __m512,
 ) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
     const UNROLL: usize = JSF32X16 * 4;
 
     if aligned {
@@ -444,8 +371,8 @@ pub extern "C" fn jsf32x16_next_u32s(ptr: *mut Jsf32x16, out: *mut u32, count: u
             .par_chunks_mut(JSF32X16_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Jsf32x16::new(jsf32x16_chunk_seed(base_seed, chunk_idx));
-                jsf32x16_next_u32s_chunk(&mut local_rng, chunk);
+                let mut local_rng = Jsf32x16::new(chunk_seed32(base_seed, chunk_idx));
+                jsf32x16_next_u32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk));
             });
     }
 }
@@ -468,9 +395,9 @@ pub extern "C" fn jsf32x16_next_f32s(ptr: *mut Jsf32x16, out: *mut f32, count: u
             .par_chunks_mut(JSF32X16_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Jsf32x16::new(jsf32x16_chunk_seed(base_seed, chunk_idx));
+                let mut local_rng = Jsf32x16::new(chunk_seed32(base_seed, chunk_idx));
                 let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
-                jsf32x16_next_f32s_chunk(&mut local_rng, chunk, scale);
+                jsf32x16_next_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), scale);
             });
     }
 }
@@ -499,10 +426,10 @@ pub extern "C" fn jsf32x16_rand_i32s(
             .par_chunks_mut(JSF32X16_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Jsf32x16::new(jsf32x16_chunk_seed(base_seed, chunk_idx));
+                let mut local_rng = Jsf32x16::new(chunk_seed32(base_seed, chunk_idx));
                 let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1);
                 let v_min = _mm512_set1_epi32(min);
-                jsf32x16_rand_i32s_chunk(&mut local_rng, chunk, v_range, v_min);
+                jsf32x16_rand_i32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_range, v_min);
             });
     }
 }
@@ -531,10 +458,10 @@ pub extern "C" fn jsf32x16_rand_f32s(
             .par_chunks_mut(JSF32X16_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Jsf32x16::new(jsf32x16_chunk_seed(base_seed, chunk_idx));
+                let mut local_rng = Jsf32x16::new(chunk_seed32(base_seed, chunk_idx));
                 let v_mult = _mm512_set1_ps((max - min) * (1.0 / (u32::MAX as f32 + 1.0)));
                 let v_min = _mm512_set1_ps(min);
-                jsf32x16_rand_f32s_chunk(&mut local_rng, chunk, v_mult, v_min);
+                jsf32x16_rand_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_mult, v_min);
             });
     }
 }

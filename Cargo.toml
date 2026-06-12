@@ -1,6 +1,6 @@
 [package]
 name = "urng"
-version = "0.4.8"
+version = "0.4.9"
 edition = "2024"
 license = "MIT"
 authors = ["cet"]
@@ -32,6 +32,10 @@ testing = []
 
 [lints.clippy]
 not_unsafe_ptr_arg_deref = "allow"
+# C ABI exports mirror the native signatures; argument count is fixed by the ABI.
+too_many_arguments = "allow"
+# Index loops in SIMD setup/compute kernels are deliberate (fixed-size lanes).
+needless_range_loop = "allow"
 
 [dependencies]
 wide = "1.3.0"

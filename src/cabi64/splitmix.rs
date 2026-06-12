@@ -1,3 +1,4 @@
+use crate::_internal::{fill_chunk_auto, prefer_nt};
 use crate::rng64::SplitMix64;
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
@@ -17,7 +18,38 @@ pub extern "C" fn splitmix64_free(ptr: *mut SplitMix64) {
     }
 }
 
-const SPLITMIX64_PAR_CHUNK: usize = 4096;
+const SPLITMIX64_PAR_CHUNK: usize = 0x20000;
+const SPLITMIX64_GAMMA: u64 = 0x9E3779B97F4A7C15;
+
+/// Fills `buffer` in parallel from counter-mode SplitMix64 states
+/// (`s0 + index * GAMMA`), mapping each raw `u64` through `map`. Eight
+/// outputs (64 bytes for 8-byte `T`) are batched per generator call so
+/// the non-temporal path can stream whole cache lines.
+#[inline(always)]
+fn sm64_fill<T, M>(buffer: &mut [T], s0: u64, map: M)
+where
+    T: Copy + Default + Send,
+    M: Fn(u64) -> T + Sync,
+{
+    let nt = prefer_nt::<T>(buffer.len());
+    buffer
+        .par_chunks_mut(SPLITMIX64_PAR_CHUNK)
+        .enumerate()
+        .for_each(|(chunk_idx, chunk)| {
+            let mut idx = (chunk_idx * SPLITMIX64_PAR_CHUNK) as u64;
+            unsafe {
+                fill_chunk_auto(chunk, nt, || {
+                    let mut out = [T::default(); 8];
+                    for v in &mut out {
+                        idx += 1;
+                        let state = s0.wrapping_add(idx.wrapping_mul(SPLITMIX64_GAMMA));
+                        *v = map(SplitMix64::compute(state));
+                    }
+                    out
+                });
+            }
+        });
+}
 
 /// Fills `out[0..count]` with raw `u64` random values using parallel chunk generation.
 #[unsafe(no_mangle)]
@@ -25,51 +57,25 @@ pub extern "C" fn splitmix64_next_u64s(ptr: *mut SplitMix64, out: *mut u64, coun
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let s0 = rng.s.0;
-
-        buffer
-            .par_chunks_mut(SPLITMIX64_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(chunk_idx, chunk)| {
-                let mut start_idx = (chunk_idx * SPLITMIX64_PAR_CHUNK) as u64;
-                for v in chunk {
-                    start_idx += 1;
-                    let state = s0.wrapping_add(start_idx.wrapping_mul(0x9E3779B97F4A7C15));
-                    *v = SplitMix64::compute(state);
-                }
-            });
-
+        sm64_fill(buffer, rng.s.0, |x| x);
         rng.s.0 = rng
             .s
             .0
-            .wrapping_add((count as u64).wrapping_mul(0x9E3779B97F4A7C15));
+            .wrapping_add((count as u64).wrapping_mul(SPLITMIX64_GAMMA));
     }
 }
 /// Fills `out[0..count]` with `f64` values in `[0, 1)` using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix64_next_f64s(ptr: *mut SplitMix64, out: *mut f64, count: usize) {
+    const SCALE: f64 = 1.0 / (u64::MAX as f64 + 1.0);
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let s0 = rng.s.0;
-        let scale = 1.0f64 / (u64::MAX as f64 + 1.0);
-
-        buffer
-            .par_chunks_mut(SPLITMIX64_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(chunk_idx, chunk)| {
-                let mut start_idx = (chunk_idx * SPLITMIX64_PAR_CHUNK) as u64;
-                for v in chunk {
-                    start_idx += 1;
-                    let state = s0.wrapping_add(start_idx.wrapping_mul(0x9E3779B97F4A7C15));
-                    *v = SplitMix64::compute(state) as f64 * scale;
-                }
-            });
-
+        sm64_fill(buffer, rng.s.0, |x| x as f64 * SCALE);
         rng.s.0 = rng
             .s
             .0
-            .wrapping_add((count as u64).wrapping_mul(0x9E3779B97F4A7C15));
+            .wrapping_add((count as u64).wrapping_mul(SPLITMIX64_GAMMA));
     }
 }
 /// Fills `out[0..count]` with `i64` values in `[min, max]` using parallel chunk generation.
@@ -84,26 +90,12 @@ pub extern "C" fn splitmix64_rand_i64s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let s0 = rng.s.0;
         let range = (max as i128 - min as i128 + 1) as u128;
-
-        buffer
-            .par_chunks_mut(SPLITMIX64_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(chunk_idx, chunk)| {
-                let mut start_idx = (chunk_idx * SPLITMIX64_PAR_CHUNK) as u64;
-                for v in chunk {
-                    start_idx += 1;
-                    let state = s0.wrapping_add(start_idx.wrapping_mul(0x9E3779B97F4A7C15));
-                    let val = SplitMix64::compute(state);
-                    *v = ((val as u128 * range) >> 64) as i64 + min;
-                }
-            });
-
+        sm64_fill(buffer, rng.s.0, |x| ((x as u128 * range) >> 64) as i64 + min);
         rng.s.0 = rng
             .s
             .0
-            .wrapping_add((count as u64).wrapping_mul(0x9E3779B97F4A7C15));
+            .wrapping_add((count as u64).wrapping_mul(SPLITMIX64_GAMMA));
     }
 }
 /// Fills `out[0..count]` with `f64` values in `[min, max)` using parallel chunk generation.
@@ -115,29 +107,15 @@ pub extern "C" fn splitmix64_rand_f64s(
     min: f64,
     max: f64,
 ) {
+    const SCALE: f64 = 1.0 / (u64::MAX as f64 + 1.0);
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let s0 = rng.s.0;
-        let scale_val = 1.0f64 / (u64::MAX as f64 + 1.0);
-        let range_val = max - min;
-
-        buffer
-            .par_chunks_mut(SPLITMIX64_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(chunk_idx, chunk)| {
-                let mut start_idx = (chunk_idx * SPLITMIX64_PAR_CHUNK) as u64;
-                for v in chunk {
-                    start_idx += 1;
-                    let state = s0.wrapping_add(start_idx.wrapping_mul(0x9E3779B97F4A7C15));
-                    let val_01 = SplitMix64::compute(state) as f64 * scale_val;
-                    *v = val_01 * range_val + min;
-                }
-            });
-
+        let mult = (max - min) * SCALE;
+        sm64_fill(buffer, rng.s.0, |x| x as f64 * mult + min);
         rng.s.0 = rng
             .s
             .0
-            .wrapping_add((count as u64).wrapping_mul(0x9E3779B97F4A7C15));
+            .wrapping_add((count as u64).wrapping_mul(SPLITMIX64_GAMMA));
     }
 }

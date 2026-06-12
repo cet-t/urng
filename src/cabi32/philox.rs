@@ -76,13 +76,11 @@ pub extern "C" fn philox32x4_next_u32s(ptr: *mut Philox32x4, out: *mut u32, coun
                     }
 
                     let result = Philox32x4::compute(c, k);
-                    for i in 0..rem.len() {
-                        rem[i] = result[i];
-                    }
+                    rem.copy_from_slice(&result[..rem.len()]);
                 }
             });
 
-        let num_blocks = (count + 3) / 4;
+        let num_blocks = count.div_ceil(4);
         let (n_c0, overflow) = rng.c[0].0.overflowing_add(num_blocks as u32);
         rng.c[0].0 = n_c0;
         if overflow {
@@ -150,7 +148,7 @@ pub extern "C" fn philox32x4_next_f32s(ptr: *mut Philox32x4, out: *mut f32, coun
                 }
             });
 
-        let num_blocks = (count + 3) / 4;
+        let num_blocks = count.div_ceil(4);
         let (n_c0, overflow) = rng.c[0].0.overflowing_add(num_blocks as u32);
         rng.c[0].0 = n_c0;
         if overflow {
@@ -224,7 +222,7 @@ pub extern "C" fn philox32x4_rand_i32s(
                 }
             });
 
-        let num_blocks = (count + 3) / 4;
+        let num_blocks = count.div_ceil(4);
         let (n_c0, overflow) = rng.c[0].0.overflowing_add(num_blocks as u32);
         rng.c[0].0 = n_c0;
         if overflow {
@@ -299,7 +297,7 @@ pub extern "C" fn philox32x4_rand_f32s(
                 }
             });
 
-        let num_blocks = (count + 3) / 4;
+        let num_blocks = count.div_ceil(4);
         let (n_c0, overflow) = rng.c[0].0.overflowing_add(num_blocks as u32);
         rng.c[0].0 = n_c0;
         if overflow {
@@ -713,7 +711,7 @@ unsafe fn philox32x4x4_next_f32s_chunk(
             let v_u32 = philox32x4x4_compute_vec(c, k, m, w);
             let v_f32 = _mm512_cvtepu32_ps(v_u32);
             let v_res = _mm512_mul_ps(v_f32, scale);
-            unsafe { _mm512_stream_ps(dst.as_mut_ptr() as *mut f32, v_res) };
+            unsafe { _mm512_stream_ps(dst.as_mut_ptr(), v_res) };
 
             let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
             let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, zero);
@@ -725,7 +723,7 @@ unsafe fn philox32x4x4_next_f32s_chunk(
             let v_u32 = philox32x4x4_compute_vec(c, k, m, w);
             let v_f32 = _mm512_cvtepu32_ps(v_u32);
             let v_res = _mm512_mul_ps(v_f32, scale);
-            unsafe { _mm512_storeu_ps(dst.as_mut_ptr() as *mut f32, v_res) };
+            unsafe { _mm512_storeu_ps(dst.as_mut_ptr(), v_res) };
 
             let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
             let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, zero);
@@ -741,9 +739,7 @@ unsafe fn philox32x4x4_next_f32s_chunk(
         let v_res = _mm512_mul_ps(v_f32, scale);
         let mut tmp_f32 = [0f32; 16];
         unsafe { _mm512_storeu_ps(tmp_f32.as_mut_ptr() as *mut _, v_res) };
-        for j in 0..rem.len() {
-            rem[j] = tmp_f32[j];
-        }
+        rem.copy_from_slice(&tmp_f32[..rem.len()]);
     }
 }
 #[cfg(target_arch = "x86_64")]
@@ -830,9 +826,7 @@ unsafe fn philox32x4x4_rand_i32s_chunk(
         let mut tmp_res = [0i32; 16];
         unsafe { _mm512_storeu_si512(tmp_res.as_mut_ptr() as *mut _, v_res) };
 
-        for j in 0..rem.len() {
-            rem[j] = tmp_res[j];
-        }
+        rem.copy_from_slice(&tmp_res[..rem.len()]);
     }
 }
 #[cfg(target_arch = "x86_64")]
@@ -865,7 +859,7 @@ unsafe fn philox32x4x4_rand_f32s_chunk(
             let v_u32 = philox32x4x4_compute_vec(c, k, m, w);
             let v_f32 = _mm512_cvtepu32_ps(v_u32);
             let v_res = _mm512_fmadd_ps(v_f32, v_mult, v_min);
-            unsafe { _mm512_stream_ps(dst.as_mut_ptr() as *mut f32, v_res) };
+            unsafe { _mm512_stream_ps(dst.as_mut_ptr(), v_res) };
 
             let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
             let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, zero);
@@ -877,7 +871,7 @@ unsafe fn philox32x4x4_rand_f32s_chunk(
             let v_u32 = philox32x4x4_compute_vec(c, k, m, w);
             let v_f32 = _mm512_cvtepu32_ps(v_u32);
             let v_res = _mm512_fmadd_ps(v_f32, v_mult, v_min);
-            unsafe { _mm512_storeu_ps(dst.as_mut_ptr() as *mut f32, v_res) };
+            unsafe { _mm512_storeu_ps(dst.as_mut_ptr(), v_res) };
 
             let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
             let eq_zero_mask = _mm512_cmpeq_epi64_mask(next_c, zero);
@@ -893,9 +887,7 @@ unsafe fn philox32x4x4_rand_f32s_chunk(
         let v_res = _mm512_fmadd_ps(v_f32, v_mult, v_min);
         let mut tmp_f32 = [0f32; 16];
         unsafe { _mm512_storeu_ps(tmp_f32.as_mut_ptr() as *mut _, v_res) };
-        for j in 0..rem.len() {
-            rem[j] = tmp_f32[j];
-        }
+        rem.copy_from_slice(&tmp_f32[..rem.len()]);
     }
 }
 

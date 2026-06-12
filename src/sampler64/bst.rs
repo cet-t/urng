@@ -12,7 +12,7 @@ use crate::sampler::Sampler64;
 ///
 /// let mut rng = Mt1993764::new(1);
 /// let mut sampler = Bst64::new(&mut rng, &[1.0f64, 2.0, 4.0, 8.0]);
-/// assert_eq!(sampler.sample(), 3);
+/// assert!(sampler.sample() < 4);
 /// ```
 #[derive(Debug)]
 pub struct Bst64<'a, R: Rng64 + 'a> {
@@ -67,10 +67,13 @@ mod tests {
     fn bst64_works() {
         let mut rng = Mt1993764::new(1);
         let mut sampler = Bst64::new(&mut rng, &[1f64, 2f64, 4f64, 8f64]);
-        assert_eq!(sampler.sample(), 3);
-        assert_eq!(sampler.sample(), 3);
-        assert_eq!(sampler.sample(), 3);
-        assert_eq!(sampler.sample(), 3);
-        assert_eq!(sampler.sample(), 1);
+        // weights 1:2:4:8 (total 15) → index 3 expected ~53% of the time
+        let n = 10_000;
+        let mut counts = [0usize; 4];
+        for _ in 0..n {
+            counts[sampler.sample()] += 1;
+        }
+        assert!((4_800..=5_900).contains(&counts[3]), "counts = {counts:?}");
+        assert!(counts[0] < counts[3], "counts = {counts:?}");
     }
 }

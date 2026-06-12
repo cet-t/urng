@@ -1,6 +1,5 @@
 use crate::rng::Rng64;
 use crate::rng64::Xorshift64;
-use std::slice::from_raw_parts_mut;
 
 /// Creates a new heap-allocated `Xorshift64` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`xorshift64_free`].
@@ -21,10 +20,7 @@ pub extern "C" fn xorshift64_free(ptr: *mut Xorshift64) {
 pub extern "C" fn xorshift64_next_u64s(ptr: *mut Xorshift64, out: *mut u64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextu());
     }
 }
 /// Fills `out[0..count]` with `f64` values uniformly distributed in `[0, 1)`.
@@ -32,10 +28,7 @@ pub extern "C" fn xorshift64_next_u64s(ptr: *mut Xorshift64, out: *mut u64, coun
 pub extern "C" fn xorshift64_next_f64s(ptr: *mut Xorshift64, out: *mut f64, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextf());
     }
 }
 /// Fills `out[0..count]` with `i64` values uniformly distributed in `[min, max]`.
@@ -49,10 +42,7 @@ pub extern "C" fn xorshift64_rand_i64s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randi(min, max));
     }
 }
 /// Fills `out[0..count]` with `f64` values uniformly distributed in `[min, max)`.
@@ -66,9 +56,6 @@ pub extern "C" fn xorshift64_rand_f64s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randf(min, max));
     }
 }

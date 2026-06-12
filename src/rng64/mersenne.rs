@@ -276,6 +276,8 @@ impl Sfmt1993764 {
         }
     }
 
+    /// Kept for sequential single-threaded block fills (cabi now fills in parallel).
+    #[allow(dead_code)]
     #[inline]
     pub(crate) fn fill_next_u64s(&mut self, out: &mut [u64]) {
         let mut written = 0;

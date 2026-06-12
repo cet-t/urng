@@ -141,7 +141,7 @@ const STRIDE: u64 = 0x9E3779B97F4A7C15;
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
-unsafe fn biski64x8_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], seed: u64) {
+unsafe fn biski64x8_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], nt: bool, seed: u64) {
     let chunk_base = seed.wrapping_add((chunk_idx as u64).wrapping_mul(STRIDE));
     let inc = _mm512_set1_epi64(crate::rng64::biski::INC as i64);
 
@@ -208,7 +208,7 @@ unsafe fn biski64x8_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], seed: u
         }};
     }
 
-    let is_aligned = (chunk.as_ptr() as usize) & 63 == 0;
+    let is_aligned = nt && (chunk.as_ptr() as usize) & 63 == 0;
     let mut chunks_exact = chunk.chunks_exact_mut(48);
 
     if is_aligned {
@@ -265,7 +265,7 @@ unsafe fn u64x8_to_f64x8(u: __m512i, exp_bits: __m512i, ones: __m512d) -> __m512
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
-unsafe fn biski64x8_next_f64s_chunk(chunk_idx: usize, chunk: &mut [f64], seed: u64) {
+unsafe fn biski64x8_next_f64s_chunk(chunk_idx: usize, chunk: &mut [f64], _nt: bool, seed: u64) {
     let chunk_base = seed.wrapping_add((chunk_idx as u64).wrapping_mul(STRIDE));
     let inc = _mm512_set1_epi64(crate::rng64::biski::INC as i64);
     let exp_bits = _mm512_set1_epi64(0x3FF0000000000000u64 as i64);
@@ -373,7 +373,7 @@ unsafe fn biski64x8_next_f64s_chunk(chunk_idx: usize, chunk: &mut [f64], seed: u
 #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
 unsafe fn biski64x8_rand_i64s_chunk(
     chunk_idx: usize,
-    chunk: &mut [i64],
+    chunk: &mut [i64], _nt: bool,
     seed: u64,
     min: i64,
     max: i64,
@@ -480,7 +480,7 @@ unsafe fn biski64x8_rand_i64s_chunk(
 #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
 unsafe fn biski64x8_rand_f64s_chunk(
     chunk_idx: usize,
-    chunk: &mut [f64],
+    chunk: &mut [f64], _nt: bool,
     seed: u64,
     min: f64,
     max: f64,
@@ -608,7 +608,7 @@ pub extern "C" fn biski64x8_next_u64s(ptr: *mut Biski64x8, out: *mut u64, count:
             .par_chunks_mut(BISKI64X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                biski64x8_next_u64s_chunk(chunk_idx, chunk, seed);
+                biski64x8_next_u64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed);
             });
 
         let seed = SplitMix64::compute(seed.wrapping_add((count as u64).wrapping_mul(STRIDE)));
@@ -631,7 +631,7 @@ pub extern "C" fn biski64x8_next_f64s(ptr: *mut Biski64x8, out: *mut f64, count:
             .par_chunks_mut(BISKI64X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                biski64x8_next_f64s_chunk(chunk_idx, chunk, seed);
+                biski64x8_next_f64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed);
             });
 
         let seed = SplitMix64::compute(seed.wrapping_add((count as u64).wrapping_mul(STRIDE)));
@@ -660,7 +660,7 @@ pub extern "C" fn biski64x8_rand_i64s(
             .par_chunks_mut(BISKI64X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                biski64x8_rand_i64s_chunk(chunk_idx, chunk, seed, min, max);
+                biski64x8_rand_i64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed, min, max);
             });
 
         let seed = SplitMix64::compute(seed.wrapping_add((count as u64).wrapping_mul(STRIDE)));
@@ -689,7 +689,7 @@ pub extern "C" fn biski64x8_rand_f64s(
             .par_chunks_mut(BISKI64X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                biski64x8_rand_f64s_chunk(chunk_idx, chunk, seed, min, max);
+                biski64x8_rand_f64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed, min, max);
             });
 
         let seed = SplitMix64::compute(seed.wrapping_add((count as u64).wrapping_mul(STRIDE)));

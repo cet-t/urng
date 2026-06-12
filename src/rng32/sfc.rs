@@ -39,7 +39,7 @@ impl Rng32 for Sfc32 {
         self.counter = self.counter.wrapping_add(1);
         self.a = self.b ^ (self.b >> 9);
         self.b = self.c.wrapping_add(self.c << 3);
-        self.c = (self.c << 21) | (self.c >> 11);
+        self.c = self.c.rotate_right(11);
         self.c = self.c.wrapping_add(tmp);
         tmp
     }
@@ -106,8 +106,8 @@ impl Sfc32x4 {
         let v: u64x2 = bytemuck::cast(self.nextuv());
         let r: u64x2 = bytemuck::cast(v_range);
         let lo = u64x2::splat(0xffff_ffff);
-        let res_even: u32x4 = bytemuck::cast((v & lo) * (r & lo) >> 32);
-        let prod_odd: u32x4 = bytemuck::cast((v >> 32) * (r >> 32) & (lo << 32));
+        let res_even: u32x4 = bytemuck::cast(((v & lo) * (r & lo)) >> 32);
+        let prod_odd: u32x4 = bytemuck::cast(((v >> 32) * (r >> 32)) & (lo << 32));
         let merged: i32x4 = bytemuck::cast(res_even | prod_odd);
         merged + v_min
     }
@@ -150,6 +150,10 @@ pub struct Sfc32x8 {
 }
 
 impl Sfc32x8 {
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx2` target feature.
     #[target_feature(enable = "avx2")]
     pub unsafe fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
@@ -239,6 +243,10 @@ pub struct Sfc32x16 {
 }
 
 impl Sfc32x16 {
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f` target feature.
     #[target_feature(enable = "avx512f")]
     pub unsafe fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);

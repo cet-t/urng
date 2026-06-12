@@ -1,7 +1,6 @@
 use crate::rng::Rng32;
 #[allow(deprecated)]
 use crate::rng32::Lcg32;
-use std::slice::from_raw_parts_mut;
 
 /// Creates a new `Lcg32` instance on the heap.
 /// The caller is responsible for freeing the memory using `lcg32_free`.
@@ -24,10 +23,7 @@ pub extern "C" fn lcg32_free(ptr: *mut Lcg32) {
 pub extern "C" fn lcg32_next_u32s(ptr: *mut Lcg32, out: *mut u32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextu();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextu());
     }
 }
 /// Fills the output buffer with the next random `f32` values in the range [0, 1).
@@ -36,10 +32,7 @@ pub extern "C" fn lcg32_next_u32s(ptr: *mut Lcg32, out: *mut u32, count: usize) 
 pub extern "C" fn lcg32_next_f32s(ptr: *mut Lcg32, out: *mut f32, count: usize) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.nextf();
-        }
+        crate::_internal::fill_with(out, count, || rng.nextf());
     }
 }
 /// Fills the output buffer with random `i32` values in the range [min, max].
@@ -54,10 +47,7 @@ pub extern "C" fn lcg32_rand_i32s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randi(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randi(min, max));
     }
 }
 /// Fills the output buffer with random `f32` values in the range [min, max).
@@ -72,9 +62,6 @@ pub extern "C" fn lcg32_rand_f32s(
 ) {
     unsafe {
         let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        for v in buffer {
-            *v = rng.randf(min, max);
-        }
+        crate::_internal::fill_with(out, count, || rng.randf(min, max));
     }
 }

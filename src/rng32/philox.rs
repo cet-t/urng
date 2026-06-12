@@ -244,6 +244,10 @@ impl Philox32x4x4 {
     }
 
     /// Generates the next block of random numbers.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f` target feature.
     #[target_feature(enable = "avx512f")]
     pub fn nextu(&mut self) -> [u32; PHILOX32x16] {
         let out = self.compute();
@@ -270,12 +274,20 @@ impl Philox32x4x4 {
     }
 
     /// Generates 16 random `f32` values in the range [0, 1) using AVX-512.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f` target feature.
     #[target_feature(enable = "avx512f")]
     pub fn nextf(&mut self) -> [f32; PHILOX32x16] {
         self.nextu().map(|x| (x as f32) * FSCALE32)
     }
 
     /// Generates a random `i32` value in the range [min, max].
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f` target feature.
     #[target_feature(enable = "avx512f")]
     pub fn randi(&mut self, min: i32, max: i32) -> [i32; PHILOX32x16] {
         let range = (max as i64 - min as i64 + 1) as u64;
@@ -284,6 +296,10 @@ impl Philox32x4x4 {
     }
 
     /// Generates a random `f32` value in the range [min, max).
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure the CPU supports the `avx512f` target feature.
     #[target_feature(enable = "avx512f")]
     pub fn randf(&mut self, min: f32, max: f32) -> [f32; PHILOX32x16] {
         let range = max - min;

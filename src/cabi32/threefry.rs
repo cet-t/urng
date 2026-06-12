@@ -1,3 +1,4 @@
+use crate::_internal::{fill_chunk_auto, prefer_nt};
 use crate::rng32::{Threefry32x2, Threefry32x4};
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
@@ -20,7 +21,63 @@ pub extern "C" fn threefry32x4_free(ptr: *mut Threefry32x4) {
     }
 }
 
-const THREEFRY32_PAR_CHUNK: usize = 4096;
+const THREEFRY32_PAR_CHUNK: usize = 0x20000;
+
+/// Fills `buffer` in parallel from counter-mode Threefry32x4 blocks,
+/// mapping each raw `u32` through `map`. Sixteen independent blocks
+/// (64 outputs) are batched per generator call: the fixed-trip-count
+/// loop lets LLVM auto-vectorize the cipher rounds across blocks, and
+/// the non-temporal path streams whole cache lines.
+#[inline(always)]
+fn fry4_fill<T, M>(buffer: &mut [T], c0: [u32; 4], k: [u32; 5], tw: [u32; 3], map: M)
+where
+    T: Copy + Default + Send,
+    M: Fn(u32) -> T + Sync,
+{
+    let nt = prefer_nt::<T>(buffer.len());
+    buffer
+        .par_chunks_mut(THREEFRY32_PAR_CHUNK)
+        .enumerate()
+        .for_each(|(chunk_idx, chunk)| {
+            let chunk_base = (chunk_idx * (THREEFRY32_PAR_CHUNK / 4)) as u64;
+            let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
+            let mut c64 = c0_64.wrapping_add(chunk_base);
+            unsafe {
+                fill_chunk_auto(chunk, nt, || {
+                    let mut out = [T::default(); 64];
+                    for b in 0..16 {
+                        let cc = c64.wrapping_add(b as u64);
+                        let c = [cc as u32, (cc >> 32) as u32, c0[2], c0[3]];
+                        let r = Threefry32x4::compute(c, &k, &tw);
+                        out[b * 4] = map(r[0]);
+                        out[b * 4 + 1] = map(r[1]);
+                        out[b * 4 + 2] = map(r[2]);
+                        out[b * 4 + 3] = map(r[3]);
+                    }
+                    c64 = c64.wrapping_add(16);
+                    out
+                });
+            }
+        });
+}
+
+/// Advances the 128-bit counter past everything `fry4_fill` consumed
+/// (16 blocks per 64-output batch, so round `count` up to whole batches).
+#[inline(always)]
+fn fry4_advance(rng: &mut Threefry32x4, count: usize) {
+    let num_blocks = (count.div_ceil(64) * 16) as u64;
+    let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
+    let new_c64 = c0_64.wrapping_add(num_blocks);
+    rng.c[0] = new_c64 as u32;
+    rng.c[1] = (new_c64 >> 32) as u32;
+    if new_c64 < c0_64 {
+        let (n_c2, ovf3) = rng.c[2].overflowing_add(1);
+        rng.c[2] = n_c2;
+        if ovf3 {
+            rng.c[3] = rng.c[3].wrapping_add(1);
+        }
+    }
+}
 
 /// Fills the output buffer with the next random `u32` values.
 /// This function uses parallel processing for large counts.
@@ -29,120 +86,24 @@ pub extern "C" fn threefry32x4_next_u32s(ptr: *mut Threefry32x4, out: *mut u32, 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c;
-        let k = rng.k;
-        let tw = rng.tw;
-
-        buffer
-            .par_chunks_mut(THREEFRY32_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(chunk_idx, chunk)| {
-                let chunk_base_offset = (chunk_idx * (THREEFRY32_PAR_CHUNK / 4)) as u64;
-                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
-                let c64_start = c0_64.wrapping_add(chunk_base_offset);
-
-                let mut chunks_exact = chunk.chunks_exact_mut(4);
-                let mut b_offset = 0u64;
-
-                for dst in chunks_exact.by_ref() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
-
-                    let result = Threefry32x4::compute(c, &k, &tw);
-                    dst[0] = result[0];
-                    dst[1] = result[1];
-                    dst[2] = result[2];
-                    dst[3] = result[3];
-                    b_offset += 1;
-                }
-
-                let rem = chunks_exact.into_remainder();
-                if !rem.is_empty() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
-
-                    let result = Threefry32x4::compute(c, &k, &tw);
-                    for j in 0..rem.len() {
-                        rem[j] = result[j];
-                    }
-                }
-            });
-
-        let num_blocks = (count + 3) / 4;
-        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
-        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
-        rng.c[0] = new_c64 as u32;
-        rng.c[1] = (new_c64 >> 32) as u32;
-        if new_c64 < c0_64 {
-            let (n_c2, ovf3) = rng.c[2].overflowing_add(1);
-            rng.c[2] = n_c2;
-            if ovf3 {
-                rng.c[3] = rng.c[3].wrapping_add(1);
-            }
-        }
+        fry4_fill(buffer, rng.c, rng.k, rng.tw, |x| x);
+        fry4_advance(rng, count);
     }
 }
+
 /// Fills the output buffer with the next random `f32` values in the range [0, 1).
 /// This function uses parallel processing for large counts.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefry32x4_next_f32s(ptr: *mut Threefry32x4, out: *mut f32, count: usize) {
+    const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c;
-        let k = rng.k;
-        let tw = rng.tw;
-        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
-
-        buffer
-            .par_chunks_mut(THREEFRY32_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(chunk_idx, chunk)| {
-                let chunk_base_offset = (chunk_idx * (THREEFRY32_PAR_CHUNK / 4)) as u64;
-                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
-                let c64_start = c0_64.wrapping_add(chunk_base_offset);
-
-                let mut chunks_exact = chunk.chunks_exact_mut(4);
-                let mut b_offset = 0u64;
-
-                for dst in chunks_exact.by_ref() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
-
-                    let result = Threefry32x4::compute(c, &k, &tw);
-                    dst[0] = result[0] as f32 * SCALE;
-                    dst[1] = result[1] as f32 * SCALE;
-                    dst[2] = result[2] as f32 * SCALE;
-                    dst[3] = result[3] as f32 * SCALE;
-                    b_offset += 1;
-                }
-
-                let rem = chunks_exact.into_remainder();
-                if !rem.is_empty() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
-
-                    let result = Threefry32x4::compute(c, &k, &tw);
-                    for j in 0..rem.len() {
-                        rem[j] = result[j] as f32 * SCALE;
-                    }
-                }
-            });
-
-        let num_blocks = (count + 3) / 4;
-        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
-        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
-        rng.c[0] = new_c64 as u32;
-        rng.c[1] = (new_c64 >> 32) as u32;
-        if new_c64 < c0_64 {
-            let (n_c2, ovf3) = rng.c[2].overflowing_add(1);
-            rng.c[2] = n_c2;
-            if ovf3 {
-                rng.c[3] = rng.c[3].wrapping_add(1);
-            }
-        }
+        fry4_fill(buffer, rng.c, rng.k, rng.tw, |x| x as f32 * SCALE);
+        fry4_advance(rng, count);
     }
 }
+
 /// Fills the output buffer with random `i32` values in the range [min, max].
 /// This function uses parallel processing for large counts.
 #[unsafe(no_mangle)]
@@ -156,60 +117,14 @@ pub extern "C" fn threefry32x4_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c;
-        let k = rng.k;
-        let tw = rng.tw;
         let range = (max as i64 - min as i64 + 1) as u64;
-
-        buffer
-            .par_chunks_mut(THREEFRY32_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(chunk_idx, chunk)| {
-                let chunk_base_offset = (chunk_idx * (THREEFRY32_PAR_CHUNK / 4)) as u64;
-                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
-                let c64_start = c0_64.wrapping_add(chunk_base_offset);
-
-                let mut chunks_exact = chunk.chunks_exact_mut(4);
-                let mut b_offset = 0u64;
-
-                for dst in chunks_exact.by_ref() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
-
-                    let result = Threefry32x4::compute(c, &k, &tw);
-                    dst[0] = ((result[0] as u64 * range) >> 32) as i32 + min;
-                    dst[1] = ((result[1] as u64 * range) >> 32) as i32 + min;
-                    dst[2] = ((result[2] as u64 * range) >> 32) as i32 + min;
-                    dst[3] = ((result[3] as u64 * range) >> 32) as i32 + min;
-                    b_offset += 1;
-                }
-
-                let rem = chunks_exact.into_remainder();
-                if !rem.is_empty() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
-
-                    let result = Threefry32x4::compute(c, &k, &tw);
-                    for j in 0..rem.len() {
-                        rem[j] = ((result[j] as u64 * range) >> 32) as i32 + min;
-                    }
-                }
-            });
-
-        let num_blocks = (count + 3) / 4;
-        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
-        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
-        rng.c[0] = new_c64 as u32;
-        rng.c[1] = (new_c64 >> 32) as u32;
-        if new_c64 < c0_64 {
-            let (n_c2, ovf3) = rng.c[2].overflowing_add(1);
-            rng.c[2] = n_c2;
-            if ovf3 {
-                rng.c[3] = rng.c[3].wrapping_add(1);
-            }
-        }
+        fry4_fill(buffer, rng.c, rng.k, rng.tw, |x| {
+            ((x as u64 * range) >> 32) as i32 + min
+        });
+        fry4_advance(rng, count);
     }
 }
+
 /// Fills the output buffer with random `f32` values in the range [min, max).
 /// This function uses parallel processing for large counts.
 #[unsafe(no_mangle)]
@@ -220,62 +135,13 @@ pub extern "C" fn threefry32x4_rand_f32s(
     min: f32,
     max: f32,
 ) {
+    const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c;
-        let k = rng.k;
-        let tw = rng.tw;
-        let scale_val = 1.0f32 / (u32::MAX as f32 + 1.0);
-        let range_val = max - min;
-
-        buffer
-            .par_chunks_mut(THREEFRY32_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(chunk_idx, chunk)| {
-                let chunk_base_offset = (chunk_idx * (THREEFRY32_PAR_CHUNK / 4)) as u64;
-                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
-                let c64_start = c0_64.wrapping_add(chunk_base_offset);
-
-                let mut chunks_exact = chunk.chunks_exact_mut(4);
-                let mut b_offset = 0u64;
-
-                for dst in chunks_exact.by_ref() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
-
-                    let result = Threefry32x4::compute(c, &k, &tw);
-                    dst[0] = (result[0] as f32 * scale_val) * range_val + min;
-                    dst[1] = (result[1] as f32 * scale_val) * range_val + min;
-                    dst[2] = (result[2] as f32 * scale_val) * range_val + min;
-                    dst[3] = (result[3] as f32 * scale_val) * range_val + min;
-                    b_offset += 1;
-                }
-
-                let rem = chunks_exact.into_remainder();
-                if !rem.is_empty() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [current_c64 as u32, (current_c64 >> 32) as u32, c0[2], c0[3]];
-
-                    let result = Threefry32x4::compute(c, &k, &tw);
-                    for j in 0..rem.len() {
-                        rem[j] = (result[j] as f32 * scale_val) * range_val + min;
-                    }
-                }
-            });
-
-        let num_blocks = (count + 3) / 4;
-        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
-        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
-        rng.c[0] = new_c64 as u32;
-        rng.c[1] = (new_c64 >> 32) as u32;
-        if new_c64 < c0_64 {
-            let (n_c2, ovf3) = rng.c[2].overflowing_add(1);
-            rng.c[2] = n_c2;
-            if ovf3 {
-                rng.c[3] = rng.c[3].wrapping_add(1);
-            }
-        }
+        let mult = (max - min) * SCALE;
+        fry4_fill(buffer, rng.c, rng.k, rng.tw, |x| x as f32 * mult + min);
+        fry4_advance(rng, count);
     }
 }
 
@@ -296,7 +162,54 @@ pub extern "C" fn threefry32x2_free(ptr: *mut Threefry32x2) {
     }
 }
 
-const THREEFRY32X2_PAR_CHUNK: usize = 4096;
+const THREEFRY32X2_PAR_CHUNK: usize = 0x20000;
+
+/// Fills `buffer` in parallel from counter-mode Threefry32x2 blocks,
+/// mapping each raw `u32` through `map`. Thirty-two independent blocks
+/// (64 outputs) are batched per generator call: the fixed-trip-count
+/// loop lets LLVM auto-vectorize the cipher rounds across blocks, and
+/// the non-temporal path streams whole cache lines.
+#[inline(always)]
+fn fry2_fill<T, M>(buffer: &mut [T], c0: [u32; 2], k: [u32; 3], map: M)
+where
+    T: Copy + Default + Send,
+    M: Fn(u32) -> T + Sync,
+{
+    let nt = prefer_nt::<T>(buffer.len());
+    buffer
+        .par_chunks_mut(THREEFRY32X2_PAR_CHUNK)
+        .enumerate()
+        .for_each(|(chunk_idx, chunk)| {
+            let chunk_base = (chunk_idx * (THREEFRY32X2_PAR_CHUNK / 2)) as u64;
+            let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
+            let mut c64 = c0_64.wrapping_add(chunk_base);
+            unsafe {
+                fill_chunk_auto(chunk, nt, || {
+                    let mut out = [T::default(); 64];
+                    for b in 0..32 {
+                        let cc = c64.wrapping_add(b as u64);
+                        let c = [cc as u32, (cc >> 32) as u32];
+                        let r = Threefry32x2::compute(c, &k);
+                        out[b * 2] = map(r[0]);
+                        out[b * 2 + 1] = map(r[1]);
+                    }
+                    c64 = c64.wrapping_add(32);
+                    out
+                });
+            }
+        });
+}
+
+/// Advances the 64-bit counter past everything `fry2_fill` consumed
+/// (32 blocks per 64-output batch).
+#[inline(always)]
+fn fry2_advance(rng: &mut Threefry32x2, count: usize) {
+    let num_blocks = (count.div_ceil(64) * 32) as u64;
+    let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
+    let new_c64 = c0_64.wrapping_add(num_blocks);
+    rng.c[0] = new_c64 as u32;
+    rng.c[1] = (new_c64 >> 32) as u32;
+}
 
 /// Fills the output buffer with the next random `u32` values.
 /// This function uses parallel processing for large counts.
@@ -305,47 +218,8 @@ pub extern "C" fn threefry32x2_next_u32s(ptr: *mut Threefry32x2, out: *mut u32, 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c;
-        let k = rng.k;
-
-        buffer
-            .par_chunks_mut(THREEFRY32X2_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(chunk_idx, chunk)| {
-                let chunk_base_offset = (chunk_idx * (THREEFRY32X2_PAR_CHUNK / 2)) as u64;
-                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
-                let c64_start = c0_64.wrapping_add(chunk_base_offset);
-
-                let mut chunks_exact = chunk.chunks_exact_mut(2);
-                let mut b_offset = 0u64;
-
-                for dst in chunks_exact.by_ref() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
-
-                    let result = Threefry32x2::compute(c, &k);
-                    dst[0] = result[0];
-                    dst[1] = result[1];
-                    b_offset += 1;
-                }
-
-                let rem = chunks_exact.into_remainder();
-                if !rem.is_empty() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
-
-                    let result = Threefry32x2::compute(c, &k);
-                    for j in 0..rem.len() {
-                        rem[j] = result[j];
-                    }
-                }
-            });
-
-        let num_blocks = (count + 1) / 2;
-        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
-        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
-        rng.c[0] = new_c64 as u32;
-        rng.c[1] = (new_c64 >> 32) as u32;
+        fry2_fill(buffer, rng.c, rng.k, |x| x);
+        fry2_advance(rng, count);
     }
 }
 
@@ -353,51 +227,12 @@ pub extern "C" fn threefry32x2_next_u32s(ptr: *mut Threefry32x2, out: *mut u32, 
 /// This function uses parallel processing for large counts.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefry32x2_next_f32s(ptr: *mut Threefry32x2, out: *mut f32, count: usize) {
+    const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c;
-        let k = rng.k;
-        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
-
-        buffer
-            .par_chunks_mut(THREEFRY32X2_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(chunk_idx, chunk)| {
-                let chunk_base_offset = (chunk_idx * (THREEFRY32X2_PAR_CHUNK / 2)) as u64;
-                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
-                let c64_start = c0_64.wrapping_add(chunk_base_offset);
-
-                let mut chunks_exact = chunk.chunks_exact_mut(2);
-                let mut b_offset = 0u64;
-
-                for dst in chunks_exact.by_ref() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
-
-                    let result = Threefry32x2::compute(c, &k);
-                    dst[0] = result[0] as f32 * SCALE;
-                    dst[1] = result[1] as f32 * SCALE;
-                    b_offset += 1;
-                }
-
-                let rem = chunks_exact.into_remainder();
-                if !rem.is_empty() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
-
-                    let result = Threefry32x2::compute(c, &k);
-                    for j in 0..rem.len() {
-                        rem[j] = result[j] as f32 * SCALE;
-                    }
-                }
-            });
-
-        let num_blocks = (count + 1) / 2;
-        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
-        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
-        rng.c[0] = new_c64 as u32;
-        rng.c[1] = (new_c64 >> 32) as u32;
+        fry2_fill(buffer, rng.c, rng.k, |x| x as f32 * SCALE);
+        fry2_advance(rng, count);
     }
 }
 
@@ -414,106 +249,10 @@ pub extern "C" fn threefry32x2_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c;
-        let k = rng.k;
         let range = (max as i64 - min as i64 + 1) as u64;
-
-        buffer
-            .par_chunks_mut(THREEFRY32X2_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(chunk_idx, chunk)| {
-                let chunk_base_offset = (chunk_idx * (THREEFRY32X2_PAR_CHUNK / 2)) as u64;
-                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
-                let c64_start = c0_64.wrapping_add(chunk_base_offset);
-
-                let mut chunks_exact = chunk.chunks_exact_mut(2);
-                let mut b_offset = 0u64;
-
-                for dst in chunks_exact.by_ref() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
-
-                    let result = Threefry32x2::compute(c, &k);
-                    dst[0] = ((result[0] as u64 * range) >> 32) as i32 + min;
-                    dst[1] = ((result[1] as u64 * range) >> 32) as i32 + min;
-                    b_offset += 1;
-                }
-
-                let rem = chunks_exact.into_remainder();
-                if !rem.is_empty() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
-
-                    let result = Threefry32x2::compute(c, &k);
-                    for j in 0..rem.len() {
-                        rem[j] = ((result[j] as u64 * range) >> 32) as i32 + min;
-                    }
-                }
-            });
-
-        let num_blocks = (count + 1) / 2;
-        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
-        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
-        rng.c[0] = new_c64 as u32;
-        rng.c[1] = (new_c64 >> 32) as u32;
-    }
-}
-
-/// Fills the output buffer with random `f32` values in the range [min, max).
-/// This function uses parallel processing for large counts.
-#[unsafe(no_mangle)]
-pub extern "C" fn threefry32x2_rand_f32s(
-    ptr: *mut Threefry32x2,
-    out: *mut f32,
-    count: usize,
-    min: f32,
-    max: f32,
-) {
-    unsafe {
-        let rng = &mut *ptr;
-        let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c;
-        let k = rng.k;
-        let scale_val = 1.0f32 / (u32::MAX as f32 + 1.0);
-        let range_val = max - min;
-
-        buffer
-            .par_chunks_mut(THREEFRY32X2_PAR_CHUNK)
-            .enumerate()
-            .for_each(|(chunk_idx, chunk)| {
-                let chunk_base_offset = (chunk_idx * (THREEFRY32X2_PAR_CHUNK / 2)) as u64;
-                let c0_64 = (c0[0] as u64) | ((c0[1] as u64) << 32);
-                let c64_start = c0_64.wrapping_add(chunk_base_offset);
-
-                let mut chunks_exact = chunk.chunks_exact_mut(2);
-                let mut b_offset = 0u64;
-
-                for dst in chunks_exact.by_ref() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
-
-                    let result = Threefry32x2::compute(c, &k);
-                    dst[0] = (result[0] as f32 * scale_val) * range_val + min;
-                    dst[1] = (result[1] as f32 * scale_val) * range_val + min;
-                    b_offset += 1;
-                }
-
-                let rem = chunks_exact.into_remainder();
-                if !rem.is_empty() {
-                    let current_c64 = c64_start.wrapping_add(b_offset);
-                    let c = [(current_c64 as u32), ((current_c64 >> 32) as u32)];
-
-                    let result = Threefry32x2::compute(c, &k);
-                    for j in 0..rem.len() {
-                        rem[j] = (result[j] as f32 * scale_val) * range_val + min;
-                    }
-                }
-            });
-
-        let num_blocks = (count + 1) / 2;
-        let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
-        let new_c64 = c0_64.wrapping_add(num_blocks as u64);
-        rng.c[0] = new_c64 as u32;
-        rng.c[1] = (new_c64 >> 32) as u32;
+        fry2_fill(buffer, rng.c, rng.k, |x| {
+            ((x as u64 * range) >> 32) as i32 + min
+        });
+        fry2_advance(rng, count);
     }
 }

@@ -32,9 +32,7 @@ pub extern "C" fn pcg32_next_u32s(ptr: *mut Pcg32, out: *mut u32, count: usize) 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.nextu();
-        }
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| Pcg32::new(s as u64), |r| r.nextu());
     }
 }
 
@@ -44,9 +42,7 @@ pub extern "C" fn pcg32_next_f32s(ptr: *mut Pcg32, out: *mut f32, count: usize) 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.nextf();
-        }
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| Pcg32::new(s as u64), |r| r.nextf());
     }
 }
 
@@ -62,9 +58,7 @@ pub extern "C" fn pcg32_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.randi(min, max);
-        }
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| Pcg32::new(s as u64), |r| r.randi(min, max));
     }
 }
 
@@ -80,9 +74,7 @@ pub extern "C" fn pcg32_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.randf(min, max);
-        }
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| Pcg32::new(s as u64), |r| r.randf(min, max));
     }
 }
 
@@ -185,9 +177,7 @@ unsafe fn pcg32x8_next_u32s_chunk(
         let out256 = Pcg32x8::step_u32(&mut state, inc, mult_lo, mult_hi, mask32);
         let mut tmp = [0u32; PCG32X8_LANE];
         _mm256_storeu_si256(tmp.as_mut_ptr() as *mut __m256i, out256);
-        for j in 0..final_rem.len() {
-            final_rem[j] = tmp[j];
-        }
+        final_rem.copy_from_slice(&tmp[..final_rem.len()]);
     }
 }
 
@@ -392,7 +382,7 @@ pub extern "C" fn pcg32x8_next_u32s(ptr: *mut Pcg32x8, out: *mut u32, count: usi
                 pcg32x8_next_u32s_chunk(chunk, start_state, inc0, mult_lo, mult_hi, mask32)
             });
 
-        let num_blocks = ((count + PCG32X8_LANE - 1) / PCG32X8_LANE) as u64;
+        let num_blocks = count.div_ceil(PCG32X8_LANE) as u64;
         state0 = pcg32x8_advance_states(state0, inc0, num_blocks);
         rng.state = _mm512_loadu_si512(state0.as_ptr() as *const _);
     }
@@ -426,7 +416,7 @@ pub extern "C" fn pcg32x8_next_f32s(ptr: *mut Pcg32x8, out: *mut f32, count: usi
                 pcg32x8_next_f32s_chunk(chunk, start_state, inc0, mult_lo, mult_hi, mask32, scale)
             });
 
-        let num_blocks = ((count + PCG32X8_LANE - 1) / PCG32X8_LANE) as u64;
+        let num_blocks = count.div_ceil(PCG32X8_LANE) as u64;
         state0 = pcg32x8_advance_states(state0, inc0, num_blocks);
         rng.state = _mm512_loadu_si512(state0.as_ptr() as *const _);
     }
@@ -475,7 +465,7 @@ pub extern "C" fn pcg32x8_rand_i32s(
                 )
             });
 
-        let num_blocks = ((count + PCG32X8_LANE - 1) / PCG32X8_LANE) as u64;
+        let num_blocks = count.div_ceil(PCG32X8_LANE) as u64;
         state0 = pcg32x8_advance_states(state0, inc0, num_blocks);
         rng.state = _mm512_loadu_si512(state0.as_ptr() as *const _);
     }
@@ -524,7 +514,7 @@ pub extern "C" fn pcg32x8_rand_f32s(
                 )
             });
 
-        let num_blocks = ((count + PCG32X8_LANE - 1) / PCG32X8_LANE) as u64;
+        let num_blocks = count.div_ceil(PCG32X8_LANE) as u64;
         state0 = pcg32x8_advance_states(state0, inc0, num_blocks);
         rng.state = _mm512_loadu_si512(state0.as_ptr() as *const _);
     }

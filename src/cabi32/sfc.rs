@@ -5,7 +5,7 @@ use std::{ptr, slice::from_raw_parts_mut};
 use wide::{f32x4, i32x4, u32x4};
 
 use crate::{
-    _internal::FSCALE32,
+    _internal::{FSCALE32, chunk_seed32},
     rng::Rng32,
     rng32::{
         Sfc32,
@@ -32,9 +32,7 @@ pub extern "C" fn sfc32_next_u32s(ptr: *mut Sfc32, out: *mut u32, count: usize) 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.nextu();
-        }
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Sfc32::new, |r| r.nextu());
     }
 }
 
@@ -43,9 +41,7 @@ pub extern "C" fn sfc32_next_f32s(ptr: *mut Sfc32, out: *mut f32, count: usize) 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.nextf();
-        }
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Sfc32::new, |r| r.nextf());
     }
 }
 
@@ -60,9 +56,7 @@ pub extern "C" fn sfc32_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.randi(min, max);
-        }
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Sfc32::new, |r| r.randi(min, max));
     }
 }
 
@@ -77,27 +71,13 @@ pub extern "C" fn sfc32_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        for x in buffer {
-            *x = rng.randf(min, max);
-        }
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Sfc32::new, |r| r.randf(min, max));
     }
 }
 
 // --- Sfc32x4 ---
 
 const SFC32X4_PAR_CHUNK: usize = 0x20000;
-const SFC32X4_UNROLL: usize = SFC32X4 << 2;
-
-#[inline(always)]
-fn sfc32x4_chunk_seed(base_seed: u32, chunk_idx: usize) -> u32 {
-    let x = base_seed.wrapping_add((chunk_idx as u32).wrapping_mul(0x9E37_79B9));
-    let mut z = x as u64;
-    z ^= z >> 16;
-    z = z.wrapping_mul(0xFF51_AFD7_ED55_8CCD);
-    z ^= z >> 16;
-    z = z.wrapping_mul(0xC4CE_B9FE_1A85_EC53);
-    (z ^ (z >> 16)) as u32
-}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn sfc32x4_new(seed: u32) -> *mut Sfc32x4 {
@@ -114,61 +94,29 @@ pub extern "C" fn sfc32x4_free(ptr: *mut Sfc32x4) {
 #[cfg(target_arch = "x86_64")]
 #[allow(unsafe_op_in_unsafe_fn)]
 #[inline(always)]
-unsafe fn sfc32x4_next_u32s_chunk(rng: &mut Sfc32x4, chunk: &mut [u32]) {
-    let mut out_ptr = chunk.as_mut_ptr();
-    let mut remaining = chunk.len();
-    while remaining >= SFC32X4_UNROLL {
-        let v0: [u32; SFC32X4] = bytemuck::cast(rng.nextuv());
-        let v1: [u32; SFC32X4] = bytemuck::cast(rng.nextuv());
-        let v2: [u32; SFC32X4] = bytemuck::cast(rng.nextuv());
-        let v3: [u32; SFC32X4] = bytemuck::cast(rng.nextuv());
-        ptr::copy_nonoverlapping(v0.as_ptr(), out_ptr, SFC32X4);
-        ptr::copy_nonoverlapping(v1.as_ptr(), out_ptr.add(SFC32X4), SFC32X4);
-        ptr::copy_nonoverlapping(v2.as_ptr(), out_ptr.add(SFC32X4 * 2), SFC32X4);
-        ptr::copy_nonoverlapping(v3.as_ptr(), out_ptr.add(SFC32X4 * 3), SFC32X4);
-        out_ptr = out_ptr.add(SFC32X4_UNROLL);
-        remaining -= SFC32X4_UNROLL;
-    }
-    while remaining >= SFC32X4 {
-        let v: [u32; SFC32X4] = bytemuck::cast(rng.nextuv());
-        ptr::copy_nonoverlapping(v.as_ptr(), out_ptr, SFC32X4);
-        out_ptr = out_ptr.add(SFC32X4);
-        remaining -= SFC32X4;
-    }
-    if remaining > 0 {
-        let v: [u32; SFC32X4] = bytemuck::cast(rng.nextuv());
-        ptr::copy_nonoverlapping(v.as_ptr(), out_ptr, remaining);
-    }
+unsafe fn sfc32x4_next_u32s_chunk(rng: &mut Sfc32x4, chunk: &mut [u32], nt: bool) {
+    crate::_internal::fill_chunk_auto(chunk, nt, || {
+        bytemuck::cast::<_, [u32; SFC32X4 * 4]>([
+            rng.nextuv(),
+            rng.nextuv(),
+            rng.nextuv(),
+            rng.nextuv(),
+        ])
+    });
 }
 
 #[cfg(target_arch = "x86_64")]
 #[allow(unsafe_op_in_unsafe_fn)]
 #[inline(always)]
-unsafe fn sfc32x4_next_f32s_chunk(rng: &mut Sfc32x4, chunk: &mut [f32], scale: f32x4) {
-    let mut out_ptr = chunk.as_mut_ptr();
-    let mut remaining = chunk.len();
-    while remaining >= SFC32X4_UNROLL {
-        let v0: [f32; SFC32X4] = bytemuck::cast(rng.nextfv(scale));
-        let v1: [f32; SFC32X4] = bytemuck::cast(rng.nextfv(scale));
-        let v2: [f32; SFC32X4] = bytemuck::cast(rng.nextfv(scale));
-        let v3: [f32; SFC32X4] = bytemuck::cast(rng.nextfv(scale));
-        ptr::copy_nonoverlapping(v0.as_ptr(), out_ptr, SFC32X4);
-        ptr::copy_nonoverlapping(v1.as_ptr(), out_ptr.add(SFC32X4), SFC32X4);
-        ptr::copy_nonoverlapping(v2.as_ptr(), out_ptr.add(SFC32X4 * 2), SFC32X4);
-        ptr::copy_nonoverlapping(v3.as_ptr(), out_ptr.add(SFC32X4 * 3), SFC32X4);
-        out_ptr = out_ptr.add(SFC32X4_UNROLL);
-        remaining -= SFC32X4_UNROLL;
-    }
-    while remaining >= SFC32X4 {
-        let v: [f32; SFC32X4] = bytemuck::cast(rng.nextfv(scale));
-        ptr::copy_nonoverlapping(v.as_ptr(), out_ptr, SFC32X4);
-        out_ptr = out_ptr.add(SFC32X4);
-        remaining -= SFC32X4;
-    }
-    if remaining > 0 {
-        let v: [f32; SFC32X4] = bytemuck::cast(rng.nextfv(scale));
-        ptr::copy_nonoverlapping(v.as_ptr(), out_ptr, remaining);
-    }
+unsafe fn sfc32x4_next_f32s_chunk(rng: &mut Sfc32x4, chunk: &mut [f32], nt: bool, scale: f32x4) {
+    crate::_internal::fill_chunk_auto(chunk, nt, || {
+        bytemuck::cast::<_, [f32; SFC32X4 * 4]>([
+            rng.nextfv(scale),
+            rng.nextfv(scale),
+            rng.nextfv(scale),
+            rng.nextfv(scale),
+        ])
+    });
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -176,34 +124,18 @@ unsafe fn sfc32x4_next_f32s_chunk(rng: &mut Sfc32x4, chunk: &mut [f32], scale: f
 #[inline(always)]
 unsafe fn sfc32x4_rand_i32s_chunk(
     rng: &mut Sfc32x4,
-    chunk: &mut [i32],
+    chunk: &mut [i32], nt: bool,
     v_range: u32x4,
     v_min: i32x4,
 ) {
-    let mut out_ptr = chunk.as_mut_ptr();
-    let mut remaining = chunk.len();
-    while remaining >= SFC32X4_UNROLL {
-        let v0: [i32; SFC32X4] = bytemuck::cast(rng.randiv(v_range, v_min));
-        let v1: [i32; SFC32X4] = bytemuck::cast(rng.randiv(v_range, v_min));
-        let v2: [i32; SFC32X4] = bytemuck::cast(rng.randiv(v_range, v_min));
-        let v3: [i32; SFC32X4] = bytemuck::cast(rng.randiv(v_range, v_min));
-        ptr::copy_nonoverlapping(v0.as_ptr(), out_ptr, SFC32X4);
-        ptr::copy_nonoverlapping(v1.as_ptr(), out_ptr.add(SFC32X4), SFC32X4);
-        ptr::copy_nonoverlapping(v2.as_ptr(), out_ptr.add(SFC32X4 * 2), SFC32X4);
-        ptr::copy_nonoverlapping(v3.as_ptr(), out_ptr.add(SFC32X4 * 3), SFC32X4);
-        out_ptr = out_ptr.add(SFC32X4_UNROLL);
-        remaining -= SFC32X4_UNROLL;
-    }
-    while remaining >= SFC32X4 {
-        let v: [i32; SFC32X4] = bytemuck::cast(rng.randiv(v_range, v_min));
-        ptr::copy_nonoverlapping(v.as_ptr(), out_ptr, SFC32X4);
-        out_ptr = out_ptr.add(SFC32X4);
-        remaining -= SFC32X4;
-    }
-    if remaining > 0 {
-        let v: [i32; SFC32X4] = bytemuck::cast(rng.randiv(v_range, v_min));
-        ptr::copy_nonoverlapping(v.as_ptr(), out_ptr, remaining);
-    }
+    crate::_internal::fill_chunk_auto(chunk, nt, || {
+        bytemuck::cast::<_, [i32; SFC32X4 * 4]>([
+            rng.randiv(v_range, v_min),
+            rng.randiv(v_range, v_min),
+            rng.randiv(v_range, v_min),
+            rng.randiv(v_range, v_min),
+        ])
+    });
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -211,34 +143,18 @@ unsafe fn sfc32x4_rand_i32s_chunk(
 #[inline(always)]
 unsafe fn sfc32x4_rand_f32s_chunk(
     rng: &mut Sfc32x4,
-    chunk: &mut [f32],
+    chunk: &mut [f32], nt: bool,
     v_mult: f32x4,
     v_min: f32x4,
 ) {
-    let mut out_ptr = chunk.as_mut_ptr();
-    let mut remaining = chunk.len();
-    while remaining >= SFC32X4_UNROLL {
-        let v0: [f32; SFC32X4] = bytemuck::cast(rng.randfv(v_mult, v_min));
-        let v1: [f32; SFC32X4] = bytemuck::cast(rng.randfv(v_mult, v_min));
-        let v2: [f32; SFC32X4] = bytemuck::cast(rng.randfv(v_mult, v_min));
-        let v3: [f32; SFC32X4] = bytemuck::cast(rng.randfv(v_mult, v_min));
-        ptr::copy_nonoverlapping(v0.as_ptr(), out_ptr, SFC32X4);
-        ptr::copy_nonoverlapping(v1.as_ptr(), out_ptr.add(SFC32X4), SFC32X4);
-        ptr::copy_nonoverlapping(v2.as_ptr(), out_ptr.add(SFC32X4 * 2), SFC32X4);
-        ptr::copy_nonoverlapping(v3.as_ptr(), out_ptr.add(SFC32X4 * 3), SFC32X4);
-        out_ptr = out_ptr.add(SFC32X4_UNROLL);
-        remaining -= SFC32X4_UNROLL;
-    }
-    while remaining >= SFC32X4 {
-        let v: [f32; SFC32X4] = bytemuck::cast(rng.randfv(v_mult, v_min));
-        ptr::copy_nonoverlapping(v.as_ptr(), out_ptr, SFC32X4);
-        out_ptr = out_ptr.add(SFC32X4);
-        remaining -= SFC32X4;
-    }
-    if remaining > 0 {
-        let v: [f32; SFC32X4] = bytemuck::cast(rng.randfv(v_mult, v_min));
-        ptr::copy_nonoverlapping(v.as_ptr(), out_ptr, remaining);
-    }
+    crate::_internal::fill_chunk_auto(chunk, nt, || {
+        bytemuck::cast::<_, [f32; SFC32X4 * 4]>([
+            rng.randfv(v_mult, v_min),
+            rng.randfv(v_mult, v_min),
+            rng.randfv(v_mult, v_min),
+            rng.randfv(v_mult, v_min),
+        ])
+    });
 }
 
 #[unsafe(no_mangle)]
@@ -254,8 +170,8 @@ pub extern "C" fn sfc32x4_next_u32s(ptr: *mut Sfc32x4, out: *mut u32, count: usi
             .par_chunks_mut(SFC32X4_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Sfc32x4::new(sfc32x4_chunk_seed(base_seed, chunk_idx));
-                sfc32x4_next_u32s_chunk(&mut local_rng, chunk);
+                let mut local_rng = Sfc32x4::new(chunk_seed32(base_seed, chunk_idx));
+                sfc32x4_next_u32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk));
             });
     }
 }
@@ -274,8 +190,8 @@ pub extern "C" fn sfc32x4_next_f32s(ptr: *mut Sfc32x4, out: *mut f32, count: usi
             .par_chunks_mut(SFC32X4_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Sfc32x4::new(sfc32x4_chunk_seed(base_seed, chunk_idx));
-                sfc32x4_next_f32s_chunk(&mut local_rng, chunk, scale);
+                let mut local_rng = Sfc32x4::new(chunk_seed32(base_seed, chunk_idx));
+                sfc32x4_next_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), scale);
             });
     }
 }
@@ -301,8 +217,8 @@ pub extern "C" fn sfc32x4_rand_i32s(
             .par_chunks_mut(SFC32X4_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Sfc32x4::new(sfc32x4_chunk_seed(base_seed, chunk_idx));
-                sfc32x4_rand_i32s_chunk(&mut local_rng, chunk, v_range, v_min);
+                let mut local_rng = Sfc32x4::new(chunk_seed32(base_seed, chunk_idx));
+                sfc32x4_rand_i32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_range, v_min);
             });
     }
 }
@@ -328,8 +244,8 @@ pub extern "C" fn sfc32x4_rand_f32s(
             .par_chunks_mut(SFC32X4_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Sfc32x4::new(sfc32x4_chunk_seed(base_seed, chunk_idx));
-                sfc32x4_rand_f32s_chunk(&mut local_rng, chunk, v_mult, v_min);
+                let mut local_rng = Sfc32x4::new(chunk_seed32(base_seed, chunk_idx));
+                sfc32x4_rand_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_mult, v_min);
             });
     }
 }
@@ -354,29 +270,17 @@ const SFC32X8_PAR_CHUNK: usize = 0x20000;
 const SFC32X8_UNROLL: usize = SFC32X8 << 2;
 
 #[cfg(target_arch = "x86_64")]
-#[inline]
-fn sfc32x8_chunk_seed(base_seed: u32, chunk_idx: usize) -> u32 {
-    let x = base_seed.wrapping_add((chunk_idx as u32).wrapping_mul(0x9E37_79B9));
-    let mut z = x as u64;
-    z ^= z >> 16;
-    z = z.wrapping_mul(0xFF51_AFD7_ED55_8CCD);
-    z ^= z >> 16;
-    z = z.wrapping_mul(0xC4CE_B9FE_1A85_EC53);
-    (z ^ (z >> 16)) as u32
-}
-
-#[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
 #[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn sfc32x8_next_u32s_chunk(rng: &mut Sfc32x8, chunk: &mut [u32]) {
+unsafe fn sfc32x8_next_u32s_chunk(rng: &mut Sfc32x8, chunk: &mut [u32], nt: bool) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X8_UNROLL {
             _mm256_stream_si256(out_ptr as *mut _, rng.nextuv());
-            _mm256_stream_si256(out_ptr.add(SFC32X8 * 1) as *mut _, rng.nextuv());
+            _mm256_stream_si256(out_ptr.add(SFC32X8) as *mut _, rng.nextuv());
             _mm256_stream_si256(out_ptr.add(SFC32X8 * 2) as *mut _, rng.nextuv());
             _mm256_stream_si256(out_ptr.add(SFC32X8 * 3) as *mut _, rng.nextuv());
             out_ptr = out_ptr.add(SFC32X8_UNROLL);
@@ -391,7 +295,7 @@ unsafe fn sfc32x8_next_u32s_chunk(rng: &mut Sfc32x8, chunk: &mut [u32]) {
     } else {
         while remaining >= SFC32X8_UNROLL {
             _mm256_storeu_si256(out_ptr as *mut _, rng.nextuv());
-            _mm256_storeu_si256(out_ptr.add(SFC32X8 * 1) as *mut _, rng.nextuv());
+            _mm256_storeu_si256(out_ptr.add(SFC32X8) as *mut _, rng.nextuv());
             _mm256_storeu_si256(out_ptr.add(SFC32X8 * 2) as *mut _, rng.nextuv());
             _mm256_storeu_si256(out_ptr.add(SFC32X8 * 3) as *mut _, rng.nextuv());
             out_ptr = out_ptr.add(SFC32X8_UNROLL);
@@ -415,15 +319,15 @@ unsafe fn sfc32x8_next_u32s_chunk(rng: &mut Sfc32x8, chunk: &mut [u32]) {
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2")]
 #[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn sfc32x8_next_f32s_chunk(rng: &mut Sfc32x8, chunk: &mut [f32], scale: __m256) {
+unsafe fn sfc32x8_next_f32s_chunk(rng: &mut Sfc32x8, chunk: &mut [f32], nt: bool, scale: __m256) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X8_UNROLL {
             _mm256_stream_ps(out_ptr, rng.nextfv(scale));
-            _mm256_stream_ps(out_ptr.add(SFC32X8 * 1), rng.nextfv(scale));
+            _mm256_stream_ps(out_ptr.add(SFC32X8), rng.nextfv(scale));
             _mm256_stream_ps(out_ptr.add(SFC32X8 * 2), rng.nextfv(scale));
             _mm256_stream_ps(out_ptr.add(SFC32X8 * 3), rng.nextfv(scale));
             out_ptr = out_ptr.add(SFC32X8_UNROLL);
@@ -437,7 +341,7 @@ unsafe fn sfc32x8_next_f32s_chunk(rng: &mut Sfc32x8, chunk: &mut [f32], scale: _
     } else {
         while remaining >= SFC32X8_UNROLL {
             _mm256_storeu_ps(out_ptr, rng.nextfv(scale));
-            _mm256_storeu_ps(out_ptr.add(SFC32X8 * 1), rng.nextfv(scale));
+            _mm256_storeu_ps(out_ptr.add(SFC32X8), rng.nextfv(scale));
             _mm256_storeu_ps(out_ptr.add(SFC32X8 * 2), rng.nextfv(scale));
             _mm256_storeu_ps(out_ptr.add(SFC32X8 * 3), rng.nextfv(scale));
             out_ptr = out_ptr.add(SFC32X8_UNROLL);
@@ -462,13 +366,13 @@ unsafe fn sfc32x8_next_f32s_chunk(rng: &mut Sfc32x8, chunk: &mut [f32], scale: _
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn sfc32x8_rand_i32s_chunk(
     rng: &mut Sfc32x8,
-    chunk: &mut [i32],
+    chunk: &mut [i32], nt: bool,
     v_range: __m256i,
     v_min: __m256i,
 ) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X8_UNROLL {
@@ -477,7 +381,7 @@ unsafe fn sfc32x8_rand_i32s_chunk(
                 rng.randiv(v_range, v_min),
             );
             _mm256_stream_si256(
-                out_ptr.add(SFC32X8 * 1) as *mut _,
+                out_ptr.add(SFC32X8) as *mut _,
                 rng.randiv(v_range, v_min),
             );
             _mm256_stream_si256(
@@ -503,7 +407,7 @@ unsafe fn sfc32x8_rand_i32s_chunk(
                 rng.randiv(v_range, v_min),
             );
             _mm256_storeu_si256(
-                out_ptr.add(SFC32X8 * 1) as *mut _,
+                out_ptr.add(SFC32X8) as *mut _,
                 rng.randiv(v_range, v_min),
             );
             _mm256_storeu_si256(
@@ -536,18 +440,18 @@ unsafe fn sfc32x8_rand_i32s_chunk(
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn sfc32x8_rand_f32s_chunk(
     rng: &mut Sfc32x8,
-    chunk: &mut [f32],
+    chunk: &mut [f32], nt: bool,
     v_mult: __m256,
     v_min: __m256,
 ) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X8_UNROLL {
             _mm256_stream_ps(out_ptr, rng.randfv(v_mult, v_min));
-            _mm256_stream_ps(out_ptr.add(SFC32X8 * 1), rng.randfv(v_mult, v_min));
+            _mm256_stream_ps(out_ptr.add(SFC32X8), rng.randfv(v_mult, v_min));
             _mm256_stream_ps(out_ptr.add(SFC32X8 * 2), rng.randfv(v_mult, v_min));
             _mm256_stream_ps(out_ptr.add(SFC32X8 * 3), rng.randfv(v_mult, v_min));
             out_ptr = out_ptr.add(SFC32X8_UNROLL);
@@ -561,7 +465,7 @@ unsafe fn sfc32x8_rand_f32s_chunk(
     } else {
         while remaining >= SFC32X8_UNROLL {
             _mm256_storeu_ps(out_ptr, rng.randfv(v_mult, v_min));
-            _mm256_storeu_ps(out_ptr.add(SFC32X8 * 1), rng.randfv(v_mult, v_min));
+            _mm256_storeu_ps(out_ptr.add(SFC32X8), rng.randfv(v_mult, v_min));
             _mm256_storeu_ps(out_ptr.add(SFC32X8 * 2), rng.randfv(v_mult, v_min));
             _mm256_storeu_ps(out_ptr.add(SFC32X8 * 3), rng.randfv(v_mult, v_min));
             out_ptr = out_ptr.add(SFC32X8_UNROLL);
@@ -597,8 +501,8 @@ pub extern "C" fn sfc32x8_next_u32s(ptr: *mut Sfc32x8, out: *mut u32, count: usi
             .par_chunks_mut(SFC32X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Sfc32x8::new(sfc32x8_chunk_seed(base_seed, chunk_idx));
-                sfc32x8_next_u32s_chunk(&mut local_rng, chunk);
+                let mut local_rng = Sfc32x8::new(chunk_seed32(base_seed, chunk_idx));
+                sfc32x8_next_u32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk));
             });
     }
 }
@@ -621,8 +525,8 @@ pub extern "C" fn sfc32x8_next_f32s(ptr: *mut Sfc32x8, out: *mut f32, count: usi
             .par_chunks_mut(SFC32X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Sfc32x8::new(sfc32x8_chunk_seed(base_seed, chunk_idx));
-                sfc32x8_next_f32s_chunk(&mut local_rng, chunk, scale);
+                let mut local_rng = Sfc32x8::new(chunk_seed32(base_seed, chunk_idx));
+                sfc32x8_next_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), scale);
             });
     }
 }
@@ -645,15 +549,15 @@ pub extern "C" fn sfc32x8_rand_i32s(
         let base_seed = tmp[0];
 
         let v_min = _mm256_set1_epi32(min);
-        let v_range = _mm256_set1_epi64x((max as i64 - min as i64 + 1) as i64);
+        let v_range = _mm256_set1_epi64x(max as i64 - min as i64 + 1  );
 
         let buffer = from_raw_parts_mut(out, count);
         buffer
             .par_chunks_mut(SFC32X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Sfc32x8::new(sfc32x8_chunk_seed(base_seed, chunk_idx));
-                sfc32x8_rand_i32s_chunk(&mut local_rng, chunk, v_range, v_min);
+                let mut local_rng = Sfc32x8::new(chunk_seed32(base_seed, chunk_idx));
+                sfc32x8_rand_i32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_range, v_min);
             });
     }
 }
@@ -683,8 +587,8 @@ pub extern "C" fn sfc32x8_rand_f32s(
             .par_chunks_mut(SFC32X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Sfc32x8::new(sfc32x8_chunk_seed(base_seed, chunk_idx));
-                sfc32x8_rand_f32s_chunk(&mut local_rng, chunk, v_mult, v_min);
+                let mut local_rng = Sfc32x8::new(chunk_seed32(base_seed, chunk_idx));
+                sfc32x8_rand_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_mult, v_min);
             });
     }
 }
@@ -709,24 +613,12 @@ const SFC32X16_PAR_CHUNK: usize = 0x20000;
 const SFC32X16_UNROLL: usize = SFC32X16 << 2;
 
 #[cfg(target_arch = "x86_64")]
-#[inline]
-fn sfc32x16_chunk_seed(base_seed: u32, chunk_idx: usize) -> u32 {
-    let x = base_seed.wrapping_add((chunk_idx as u32).wrapping_mul(0x9E37_79B9));
-    let mut z = x as u64;
-    z ^= z >> 16;
-    z = z.wrapping_mul(0xFF51_AFD7_ED55_8CCD);
-    z ^= z >> 16;
-    z = z.wrapping_mul(0xC4CE_B9FE_1A85_EC53);
-    (z ^ (z >> 16)) as u32
-}
-
-#[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 #[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn sfc32x16_next_u32s_chunk(rng: &mut Sfc32x16, chunk: &mut [u32]) {
+unsafe fn sfc32x16_next_u32s_chunk(rng: &mut Sfc32x16, chunk: &mut [u32], nt: bool) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X16_UNROLL {
@@ -779,10 +671,10 @@ unsafe fn sfc32x16_next_u32s_chunk(rng: &mut Sfc32x16, chunk: &mut [u32]) {
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f")]
 #[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn sfc32x16_next_f32s_chunk(rng: &mut Sfc32x16, chunk: &mut [f32], scale: __m512) {
+unsafe fn sfc32x16_next_f32s_chunk(rng: &mut Sfc32x16, chunk: &mut [f32], nt: bool, scale: __m512) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X16_UNROLL {
@@ -837,13 +729,13 @@ unsafe fn sfc32x16_next_f32s_chunk(rng: &mut Sfc32x16, chunk: &mut [f32], scale:
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn sfc32x16_rand_i32s_chunk(
     rng: &mut Sfc32x16,
-    chunk: &mut [i32],
+    chunk: &mut [i32], nt: bool,
     v_range: __m512i,
     v_min: __m512i,
 ) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X16_UNROLL {
@@ -898,13 +790,13 @@ unsafe fn sfc32x16_rand_i32s_chunk(
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn sfc32x16_rand_f32s_chunk(
     rng: &mut Sfc32x16,
-    chunk: &mut [f32],
+    chunk: &mut [f32], nt: bool,
     v_mult: __m512,
     v_min: __m512,
 ) {
     let mut out_ptr = chunk.as_mut_ptr();
     let mut remaining = chunk.len();
-    let aligned = (out_ptr as usize & 63) == 0;
+    let aligned = nt && (out_ptr as usize & 63) == 0;
 
     if aligned {
         while remaining >= SFC32X16_UNROLL {
@@ -971,8 +863,8 @@ pub extern "C" fn sfc32x16_next_u32s(ptr: *mut Sfc32x16, out: *mut u32, count: u
             .par_chunks_mut(SFC32X16_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Sfc32x16::new(sfc32x16_chunk_seed(base_seed, chunk_idx));
-                sfc32x16_next_u32s_chunk(&mut local_rng, chunk);
+                let mut local_rng = Sfc32x16::new(chunk_seed32(base_seed, chunk_idx));
+                sfc32x16_next_u32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk));
             });
     }
 }
@@ -996,8 +888,8 @@ pub extern "C" fn sfc32x16_next_f32s(ptr: *mut Sfc32x16, out: *mut f32, count: u
             .par_chunks_mut(SFC32X16_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Sfc32x16::new(sfc32x16_chunk_seed(base_seed, chunk_idx));
-                sfc32x16_next_f32s_chunk(&mut local_rng, chunk, scale);
+                let mut local_rng = Sfc32x16::new(chunk_seed32(base_seed, chunk_idx));
+                sfc32x16_next_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), scale);
             });
     }
 }
@@ -1021,15 +913,15 @@ pub extern "C" fn sfc32x16_rand_i32s(
         let base_seed = tmp[0];
 
         let v_min = _mm512_set1_epi32(min);
-        let v_range = _mm512_set1_epi64((max as i64 - min as i64 + 1) as i64);
+        let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1  );
 
         let buffer = from_raw_parts_mut(out, count);
         buffer
             .par_chunks_mut(SFC32X16_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Sfc32x16::new(sfc32x16_chunk_seed(base_seed, chunk_idx));
-                sfc32x16_rand_i32s_chunk(&mut local_rng, chunk, v_range, v_min);
+                let mut local_rng = Sfc32x16::new(chunk_seed32(base_seed, chunk_idx));
+                sfc32x16_rand_i32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_range, v_min);
             });
     }
 }
@@ -1060,8 +952,8 @@ pub extern "C" fn sfc32x16_rand_f32s(
             .par_chunks_mut(SFC32X16_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let mut local_rng = Sfc32x16::new(sfc32x16_chunk_seed(base_seed, chunk_idx));
-                sfc32x16_rand_f32s_chunk(&mut local_rng, chunk, v_mult, v_min);
+                let mut local_rng = Sfc32x16::new(chunk_seed32(base_seed, chunk_idx));
+                sfc32x16_rand_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_mult, v_min);
             });
     }
 }

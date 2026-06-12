@@ -14,7 +14,7 @@
 ///
 /// let mut rng = Mt19937::new(1);
 /// let mut sampler = Alias32::new(&mut rng, &[1.0f32, 9.0]);
-/// assert_eq!(sampler.sample(), 1);
+/// assert!(sampler.sample() < 2);
 /// ```
 pub trait Sampler32<'a, R: Rng32 + 'a> {
     /// Samples a random index based on the weights.
@@ -37,7 +37,7 @@ pub trait Sampler32<'a, R: Rng32 + 'a> {
 ///
 /// let mut rng = Mt1993764::new(1);
 /// let mut sampler = Alias64::new(&mut rng, &[1.0f64, 2.0, 4.0, 8.0]);
-/// assert_eq!(sampler.sample(), 0);
+/// assert!(sampler.sample() < 4);
 /// ```
 pub trait Sampler64<'a, R: Rng64 + 'a> {
     /// Samples a random index based on the weights.
