@@ -28,22 +28,33 @@
 
 /// A 32/64-bit random number generator trait.
 pub mod rng;
+pub use crate::rng::*;
 
 /// Consolidated 32-bit random number generators.
 pub mod rng32;
+#[allow(ambiguous_glob_reexports)]
+pub use crate::rng32::*;
 
 #[cfg(feature = "rand")]
 pub mod rand32;
 
+#[cfg(feature = "cabi")]
 pub mod cabi32;
+#[cfg(feature = "cabi")]
+pub use crate::cabi32::*;
 
 /// Consolidated 64-bit random number generators.
 pub mod rng64;
+#[allow(ambiguous_glob_reexports)]
+pub use crate::rng64::*;
 
 #[cfg(feature = "rand")]
 pub mod rand64;
 
+#[cfg(feature = "cabi")]
 pub mod cabi64;
+#[cfg(feature = "cabi")]
+pub use crate::cabi64::*;
 
 pub(crate) mod _internal;
 
