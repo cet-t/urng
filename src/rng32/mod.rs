@@ -44,10 +44,14 @@ pub use xoroshiro::{Xoroshiro64Ss, Xoroshiro64Ssx16};
 pub use xorshift::{Xorshift32, Xorshift128, Xorwow};
 pub use xoshiro::{Xoshiro128Pp, Xoshiro128Ppx16, Xoshiro128Ss, Xoshiro128Ssx16};
 
+#[cfg(feature = "cabi")]
 pub(crate) use pcg::{PCG32_MULT, PCG32X8_LANE, PCG32X8_PAR_CHUNK, PCG32X8_PAR_CHUNK_BLOCKS};
+#[cfg(feature = "cabi")]
 pub(crate) use philox::{
     PHILOX32x4x4_CHUNK_RATIO, PHILOX32x4x4_PAR_CHUNK, PHILOX32x4x4_SHIFT, PHILOX32x16,
     PHILOX32x16_SHIFT,
 };
+#[cfg(feature = "cabi")]
 pub(crate) use splitmix::{SPLITMIX32_GAMMA, SPLITMIX32x16, SPLITMIX32x16_PAR_CHUNK};
+#[cfg(feature = "cabi")]
 pub(crate) use squares::SQUARES32x8;

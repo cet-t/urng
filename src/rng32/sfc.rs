@@ -65,6 +65,7 @@ pub struct Sfc32x4 {
     pub(crate) counter: u32x4,
 }
 
+#[allow(dead_code)]
 impl Sfc32x4 {
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
@@ -149,6 +150,7 @@ pub struct Sfc32x8 {
     pub(crate) counter: __m256i,
 }
 
+#[allow(dead_code)]
 impl Sfc32x8 {
     ///
     /// # Safety
@@ -242,6 +244,7 @@ pub struct Sfc32x16 {
     pub(crate) counter: __m512i,
 }
 
+#[allow(dead_code)]
 impl Sfc32x16 {
     ///
     /// # Safety

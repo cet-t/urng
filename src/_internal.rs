@@ -1,4 +1,6 @@
-﻿pub const FSCALE64: f64 = 1.0 / (u64::MAX as f64 + 1.0);
+﻿#![allow(dead_code)]
+
+pub const FSCALE64: f64 = 1.0 / (u64::MAX as f64 + 1.0);
 pub const FSCALE32: f32 = 1.0 / (u32::MAX as f32 + 1.0);
 
 /// Fills `out[..count]` from repeated calls to `next`.
@@ -66,7 +68,7 @@ pub(crate) unsafe fn fill_chunk_nt<T: Copy, const N: usize, F: FnMut() -> [T; N]
     let words = (N * size_of::<T>()) / 32;
     // A batch smaller than one 32-byte store cannot be streamed; silently
     // dropping stores would corrupt the output, so fall back instead.
-    if words == 0 || (N * size_of::<T>()) % 32 != 0 {
+    if words == 0 || !(N * size_of::<T>()).is_multiple_of(32) {
         return fill_chunk(chunk, generate);
     }
     let mut p = chunk.as_mut_ptr();

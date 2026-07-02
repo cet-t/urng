@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 mod stat;
 
 use anyhow::Result;

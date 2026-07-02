@@ -1,8 +1,9 @@
 [package]
 name = "urng"
-version = "0.5.2"
+version = "0.5.3"
 edition = "2024"
 license = "MIT"
+rust-version = "1.92"
 authors = ["cet"]
 description = "Universal Random Number Generator"
 repository = "https://github.com/cet-t/urng"
@@ -24,6 +25,16 @@ thousands = "0.2.0"
 plotters = "0.3"
 anyhow = "1"
 rand = "0.10.1"
+
+[[example]]
+name = "main"
+required-features = ["cabi"]
+path = "examples/cabi/main.rs"
+
+[[example]]
+name = "test"
+required-features = ["cabi"]
+path = "examples/cabi/test.rs"
 
 [features]
 rand = ["dep:rand_core"]

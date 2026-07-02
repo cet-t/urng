@@ -43,6 +43,7 @@ pub struct Xoroshiro64Ssx8 {
     s1: __m256i,
 }
 
+#[allow(dead_code)]
 impl Xoroshiro64Ssx8 {
     /// Initializes the generator with a given seed, filling the state arrays with values derived from the seed.
     ///
@@ -133,6 +134,7 @@ pub struct Xoroshiro64Ssx16 {
     s1: __m512i,
 }
 
+#[allow(dead_code)]
 impl Xoroshiro64Ssx16 {
     /// Initializes the generator with a given seed, filling the state arrays with values derived from the seed.
     ///

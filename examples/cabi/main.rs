@@ -1,4 +1,4 @@
-﻿use colored::Colorize;
+use colored::Colorize;
 use std::time::Instant;
 use thousands::Separable;
 #[rustfmt::skip]
