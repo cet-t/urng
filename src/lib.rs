@@ -49,7 +49,7 @@ pub mod rng64;
 pub use crate::rng64::*;
 
 #[cfg(feature = "rand")]
-pub mod rand64;
+pub(crate) mod rand64;
 
 #[cfg(feature = "cabi")]
 pub mod cabi64;
@@ -58,40 +58,29 @@ pub use crate::cabi64::*;
 
 pub(crate) mod _internal;
 
-#[cfg(feature = "wide")]
 /// Wide SIMD-accelerated random number generators (e.g., `Sfmt19937x8`).
+#[cfg(feature = "wide")]
 pub(crate) mod wide;
 
-#[cfg(feature = "sampler")]
 /// Weighted random selection traits (`Sampler32`, `Sampler64`).
+#[cfg(feature = "sampler")]
 pub mod sampler;
 
-#[cfg(feature = "sampler")]
 /// Weighted random selection for 32-bit RNGs (`Bst32`, `Alias32`).
+#[cfg(feature = "sampler")]
 pub mod sampler32;
 
-#[cfg(feature = "sampler")]
 /// Weighted random selection for 64-bit RNGs (`Bst64`, `Alias64`).
+#[cfg(feature = "sampler")]
 pub mod sampler64;
 
 #[cfg(feature = "seedgen")]
 pub mod seedgen;
+#[cfg(feature = "seedgen")]
+pub use crate::seedgen::*;
 
 #[cfg(feature = "testing")]
 pub mod testing;
 
 #[macro_use]
 pub mod macros;
-
-#[deprecated]
-pub mod prelude {
-    pub use crate::rng::{Rng32, Rng64};
-    pub use crate::rng32::{
-        Mt19937, Pcg32, Philox32x4, Sfc32, Sfmt19937, SplitMix32, Squares32, Squares32Simd,
-        Squares32x8, Threefry32x2, Threefry32x4, Xorshift32, Xorshift128, Xorwow, Xoshiro128Pp,
-    };
-    pub use crate::rng64::{
-        Cet64, Cet256, Mt1993764, Philox64, Sfc64, Sfmt1993764, SplitMix64, Threefish256,
-        TwistedGFSR, Xoroshiro128Pp, Xoroshiro128Ss, Xoshiro256Pp, Xoshiro256Ss,
-    };
-}
