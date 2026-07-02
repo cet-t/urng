@@ -32,10 +32,16 @@ pub mod rng;
 /// Consolidated 32-bit random number generators.
 pub mod rng32;
 
+#[cfg(feature = "rand")]
+pub mod rand32;
+
 pub mod cabi32;
 
 /// Consolidated 64-bit random number generators.
 pub mod rng64;
+
+#[cfg(feature = "rand")]
+pub mod rand64;
 
 pub mod cabi64;
 
@@ -66,6 +72,7 @@ pub mod testing;
 #[macro_use]
 pub mod macros;
 
+#[deprecated]
 pub mod prelude {
     pub use crate::rng::{Rng32, Rng64};
     pub use crate::rng32::{

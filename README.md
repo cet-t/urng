@@ -13,8 +13,25 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.4.9"
+urng = "0.5.0"
 ```
+
+### Optional `rand` Feature
+
+Enable the `rand` feature to implement [`rand_core::SeedableRng`] and [`rand_core::TryRng`] for all standard generators. This allows interoperability with the `rand` ecosystem (e.g. `rand::Rng`, `rand::SeedableRng`).
+
+```toml
+[dependencies]
+urng = { version = "0.5.0", features = ["rand"] }
+```
+
+> Requires `rand_core = "0.10"`. The `rand` crate itself is only needed as a dev-dependency for tests; consumers only need `urng` with the `rand` feature.
+
+When enabled, all scalar generators (`Mt19937`, `Sfmt*`, `Pcg32`, `Sfc32`, `SplitMix32`, `Squares32`, `Xoroshiro64Ss`, `Xorshift32`, `Xorshift128`, `Xorwow`, `Xoshiro128Pp`, `Xoshiro128Ss`) implement:
+- [`rand_core::SeedableRng`][SeedableRng] — seed from `[u8; 4]`
+- [`rand_core::TryRng`][TryRng] — fallible byte-fill API via [`try_fill_bytes`][try_fill_bytes]
+
+`Philox32x4` (returns `[u32; 4]` per call) implements `TryRng` with a specialized `try_fill_bytes` that packs multiple `u32` outputs per call.
 
 ## Supported Generators
 
@@ -182,4 +199,9 @@ void* mt19937_new(uint32_t seed, size_t warm);
 void mt19937_next_u32s(void* ptr, uint32_t* out, size_t count);
 void mt19937_rand_f32s(void* ptr, float* out, size_t count, float min, float max);
 void mt19937_free(void* ptr);
+```
+
+[SeedableRng]: https://docs.rs/rand_core/latest/rand_core/trait.SeedableRng.html
+[TryRng]: https://docs.rs/rand_core/latest/rand_core/trait.TryRng.html
+[try_fill_bytes]: https://docs.rs/rand_core/latest/rand_core/trait.TryRng.html#tymethod.try_fill_bytes
 ```

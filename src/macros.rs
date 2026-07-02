@@ -118,3 +118,57 @@ macro_rules! unsafe_test {
         }
     };
 }
+
+#[macro_export]
+macro_rules! impl_try_rng_trait {
+    ($($type:ty),* $(,)?) => {
+        $(
+            impl rand_core::TryRng for $type {
+                type Error = std::convert::Infallible;
+
+                fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+                    Ok(self.nextu())
+                }
+
+                fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+                    let hi = self.nextu() as u64;
+                    let lo = self.nextu() as u64;
+                    Ok(hi << 32 | lo)
+                }
+
+                fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> {
+                    let mut i = 0;
+                    while i < dst.len() {
+                        let remaining = dst.len() - i;
+                        if remaining >= 4 {
+                            let val = self.nextu();
+                            dst[i..i + 4].copy_from_slice(&val.to_le_bytes());
+                            i += 4;
+                        } else {
+                            let val = self.nextu();
+                            dst[i..].copy_from_slice(&val.to_le_bytes()[..remaining]);
+                            i += remaining;
+                        }
+                    }
+                    Ok(())
+                }
+            }
+        )*
+    };
+}
+
+#[macro_export]
+macro_rules! impl_rand_trait {
+    ($($type:ty),* $(,)?) => {
+        $(
+            impl rand_core::SeedableRng for $type {
+                type Seed = [u8; 4];
+
+                fn from_seed(seed: Self::Seed) -> Self {
+                    let seed = u32::from_ne_bytes(seed);
+                    Self::new(seed.into())
+                }
+            }
+        )*
+    };
+}

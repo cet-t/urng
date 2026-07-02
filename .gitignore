@@ -8,3 +8,4 @@ tests/logs/*.png
 tasks/
 sources/
 token-optimizer/
+AGENTS.md

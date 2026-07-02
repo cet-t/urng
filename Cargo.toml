@@ -1,6 +1,6 @@
 [package]
 name = "urng"
-version = "0.4.9"
+version = "0.5.0"
 edition = "2024"
 license = "MIT"
 authors = ["cet"]
@@ -23,8 +23,10 @@ colored = "3.1.1"
 thousands = "0.2.0"
 plotters = "0.3"
 anyhow = "1"
+rand = "0.10.1"
 
 [features]
+rand = ["dep:rand_core"]
 wide = []
 sampler = []
 seedgen = []
@@ -43,3 +45,4 @@ bytemuck = "1.25"
 rayon = "1.10"
 paste = "1.0.15"
 thiserror = "2"
+rand_core = { version = "0.10.1", optional = true }
