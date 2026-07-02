@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.5.0"
+urng = "0.5.1"
 ```
 
 ### Optional `rand` Feature
@@ -28,6 +28,7 @@ urng = { version = "0.5.0", features = ["rand"] }
 > Requires `rand_core = "0.10"`. The `rand` crate itself is only needed as a dev-dependency for tests; consumers only need `urng` with the `rand` feature.
 
 When enabled, all scalar generators (`Mt19937`, `Sfmt*`, `Pcg32`, `Sfc32`, `SplitMix32`, `Squares32`, `Xoroshiro64Ss`, `Xorshift32`, `Xorshift128`, `Xorwow`, `Xoshiro128Pp`, `Xoshiro128Ss`) implement:
+
 - [`rand_core::SeedableRng`][SeedableRng] — seed from `[u8; 4]`
 - [`rand_core::TryRng`][TryRng] — fallible byte-fill API via [`try_fill_bytes`][try_fill_bytes]
 
@@ -204,4 +205,3 @@ void mt19937_free(void* ptr);
 [SeedableRng]: https://docs.rs/rand_core/latest/rand_core/trait.SeedableRng.html
 [TryRng]: https://docs.rs/rand_core/latest/rand_core/trait.TryRng.html
 [try_fill_bytes]: https://docs.rs/rand_core/latest/rand_core/trait.TryRng.html#tymethod.try_fill_bytes
-```
