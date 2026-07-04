@@ -56,7 +56,7 @@ impl Rng64 for Sfc64 {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use urng::rng64::Sfc64x8;
 ///
 /// unsafe {
@@ -190,7 +190,9 @@ impl Sfc64x8 {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(target_feature = "avx512f")]
     use super::*;
 
+    #[cfg(target_feature = "avx512f")]
     crate::unsafe_test!(Sfc64x8);
 }

@@ -414,7 +414,12 @@ pub extern "C" fn cet64x8_next_u64s(ptr: *mut Cet64x8, out: *mut u64, count: usi
             .par_chunks_mut(CET64X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                cet64x8_next_u64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed);
+                cet64x8_next_u64s_chunk(
+                    chunk_idx,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    seed,
+                );
             });
 
         let next_seed = SplitMix64::compute(seed.wrapping_add((count as u64).wrapping_mul(STRIDE)));
@@ -471,7 +476,12 @@ pub extern "C" fn cet256x2_next_u64s(ptr: *mut Cet256x2, out: *mut u64, count: u
             .par_chunks_mut(CET256X2_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                cet256x2_next_u64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed);
+                cet256x2_next_u64s_chunk(
+                    chunk_idx,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    seed,
+                );
             });
 
         let next_seed = SplitMix64::compute(seed.wrapping_add((count as u64).wrapping_mul(STRIDE)));

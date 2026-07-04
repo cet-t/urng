@@ -57,7 +57,9 @@ pub extern "C" fn mt19937_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Mt19937::new, |r| r.randi(min, max));
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Mt19937::new, |r| {
+            r.randi(min, max)
+        });
     }
 }
 
@@ -73,7 +75,9 @@ pub extern "C" fn mt19937_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Mt19937::new, |r| r.randf(min, max));
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Mt19937::new, |r| {
+            r.randf(min, max)
+        });
     }
 }
 
@@ -103,7 +107,12 @@ pub extern "C" fn sfmt19937_next_u32s(ptr: *mut Sfmt19937, out: *mut u32, count:
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| Sfmt19937::new(s as u64), |r| r.nextu());
+        crate::_internal::par_fill_reseed32(
+            buffer,
+            rng.nextu(),
+            |s| Sfmt19937::new(s as u64),
+            |r| r.nextu(),
+        );
     }
 }
 
@@ -113,7 +122,12 @@ pub extern "C" fn sfmt19937_next_f32s(ptr: *mut Sfmt19937, out: *mut f32, count:
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| Sfmt19937::new(s as u64), |r| r.nextf());
+        crate::_internal::par_fill_reseed32(
+            buffer,
+            rng.nextu(),
+            |s| Sfmt19937::new(s as u64),
+            |r| r.nextf(),
+        );
     }
 }
 
@@ -129,7 +143,12 @@ pub extern "C" fn sfmt19937_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| Sfmt19937::new(s as u64), |r| r.randi(min, max));
+        crate::_internal::par_fill_reseed32(
+            buffer,
+            rng.nextu(),
+            |s| Sfmt19937::new(s as u64),
+            |r| r.randi(min, max),
+        );
     }
 }
 
@@ -145,7 +164,12 @@ pub extern "C" fn sfmt19937_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| Sfmt19937::new(s as u64), |r| r.randf(min, max));
+        crate::_internal::par_fill_reseed32(
+            buffer,
+            rng.nextu(),
+            |s| Sfmt19937::new(s as u64),
+            |r| r.randf(min, max),
+        );
     }
 }
 
@@ -181,7 +205,12 @@ macro_rules! impl_sfmt_cabi {
             unsafe {
                 let rng = &mut *ptr;
                 let buffer = from_raw_parts_mut(out, count);
-                crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| <$ty>::new(s as u64), |r| r.nextu());
+                crate::_internal::par_fill_reseed32(
+                    buffer,
+                    rng.nextu(),
+                    |s| <$ty>::new(s as u64),
+                    |r| r.nextu(),
+                );
             }
         }
 
@@ -190,7 +219,12 @@ macro_rules! impl_sfmt_cabi {
             unsafe {
                 let rng = &mut *ptr;
                 let buffer = from_raw_parts_mut(out, count);
-                crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| <$ty>::new(s as u64), |r| r.nextf());
+                crate::_internal::par_fill_reseed32(
+                    buffer,
+                    rng.nextu(),
+                    |s| <$ty>::new(s as u64),
+                    |r| r.nextf(),
+                );
             }
         }
 
@@ -205,7 +239,12 @@ macro_rules! impl_sfmt_cabi {
             unsafe {
                 let rng = &mut *ptr;
                 let buffer = from_raw_parts_mut(out, count);
-                crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| <$ty>::new(s as u64), |r| r.randi(min, max));
+                crate::_internal::par_fill_reseed32(
+                    buffer,
+                    rng.nextu(),
+                    |s| <$ty>::new(s as u64),
+                    |r| r.randi(min, max),
+                );
             }
         }
 
@@ -220,7 +259,12 @@ macro_rules! impl_sfmt_cabi {
             unsafe {
                 let rng = &mut *ptr;
                 let buffer = from_raw_parts_mut(out, count);
-                crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| <$ty>::new(s as u64), |r| r.randf(min, max));
+                crate::_internal::par_fill_reseed32(
+                    buffer,
+                    rng.nextu(),
+                    |s| <$ty>::new(s as u64),
+                    |r| r.randf(min, max),
+                );
             }
         }
     };

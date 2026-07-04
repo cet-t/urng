@@ -136,7 +136,7 @@ pub(crate) const SFC32X8: usize = 8;
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use urng::rng32::sfc::Sfc32x8;
 ///
 /// let mut rng = unsafe { Sfc32x8::new(1) };
@@ -230,7 +230,7 @@ pub(crate) const SFC32X16: usize = 16;
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use urng::rng32::sfc::Sfc32x16;
 ///
 /// let mut rng = unsafe { Sfc32x16::new(1) };
@@ -324,10 +324,14 @@ impl Sfc32x16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{safe_test, unsafe_test};
+    use crate::safe_test;
+    #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+    use crate::unsafe_test;
 
     safe_test!(Sfc32);
     safe_test!(Sfc32x4);
+    #[cfg(target_feature = "avx2")]
     unsafe_test!(Sfc32x8);
+    #[cfg(target_feature = "avx512f")]
     unsafe_test!(Sfc32x16);
 }

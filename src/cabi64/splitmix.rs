@@ -91,7 +91,9 @@ pub extern "C" fn splitmix64_rand_i64s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let range = (max as i128 - min as i128 + 1) as u128;
-        sm64_fill(buffer, rng.s.0, |x| ((x as u128 * range) >> 64) as i64 + min);
+        sm64_fill(buffer, rng.s.0, |x| {
+            ((x as u128 * range) >> 64) as i64 + min
+        });
         rng.s.0 = rng
             .s
             .0

@@ -84,3 +84,12 @@ pub mod testing;
 
 #[macro_use]
 pub mod macros;
+
+/// Convenient re-exports of the RNG traits and generators.
+pub mod prelude {
+    pub use crate::rng::*;
+    #[allow(ambiguous_glob_reexports)]
+    pub use crate::rng32::*;
+    #[allow(ambiguous_glob_reexports)]
+    pub use crate::rng64::*;
+}

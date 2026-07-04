@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.6.0"
+urng = "0.7.0"
 ```
 
 ### Optional `rand` Feature
@@ -22,7 +22,7 @@ Enable the `rand` feature to implement [`rand_core::SeedableRng`] and [`rand_cor
 
 ```toml
 [dependencies]
-urng = { version = "0.5.0", features = ["rand"] }
+urng = { version = "0.7.0", features = ["rand"] }
 ```
 
 > Requires `rand_core = "0.10"`. The `rand` crate itself is only needed as a dev-dependency for tests; consumers only need `urng` with the `rand` feature.

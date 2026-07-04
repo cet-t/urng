@@ -328,5 +328,6 @@ mod tests {
     use super::*;
 
     crate::safe_test!(Philox32x4);
+    #[cfg(target_feature = "avx512f")]
     crate::unsafe_test!(Philox32x4x4);
 }

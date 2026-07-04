@@ -89,7 +89,9 @@ pub extern "C" fn xoroshiro128pp_rand_i64s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let base_seed = rng.nextu();
-        xoro_fill(buffer, base_seed, Xoroshiro128Pp::new, |r| r.randi(min, max));
+        xoro_fill(buffer, base_seed, Xoroshiro128Pp::new, |r| {
+            r.randi(min, max)
+        });
     }
 }
 /// Fills `out[0..count]` with `f64` values in `[min, max)` using parallel chunk generation.
@@ -105,7 +107,9 @@ pub extern "C" fn xoroshiro128pp_rand_f64s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let base_seed = rng.nextu();
-        xoro_fill(buffer, base_seed, Xoroshiro128Pp::new, |r| r.randf(min, max));
+        xoro_fill(buffer, base_seed, Xoroshiro128Pp::new, |r| {
+            r.randf(min, max)
+        });
     }
 }
 
@@ -157,7 +161,9 @@ pub extern "C" fn xoroshiro128ss_rand_i64s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let base_seed = rng.nextu();
-        xoro_fill(buffer, base_seed, Xoroshiro128Ss::new, |r| r.randi(min, max));
+        xoro_fill(buffer, base_seed, Xoroshiro128Ss::new, |r| {
+            r.randi(min, max)
+        });
     }
 }
 /// Fills `out[0..count]` with `f64` values in `[min, max)` using parallel chunk generation.
@@ -173,6 +179,8 @@ pub extern "C" fn xoroshiro128ss_rand_f64s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let base_seed = rng.nextu();
-        xoro_fill(buffer, base_seed, Xoroshiro128Ss::new, |r| r.randf(min, max));
+        xoro_fill(buffer, base_seed, Xoroshiro128Ss::new, |r| {
+            r.randf(min, max)
+        });
     }
 }

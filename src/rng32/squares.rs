@@ -80,7 +80,7 @@ pub const SQUARES32x8: usize = 8;
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use urng::rng32::Squares32x8;
 /// unsafe {
 ///     let mut rng = Squares32x8::new(1);
@@ -212,5 +212,6 @@ mod tests {
     use super::*;
 
     crate::safe_test!(Squares32);
+    #[cfg(all(target_feature = "avx512f", target_feature = "avx512dq"))]
     crate::unsafe_test!(Squares32x8);
 }

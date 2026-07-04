@@ -303,7 +303,8 @@ impl_mcpi_for_rng!(64);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prelude::*;
+    use crate::Sfmt19937;
+    use crate::Sfmt1993764;
 
     #[test]
     fn mcpi32_works() {

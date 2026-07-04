@@ -57,7 +57,7 @@ pub const PCG32_MULT: u64 = 6364136223846793005;
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use urng::rng32::Pcg32x8;
 ///
 /// unsafe {

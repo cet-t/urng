@@ -32,7 +32,12 @@ pub extern "C" fn pcg32_next_u32s(ptr: *mut Pcg32, out: *mut u32, count: usize) 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| Pcg32::new(s as u64), |r| r.nextu());
+        crate::_internal::par_fill_reseed32(
+            buffer,
+            rng.nextu(),
+            |s| Pcg32::new(s as u64),
+            |r| r.nextu(),
+        );
     }
 }
 
@@ -42,7 +47,12 @@ pub extern "C" fn pcg32_next_f32s(ptr: *mut Pcg32, out: *mut f32, count: usize) 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| Pcg32::new(s as u64), |r| r.nextf());
+        crate::_internal::par_fill_reseed32(
+            buffer,
+            rng.nextu(),
+            |s| Pcg32::new(s as u64),
+            |r| r.nextf(),
+        );
     }
 }
 
@@ -58,7 +68,12 @@ pub extern "C" fn pcg32_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| Pcg32::new(s as u64), |r| r.randi(min, max));
+        crate::_internal::par_fill_reseed32(
+            buffer,
+            rng.nextu(),
+            |s| Pcg32::new(s as u64),
+            |r| r.randi(min, max),
+        );
     }
 }
 
@@ -74,7 +89,12 @@ pub extern "C" fn pcg32_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), |s| Pcg32::new(s as u64), |r| r.randf(min, max));
+        crate::_internal::par_fill_reseed32(
+            buffer,
+            rng.nextu(),
+            |s| Pcg32::new(s as u64),
+            |r| r.randf(min, max),
+        );
     }
 }
 

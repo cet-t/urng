@@ -5,11 +5,13 @@ use ::wide::{u32x4, u32x8};
 macro_rules! sm32xn {
     ($v:expr, $intrin:expr) => {
         paste::paste! {
+            #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<SplitMix32 x $v>] {
                 state: [<u32x $v>],
             }
 
+            #[allow(dead_code)]
             impl [<SplitMix32 x $v>] {
                 #[target_feature(enable = $intrin)]
                 pub fn new(seed: u32) -> Self {
@@ -57,9 +59,13 @@ sm32xn!(8, "avx512f");
 
 #[cfg(test)]
 mod tests {
+    #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
     use super::*;
+    #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
     use crate::unsafe_test;
 
+    #[cfg(target_feature = "avx2")]
     unsafe_test!(SplitMix32x4);
+    #[cfg(target_feature = "avx512f")]
     unsafe_test!(SplitMix32x8);
 }

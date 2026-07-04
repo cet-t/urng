@@ -373,7 +373,8 @@ unsafe fn biski64x8_next_f64s_chunk(chunk_idx: usize, chunk: &mut [f64], _nt: bo
 #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
 unsafe fn biski64x8_rand_i64s_chunk(
     chunk_idx: usize,
-    chunk: &mut [i64], _nt: bool,
+    chunk: &mut [i64],
+    _nt: bool,
     seed: u64,
     min: i64,
     max: i64,
@@ -480,7 +481,8 @@ unsafe fn biski64x8_rand_i64s_chunk(
 #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
 unsafe fn biski64x8_rand_f64s_chunk(
     chunk_idx: usize,
-    chunk: &mut [f64], _nt: bool,
+    chunk: &mut [f64],
+    _nt: bool,
     seed: u64,
     min: f64,
     max: f64,
@@ -608,7 +610,12 @@ pub extern "C" fn biski64x8_next_u64s(ptr: *mut Biski64x8, out: *mut u64, count:
             .par_chunks_mut(BISKI64X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                biski64x8_next_u64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed);
+                biski64x8_next_u64s_chunk(
+                    chunk_idx,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    seed,
+                );
             });
 
         let seed = SplitMix64::compute(seed.wrapping_add((count as u64).wrapping_mul(STRIDE)));
@@ -631,7 +638,12 @@ pub extern "C" fn biski64x8_next_f64s(ptr: *mut Biski64x8, out: *mut f64, count:
             .par_chunks_mut(BISKI64X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                biski64x8_next_f64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed);
+                biski64x8_next_f64s_chunk(
+                    chunk_idx,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    seed,
+                );
             });
 
         let seed = SplitMix64::compute(seed.wrapping_add((count as u64).wrapping_mul(STRIDE)));
@@ -660,7 +672,14 @@ pub extern "C" fn biski64x8_rand_i64s(
             .par_chunks_mut(BISKI64X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                biski64x8_rand_i64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed, min, max);
+                biski64x8_rand_i64s_chunk(
+                    chunk_idx,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    seed,
+                    min,
+                    max,
+                );
             });
 
         let seed = SplitMix64::compute(seed.wrapping_add((count as u64).wrapping_mul(STRIDE)));
@@ -689,7 +708,14 @@ pub extern "C" fn biski64x8_rand_f64s(
             .par_chunks_mut(BISKI64X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                biski64x8_rand_f64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed, min, max);
+                biski64x8_rand_f64s_chunk(
+                    chunk_idx,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    seed,
+                    min,
+                    max,
+                );
             });
 
         let seed = SplitMix64::compute(seed.wrapping_add((count as u64).wrapping_mul(STRIDE)));

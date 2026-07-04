@@ -319,7 +319,8 @@ impl_chisq_for_rng!(64);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prelude::*;
+    use crate::Sfmt19937;
+    use crate::Sfmt1993764;
 
     #[test]
     fn chisq32_works() {

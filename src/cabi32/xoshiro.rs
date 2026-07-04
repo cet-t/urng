@@ -92,7 +92,9 @@ pub extern "C" fn xoshiro128pp_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Pp::new, |r| r.randi(min, max));
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Pp::new, |r| {
+            r.randi(min, max)
+        });
     }
 }
 
@@ -111,7 +113,9 @@ pub extern "C" fn xoshiro128pp_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Pp::new, |r| r.randf(min, max));
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Pp::new, |r| {
+            r.randf(min, max)
+        });
     }
 }
 
@@ -175,7 +179,9 @@ pub extern "C" fn xoshiro128ss_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Ss::new, |r| r.randi(min, max));
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Ss::new, |r| {
+            r.randi(min, max)
+        });
     }
 }
 
@@ -194,7 +200,9 @@ pub extern "C" fn xoshiro128ss_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Ss::new, |r| r.randf(min, max));
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Xoshiro128Ss::new, |r| {
+            r.randf(min, max)
+        });
     }
 }
 
@@ -279,7 +287,8 @@ unsafe fn xoshiro128ppx16_next_u32s_chunk(rng: &mut Xoshiro128Ppx16, chunk: &mut
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn xoshiro128ppx16_next_f32s_chunk(
     rng: &mut Xoshiro128Ppx16,
-    chunk: &mut [f32], nt: bool,
+    chunk: &mut [f32],
+    nt: bool,
     scale: __m512,
 ) {
     let mut out_ptr = chunk.as_mut_ptr();
@@ -315,7 +324,8 @@ unsafe fn xoshiro128ppx16_next_f32s_chunk(
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn xoshiro128ppx16_rand_i32s_chunk(
     rng: &mut Xoshiro128Ppx16,
-    chunk: &mut [i32], nt: bool,
+    chunk: &mut [i32],
+    nt: bool,
     v_range: __m512i,
     v_min: __m512i,
 ) {
@@ -352,7 +362,8 @@ unsafe fn xoshiro128ppx16_rand_i32s_chunk(
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn xoshiro128ppx16_rand_f32s_chunk(
     rng: &mut Xoshiro128Ppx16,
-    chunk: &mut [f32], nt: bool,
+    chunk: &mut [f32],
+    nt: bool,
     v_mult: __m512,
     v_min: __m512,
 ) {
@@ -404,7 +415,11 @@ pub extern "C" fn xoshiro128ppx16_next_u32s(
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Xoshiro128Ppx16::new(chunk_seed32(base_seed, chunk_idx));
-                xoshiro128ppx16_next_u32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk));
+                xoshiro128ppx16_next_u32s_chunk(
+                    &mut local_rng,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                );
             });
     }
 }
@@ -430,7 +445,12 @@ pub extern "C" fn xoshiro128ppx16_next_f32s(
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Xoshiro128Ppx16::new(chunk_seed32(base_seed, chunk_idx));
                 let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
-                xoshiro128ppx16_next_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), scale);
+                xoshiro128ppx16_next_f32s_chunk(
+                    &mut local_rng,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    scale,
+                );
             });
     }
 }
@@ -457,9 +477,15 @@ pub extern "C" fn xoshiro128ppx16_rand_i32s(
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Xoshiro128Ppx16::new(chunk_seed32(base_seed, chunk_idx));
-                let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1  );
+                let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1);
                 let v_min = _mm512_set1_epi32(min);
-                xoshiro128ppx16_rand_i32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_range, v_min);
+                xoshiro128ppx16_rand_i32s_chunk(
+                    &mut local_rng,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    v_range,
+                    v_min,
+                );
             });
     }
 }
@@ -488,7 +514,13 @@ pub extern "C" fn xoshiro128ppx16_rand_f32s(
                 let mut local_rng = Xoshiro128Ppx16::new(chunk_seed32(base_seed, chunk_idx));
                 let v_mult = _mm512_set1_ps((max - min) * (1.0 / (u32::MAX as f32 + 1.0)));
                 let v_min = _mm512_set1_ps(min);
-                xoshiro128ppx16_rand_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_mult, v_min);
+                xoshiro128ppx16_rand_f32s_chunk(
+                    &mut local_rng,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    v_mult,
+                    v_min,
+                );
             });
     }
 }
@@ -574,7 +606,8 @@ unsafe fn xoshiro128ssx16_next_u32s_chunk(rng: &mut Xoshiro128Ssx16, chunk: &mut
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn xoshiro128ssx16_next_f32s_chunk(
     rng: &mut Xoshiro128Ssx16,
-    chunk: &mut [f32], nt: bool,
+    chunk: &mut [f32],
+    nt: bool,
     scale: __m512,
 ) {
     let mut out_ptr = chunk.as_mut_ptr();
@@ -610,7 +643,8 @@ unsafe fn xoshiro128ssx16_next_f32s_chunk(
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn xoshiro128ssx16_rand_i32s_chunk(
     rng: &mut Xoshiro128Ssx16,
-    chunk: &mut [i32], nt: bool,
+    chunk: &mut [i32],
+    nt: bool,
     v_range: __m512i,
     v_min: __m512i,
 ) {
@@ -647,7 +681,8 @@ unsafe fn xoshiro128ssx16_rand_i32s_chunk(
 #[allow(unsafe_op_in_unsafe_fn)]
 unsafe fn xoshiro128ssx16_rand_f32s_chunk(
     rng: &mut Xoshiro128Ssx16,
-    chunk: &mut [f32], nt: bool,
+    chunk: &mut [f32],
+    nt: bool,
     v_mult: __m512,
     v_min: __m512,
 ) {
@@ -699,7 +734,11 @@ pub extern "C" fn xoshiro128ssx16_next_u32s(
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Xoshiro128Ssx16::new(chunk_seed32(base_seed, chunk_idx));
-                xoshiro128ssx16_next_u32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk));
+                xoshiro128ssx16_next_u32s_chunk(
+                    &mut local_rng,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                );
             });
     }
 }
@@ -725,7 +764,12 @@ pub extern "C" fn xoshiro128ssx16_next_f32s(
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Xoshiro128Ssx16::new(chunk_seed32(base_seed, chunk_idx));
                 let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
-                xoshiro128ssx16_next_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), scale);
+                xoshiro128ssx16_next_f32s_chunk(
+                    &mut local_rng,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    scale,
+                );
             });
     }
 }
@@ -752,9 +796,15 @@ pub extern "C" fn xoshiro128ssx16_rand_i32s(
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
                 let mut local_rng = Xoshiro128Ssx16::new(chunk_seed32(base_seed, chunk_idx));
-                let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1  );
+                let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1);
                 let v_min = _mm512_set1_epi32(min);
-                xoshiro128ssx16_rand_i32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_range, v_min);
+                xoshiro128ssx16_rand_i32s_chunk(
+                    &mut local_rng,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    v_range,
+                    v_min,
+                );
             });
     }
 }
@@ -783,7 +833,13 @@ pub extern "C" fn xoshiro128ssx16_rand_f32s(
                 let mut local_rng = Xoshiro128Ssx16::new(chunk_seed32(base_seed, chunk_idx));
                 let v_mult = _mm512_set1_ps((max - min) * (1.0 / (u32::MAX as f32 + 1.0)));
                 let v_min = _mm512_set1_ps(min);
-                xoshiro128ssx16_rand_f32s_chunk(&mut local_rng, chunk, crate::_internal::prefer_nt_for(count, chunk), v_mult, v_min);
+                xoshiro128ssx16_rand_f32s_chunk(
+                    &mut local_rng,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    v_mult,
+                    v_min,
+                );
             });
     }
 }

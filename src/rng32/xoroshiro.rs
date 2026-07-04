@@ -110,10 +110,8 @@ impl Xoroshiro64Ssx8 {
         let v = self.nextuv();
         let res_even = _mm256_srli_epi64(_mm256_mul_epu32(v, v_range), 32);
         let v_hi = _mm256_srli_epi64(v, 32);
-        let prod_odd = _mm256_slli_epi64(
-            _mm256_srli_epi64(_mm256_mul_epu32(v_hi, v_range), 32),
-            32,
-        );
+        let prod_odd =
+            _mm256_slli_epi64(_mm256_srli_epi64(_mm256_mul_epu32(v_hi, v_range), 32), 32);
         _mm256_add_epi32(_mm256_or_si256(res_even, prod_odd), v_min)
     }
 
@@ -221,8 +219,11 @@ impl Xoroshiro64Ssx16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{safe_test, unsafe_test};
+    use crate::safe_test;
+    #[cfg(target_feature = "avx512f")]
+    use crate::unsafe_test;
 
     safe_test!(Xoroshiro64Ss);
+    #[cfg(target_feature = "avx512f")]
     unsafe_test!(Xoroshiro64Ssx16);
 }

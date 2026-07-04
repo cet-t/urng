@@ -52,7 +52,7 @@ impl Rng64 for Biski64 {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use urng::rng64::Biski64x8;
 ///
 /// unsafe {
@@ -184,5 +184,6 @@ mod tests {
     use super::*;
 
     crate::safe_test!(Biski64);
+    #[cfg(target_feature = "avx512f")]
     crate::unsafe_test!(Biski64x8);
 }

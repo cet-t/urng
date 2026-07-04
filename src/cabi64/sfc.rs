@@ -281,7 +281,12 @@ pub extern "C" fn sfc64x8_next_u64s(ptr: *mut Sfc64x8, out: *mut u64, count: usi
             .par_chunks_mut(SFC64X8_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                sfc64x8_next_u64s_chunk(chunk_idx, chunk, crate::_internal::prefer_nt_for(count, chunk), seed);
+                sfc64x8_next_u64s_chunk(
+                    chunk_idx,
+                    chunk,
+                    crate::_internal::prefer_nt_for(count, chunk),
+                    seed,
+                );
             });
 
         let seed =

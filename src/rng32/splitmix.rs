@@ -55,7 +55,7 @@ pub const SPLITMIX32_GAMMA: u32 = 0x9E37_79B9;
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use urng::rng32::SplitMix32x16;
 ///
 /// unsafe {

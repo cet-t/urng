@@ -1,6 +1,7 @@
 use crate::{_internal::FSCALE32, wide::SplitMix32x4};
 use ::wide::u32x8;
 
+#[allow(dead_code)]
 #[repr(C, align(64))]
 pub struct Sfc32x8 {
     a: u32x8,
@@ -9,6 +10,7 @@ pub struct Sfc32x8 {
     counter: u32x8,
 }
 
+#[allow(dead_code)]
 impl Sfc32x8 {
     #[target_feature(enable = "avx2")]
     pub fn new(seed: u32) -> Self {
@@ -69,8 +71,11 @@ impl Sfc32x8 {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(target_feature = "avx2")]
     use super::*;
+    #[cfg(target_feature = "avx2")]
     use crate::unsafe_test;
 
+    #[cfg(target_feature = "avx2")]
     unsafe_test!(Sfc32x8);
 }

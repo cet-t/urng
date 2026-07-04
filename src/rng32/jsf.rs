@@ -103,7 +103,7 @@ impl Rng32V256 for Jsf32x8 {
 /// This implementation uses AVX-512 instructions to generate 16 random numbers in parallel.
 ///
 /// # Example
-/// ```
+/// ```no_run
 /// use urng::rng::{Rng32, Rng32V512};
 /// use urng::rng32::Jsf32x16;
 ///
@@ -159,9 +159,13 @@ impl Rng32V512 for Jsf32x16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{safe_test, unsafe_test};
+    use crate::safe_test;
+    #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+    use crate::unsafe_test;
 
     safe_test!(Jsf32);
+    #[cfg(target_feature = "avx2")]
     unsafe_test!(Jsf32x8);
+    #[cfg(target_feature = "avx512f")]
     unsafe_test!(Jsf32x16);
 }

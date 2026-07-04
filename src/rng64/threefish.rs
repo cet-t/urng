@@ -180,7 +180,7 @@ impl Threefish256 {
     pub fn randi(&mut self, min: i64, max: i64) -> [i64; 4] {
         let range = (max as i128 - min as i128 + 1) as u128;
         let out = self.nextu();
-        
+
         [
             ((out[0] as u128 * range) >> 64) as i64 + min,
             ((out[1] as u128 * range) >> 64) as i64 + min,
@@ -195,7 +195,7 @@ impl Threefish256 {
         let range = max - min;
         let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
         let out = self.nextu();
-        
+
         [
             (out[0] as f64 * scale) + min,
             (out[1] as f64 * scale) + min,

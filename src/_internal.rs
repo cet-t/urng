@@ -145,6 +145,7 @@ pub(crate) unsafe fn fill_chunk_auto<T: Copy, const N: usize, F: FnMut() -> [T; 
 /// runs its own RNG reseeded via [`chunk_seed32`], 16 outputs are batched
 /// per generator call (64B for 4-byte `T`), and stores are size-adaptive
 /// (cached for L3-resident buffers, non-temporal for larger ones).
+#[cfg(feature = "cabi")]
 pub(crate) fn par_fill_reseed32<R, T, NF, SF>(
     buffer: &mut [T],
     base_seed: u32,
@@ -179,6 +180,7 @@ pub(crate) fn par_fill_reseed32<R, T, NF, SF>(
 /// 64-bit counterpart of [`par_fill_reseed32`]: 8 outputs per batch
 /// (64B for 8-byte `T`), chunk seeds decorrelated by golden-ratio steps
 /// plus the SplitMix64 finalizer.
+#[cfg(feature = "cabi")]
 pub(crate) fn par_fill_reseed64<R, T, NF, SF>(
     buffer: &mut [T],
     base_seed: u64,

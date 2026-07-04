@@ -3,6 +3,4 @@ mod splitmix;
 
 pub use splitmix::SplitMix32x4;
 
-pub mod prelude {
-    
-}
+pub mod prelude {}
