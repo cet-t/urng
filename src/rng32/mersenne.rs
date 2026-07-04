@@ -1,57 +1,58 @@
+use bytemuck::cast_slice;
+use std::ptr;
+use wrapn::{Wrap, wrap};
+
 use crate::{
     rng::{Rng32, Rng64},
     rng32::SplitMix32,
     rng64::SplitMix64,
-    wrap,
 };
-use bytemuck::cast_slice;
-use std::num::Wrapping;
-use std::ptr;
 
-type U32x4 = [u32; 4];
+#[allow(non_camel_case_types)]
+type u32x4 = [u32; 4];
 
 #[inline(always)]
-fn xor4(a: U32x4, b: U32x4) -> U32x4 {
+fn xor4(a: u32x4, b: u32x4) -> u32x4 {
     [a[0] ^ b[0], a[1] ^ b[1], a[2] ^ b[2], a[3] ^ b[3]]
 }
 
 #[inline(always)]
-fn and4(a: U32x4, b: U32x4) -> U32x4 {
+fn and4(a: u32x4, b: u32x4) -> u32x4 {
     [a[0] & b[0], a[1] & b[1], a[2] & b[2], a[3] & b[3]]
 }
 
 #[inline(always)]
-fn shl4(a: U32x4, shift: u32) -> U32x4 {
+fn shl4(a: u32x4, shift: u32) -> u32x4 {
     [a[0] << shift, a[1] << shift, a[2] << shift, a[3] << shift]
 }
 
 #[inline(always)]
-fn shr4(a: U32x4, shift: u32) -> U32x4 {
+fn shr4(a: u32x4, shift: u32) -> u32x4 {
     [a[0] >> shift, a[1] >> shift, a[2] >> shift, a[3] >> shift]
 }
 
 #[inline(always)]
-fn lshift128(a: U32x4, bytes: u32) -> U32x4 {
+fn lshift128(a: u32x4, bytes: u32) -> u32x4 {
     bytemuck::cast(bytemuck::cast::<_, u128>(a) << (bytes * 8))
 }
 
 #[inline(always)]
-fn rshift128(a: U32x4, bytes: u32) -> U32x4 {
+fn rshift128(a: u32x4, bytes: u32) -> u32x4 {
     bytemuck::cast(bytemuck::cast::<_, u128>(a) >> (bytes * 8))
 }
 
 #[inline(always)]
 fn sfmt_recursion(
-    a: U32x4,
-    b: U32x4,
-    r1: U32x4,
-    r2: U32x4,
-    mask: U32x4,
+    a: u32x4,
+    b: u32x4,
+    r1: u32x4,
+    r2: u32x4,
+    mask: u32x4,
     sl1: u32,
     sl2: u32,
     sr1: u32,
     sr2: u32,
-) -> U32x4 {
+) -> u32x4 {
     xor4(
         xor4(xor4(a, lshift128(a, sl2)), and4(shr4(b, sr1), mask)),
         xor4(rshift128(r1, sr2), shl4(r2, sl1)),
@@ -72,8 +73,8 @@ fn sfmt_recursion(
 /// ```
 #[repr(C)]
 pub struct Mt19937 {
-    mt: [Wrapping<u32>; MT32_N],
-    mti: Wrapping<usize>,
+    mt: [Wrap<u32>; MT32_N],
+    mti: Wrap<usize>,
 }
 
 const MT32_N: usize = 624;
@@ -87,14 +88,14 @@ impl Mt19937 {
     pub fn new(seed: u32) -> Self {
         let mut mt = [wrap!(0u32); MT32_N];
         let mut seedgen = SplitMix32::new(seed);
-        mt[0] = wrap!(seedgen.nextu());
+        mt[0] = seedgen.nextu().into();
         for i in 1..MT32_N {
             let prev = mt[i - 1];
-            mt[i] = wrap!(1812433253u32) * (prev ^ (prev >> 30)) + wrap!(i as u32);
+            mt[i] = (prev ^ (prev >> 30)) * 1812433253u32 + i as u32;
         }
         Self {
             mt,
-            mti: wrap!(MT32_N),
+            mti: MT32_N.into(),
         }
     }
 
@@ -104,53 +105,53 @@ impl Mt19937 {
     pub(crate) fn fill_next_u32s(&mut self, out: &mut [u32]) {
         let mut written = 0;
         while written < out.len() {
-            if self.mti.0 >= MT32_N {
+            if self.mti >= MT32_N {
                 self.twist();
             }
 
-            let idx = self.mti.0;
-            let available = MT32_N - idx;
-            let take = available.min(out.len() - written);
-            let src = &self.mt[idx..idx + take];
-            let dst = &mut out[written..written + take];
+            let idx = self.mti;
+            let available = wrap!(MT32_N) - idx;
+            let take = available.min((out.len() - written).into());
+            let src = &self.mt[*idx.raw()..*(idx + take).raw()];
+            let dst = &mut out[written..written + take.raw()];
 
             for (d, s) in dst.iter_mut().zip(src.iter()) {
                 let mut y = *s;
                 y ^= y >> 11;
-                y ^= (y << 7).0 & 0x9D2C5680;
-                y ^= (y << 15).0 & 0xEFC60000;
+                y ^= (y << 7) & 0x9D2C5680;
+                y ^= (y << 15) & 0xEFC60000;
                 y ^= y >> 18;
-                *d = y.0;
+                *d = y.0.0;
             }
 
-            self.mti += wrap!(take);
-            written += take;
+            self.mti += take;
+            written += take.raw();
         }
     }
 
     fn twist(&mut self) {
         for i in 0..MT32_N - MT32_M {
-            let x = (self.mt[i].0 & MT32_UPPER_MASK) | (self.mt[i + 1].0 & MT32_LOWER_MASK);
+            let x = (self.mt[i] & MT32_UPPER_MASK) | (self.mt[i + 1] & MT32_LOWER_MASK);
             let mut x_a = x >> 1;
             if x & 1 != 0 {
                 x_a ^= MT32_MATRIX_A;
             }
-            self.mt[i] = self.mt[i + MT32_M] ^ wrap!(x_a);
+            self.mt[i] = self.mt[i + MT32_M] ^ x_a;
         }
         for i in MT32_N - MT32_M..MT32_N - 1 {
-            let x = (self.mt[i].0 & MT32_UPPER_MASK) | (self.mt[i + 1].0 & MT32_LOWER_MASK);
+            let x = (self.mt[i] & MT32_UPPER_MASK) | (self.mt[i + 1] & MT32_LOWER_MASK);
             let mut x_a = x >> 1;
             if x & 1 != 0 {
                 x_a ^= MT32_MATRIX_A;
             }
-            self.mt[i] = self.mt[i + MT32_M - MT32_N] ^ wrap!(x_a);
+            self.mt[i] = self.mt[i + MT32_M - MT32_N] ^ x_a;
         }
-        let x = (self.mt[MT32_N - 1].0 & MT32_UPPER_MASK) | (self.mt[0].0 & MT32_LOWER_MASK);
+        let x = (self.mt[MT32_N - 1] & MT32_UPPER_MASK) | (self.mt[0] & MT32_LOWER_MASK);
         let mut x_a = x >> 1;
         if x & 1 != 0 {
             x_a ^= MT32_MATRIX_A;
         }
-        self.mt[MT32_N - 1] = self.mt[MT32_M - 1] ^ wrap!(x_a);
+        self.mt[MT32_N - 1] = self.mt[MT32_M - 1] ^ x_a;
         self.mti = wrap!(0);
     }
 }
@@ -158,16 +159,16 @@ impl Mt19937 {
 impl Rng32 for Mt19937 {
     #[inline]
     fn nextu(&mut self) -> u32 {
-        if self.mti.0 >= MT32_N {
+        if self.mti >= MT32_N {
             self.twist();
         }
-        let mut y = self.mt[self.mti.0];
+        let mut y = self.mt[*self.mti.raw()];
         self.mti += 1;
         y ^= y >> 11;
-        y ^= (y << 7).0 & 0x9D2C5680;
-        y ^= (y << 15).0 & 0xEFC60000;
+        y ^= (y << 7) & 0x9D2C5680;
+        y ^= (y << 15) & 0xEFC60000;
         y ^= y >> 18;
-        y.0
+        *y.raw()
     }
 }
 
@@ -186,7 +187,7 @@ impl Rng32 for Mt19937 {
 #[repr(C)]
 #[repr(align(16))]
 pub struct Sfmt19937 {
-    state: [U32x4; SFMT_N],
+    state: [u32x4; SFMT_N],
     idx: usize,
 }
 
@@ -387,7 +388,7 @@ macro_rules! define_sfmt_variant {
             #[repr(C)]
             #[repr(align(16))]
             pub struct [<Sfmt $mexp>] {
-                state: [U32x4; $n],
+                state: [u32x4; $n],
                 idx: usize,
             }
 
