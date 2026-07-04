@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.7.0"
+urng = "0.7.1"
 ```
 
 ### Optional `rand` Feature

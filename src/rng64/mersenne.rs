@@ -2,7 +2,56 @@ use crate::rng::Rng64;
 use crate::rng64::SplitMix64;
 use bytemuck;
 use std::ptr;
-use wide::u32x4;
+
+type U32x4 = [u32; 4];
+
+#[inline(always)]
+fn xor4(a: U32x4, b: U32x4) -> U32x4 {
+    [a[0] ^ b[0], a[1] ^ b[1], a[2] ^ b[2], a[3] ^ b[3]]
+}
+
+#[inline(always)]
+fn and4(a: U32x4, b: U32x4) -> U32x4 {
+    [a[0] & b[0], a[1] & b[1], a[2] & b[2], a[3] & b[3]]
+}
+
+#[inline(always)]
+fn shl4(a: U32x4, shift: u32) -> U32x4 {
+    [a[0] << shift, a[1] << shift, a[2] << shift, a[3] << shift]
+}
+
+#[inline(always)]
+fn shr4(a: U32x4, shift: u32) -> U32x4 {
+    [a[0] >> shift, a[1] >> shift, a[2] >> shift, a[3] >> shift]
+}
+
+#[inline(always)]
+fn lshift128(a: U32x4, bytes: u32) -> U32x4 {
+    bytemuck::cast(bytemuck::cast::<_, u128>(a) << (bytes * 8))
+}
+
+#[inline(always)]
+fn rshift128(a: U32x4, bytes: u32) -> U32x4 {
+    bytemuck::cast(bytemuck::cast::<_, u128>(a) >> (bytes * 8))
+}
+
+#[inline(always)]
+fn sfmt_recursion(
+    a: U32x4,
+    b: U32x4,
+    r1: U32x4,
+    r2: U32x4,
+    mask: U32x4,
+    sl1: u32,
+    sl2: u32,
+    sr1: u32,
+    sr2: u32,
+) -> U32x4 {
+    xor4(
+        xor4(xor4(a, lshift128(a, sl2)), and4(shr4(b, sr1), mask)),
+        xor4(rshift128(r1, sr2), shl4(r2, sl1)),
+    )
+}
 
 // --- Mt1993764 ---
 
@@ -135,7 +184,7 @@ impl Rng64 for Mt1993764 {
 /// ```
 #[repr(C, align(64))]
 pub struct Sfmt1993764 {
-    state: [u32x4; SFMT_N],
+    state: [U32x4; SFMT_N],
     idx: usize,
 }
 
@@ -170,14 +219,14 @@ impl Sfmt1993764 {
             raw_state[2 * i + 1] = (s >> 32) as u32;
         }
 
-        let mut state = [u32x4::default(); SFMT_N];
+        let mut state = [[0u32; 4]; SFMT_N];
         for i in 0..SFMT_N {
-            state[i] = u32x4::from([
+            state[i] = [
                 raw_state[4 * i],
                 raw_state[4 * i + 1],
                 raw_state[4 * i + 2],
                 raw_state[4 * i + 3],
-            ]);
+            ];
         }
 
         let mut rng = Self {
@@ -194,24 +243,13 @@ impl Sfmt1993764 {
             let mut r1 = *ptr.add(SFMT_N - 2);
             let mut r2 = *ptr.add(SFMT_N - 1);
 
-            // Constant mask vector
-            let mask = u32x4::from([SFMT_MSK1, SFMT_MSK2, SFMT_MSK3, SFMT_MSK4]);
+            let mask = [SFMT_MSK1, SFMT_MSK2, SFMT_MSK3, SFMT_MSK4];
 
             for i in 0..(SFMT_N - SFMT_POS1) {
                 let p_i = ptr.add(i);
                 let a = *p_i;
                 let b = *ptr.add(i + SFMT_POS1);
-
-                // do_recursion inlined
-                // a=state[i], b=state[i+SFMT_POS1], c=r1, d=r2
-                // r = a ^ x ^ ((b >> SFMT_SR1) & mask) ^ y ^ (d << SFMT_SL1)
-
-                // x = lshift128(a, SFMT_SL2=1)
-                let x: u32x4 = bytemuck::cast((bytemuck::cast::<_, u128>(a)) << 8);
-                // y = rshift128(c=r1, SFMT_SR2=1)
-                let y: u32x4 = bytemuck::cast((bytemuck::cast::<_, u128>(r1)) >> 8);
-
-                let r = a ^ x ^ ((b >> SFMT_SR1) & mask) ^ y ^ (r2 << SFMT_SL1);
+                let r = sfmt_recursion(a, b, r1, r2, mask, SFMT_SL1, 1, SFMT_SR1, 1);
 
                 *p_i = r;
                 r1 = r2;
@@ -222,14 +260,7 @@ impl Sfmt1993764 {
                 let p_i = ptr.add(i);
                 let a = *p_i;
                 let b = *ptr.add(i + SFMT_POS1 - SFMT_N);
-
-                // Group u32x4 operations
-                // x = lshift128(a, SFMT_SL2=1)
-                let x: u32x4 = bytemuck::cast((bytemuck::cast::<_, u128>(a)) << 8);
-                // y = rshift128(c=r1, SFMT_SR2=1)
-                let y: u32x4 = bytemuck::cast((bytemuck::cast::<_, u128>(r1)) >> 8);
-
-                let r = a ^ x ^ ((b >> SFMT_SR1) & mask) ^ y ^ (r2 << SFMT_SL1);
+                let r = sfmt_recursion(a, b, r1, r2, mask, SFMT_SL1, 1, SFMT_SR1, 1);
 
                 *p_i = r;
                 r1 = r2;
@@ -254,12 +285,10 @@ impl Sfmt1993764 {
         }
         inner &= 1;
 
-        // Verification passed
         if inner == 1 {
             return;
         }
 
-        // Modification for period certification
         let psfmt32_mut = unsafe {
             std::slice::from_raw_parts_mut(self.state.as_mut_ptr() as *mut u32, SFMT_N * 4)
         };
@@ -276,7 +305,6 @@ impl Sfmt1993764 {
         }
     }
 
-    /// Kept for sequential single-threaded block fills (cabi now fills in parallel).
     #[allow(dead_code)]
     #[inline]
     pub(crate) fn fill_next_u64s(&mut self, out: &mut [u64]) {

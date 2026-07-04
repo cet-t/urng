@@ -1,6 +1,6 @@
 [package]
 name = "urng"
-version = "0.7.0"
+version = "0.7.1"
 edition = "2024"
 license = "MIT"
 rust-version = "1.92"
@@ -39,7 +39,7 @@ path = "examples/cabi/test.rs"
 [features]
 rand = ["dep:rand_core"]
 cabi = ["dep:rayon"]
-wide = []
+wide = ["dep:wide"]
 sampler = []
 seedgen = []
 testing = ["dep:thiserror"]
@@ -50,7 +50,7 @@ too_many_arguments = "allow"
 needless_range_loop = "allow"
 
 [dependencies]
-wide = "1.5.0"
+wide = { version = "1.5.0", optional = true }
 bytemuck = { version = "1", features = ["derive"] }
 paste = "1"
 rayon = { version = "1.10", optional = true }

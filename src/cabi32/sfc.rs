@@ -2,7 +2,6 @@ use rayon::prelude::*;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 use std::{ptr, slice::from_raw_parts_mut};
-use wide::{f32x4, i32x4, u32x4};
 
 use crate::{
     _internal::{FSCALE32, chunk_seed32},
@@ -108,7 +107,7 @@ unsafe fn sfc32x4_next_u32s_chunk(rng: &mut Sfc32x4, chunk: &mut [u32], nt: bool
 #[cfg(target_arch = "x86_64")]
 #[allow(unsafe_op_in_unsafe_fn)]
 #[inline(always)]
-unsafe fn sfc32x4_next_f32s_chunk(rng: &mut Sfc32x4, chunk: &mut [f32], nt: bool, scale: f32x4) {
+unsafe fn sfc32x4_next_f32s_chunk(rng: &mut Sfc32x4, chunk: &mut [f32], nt: bool, scale: __m128) {
     crate::_internal::fill_chunk_auto(chunk, nt, || {
         bytemuck::cast::<_, [f32; SFC32X4 * 4]>([
             rng.nextfv(scale),
@@ -126,8 +125,8 @@ unsafe fn sfc32x4_rand_i32s_chunk(
     rng: &mut Sfc32x4,
     chunk: &mut [i32],
     nt: bool,
-    v_range: u32x4,
-    v_min: i32x4,
+    v_range: __m128i,
+    v_min: __m128i,
 ) {
     crate::_internal::fill_chunk_auto(chunk, nt, || {
         bytemuck::cast::<_, [i32; SFC32X4 * 4]>([
@@ -146,8 +145,8 @@ unsafe fn sfc32x4_rand_f32s_chunk(
     rng: &mut Sfc32x4,
     chunk: &mut [f32],
     nt: bool,
-    v_mult: f32x4,
-    v_min: f32x4,
+    v_mult: __m128,
+    v_min: __m128,
 ) {
     crate::_internal::fill_chunk_auto(chunk, nt, || {
         bytemuck::cast::<_, [f32; SFC32X4 * 4]>([
@@ -190,7 +189,7 @@ pub extern "C" fn sfc32x4_next_f32s(ptr: *mut Sfc32x4, out: *mut f32, count: usi
     unsafe {
         let rng = &mut *ptr;
         let base_seed = rng.nextu()[0];
-        let scale = f32x4::splat(FSCALE32);
+        let scale = _mm_set1_ps(FSCALE32);
         let buffer = from_raw_parts_mut(out, count);
         buffer
             .par_chunks_mut(SFC32X4_PAR_CHUNK)
@@ -221,8 +220,8 @@ pub extern "C" fn sfc32x4_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let base_seed = rng.nextu()[0];
-        let v_range = u32x4::splat((max as i64 - min as i64 + 1) as u32);
-        let v_min = i32x4::splat(min);
+        let v_range = _mm_set1_epi32((max as i64 - min as i64 + 1) as u32 as i32);
+        let v_min = _mm_set1_epi32(min);
         let buffer = from_raw_parts_mut(out, count);
         buffer
             .par_chunks_mut(SFC32X4_PAR_CHUNK)
@@ -254,8 +253,8 @@ pub extern "C" fn sfc32x4_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let base_seed = rng.nextu()[0];
-        let v_mult = f32x4::splat((max - min) * FSCALE32);
-        let v_min = f32x4::splat(min);
+        let v_mult = _mm_set1_ps((max - min) * FSCALE32);
+        let v_min = _mm_set1_ps(min);
         let buffer = from_raw_parts_mut(out, count);
         buffer
             .par_chunks_mut(SFC32X4_PAR_CHUNK)

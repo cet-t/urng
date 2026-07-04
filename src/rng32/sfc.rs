@@ -1,6 +1,5 @@
 use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
 use std::arch::x86_64::*;
-use wide::{f32x4, i32x4, u32x4, u64x2};
 
 /// A SFC32 pseudo-random number generator.
 ///
@@ -59,10 +58,10 @@ pub(crate) const SFC32X4: usize = 4;
 /// ```
 #[repr(C, align(64))]
 pub struct Sfc32x4 {
-    pub(crate) a: u32x4,
-    pub(crate) b: u32x4,
-    pub(crate) c: u32x4,
-    pub(crate) counter: u32x4,
+    pub(crate) a: __m128i,
+    pub(crate) b: __m128i,
+    pub(crate) c: __m128i,
+    pub(crate) counter: __m128i,
 }
 
 #[allow(dead_code)]
@@ -78,50 +77,70 @@ impl Sfc32x4 {
             c[i] = seedgen.nextu();
         }
 
-        Self {
-            a: u32x4::from(a),
-            b: u32x4::from(b),
-            c: u32x4::from(c),
-            counter: u32x4::splat(1),
+        unsafe {
+            Self {
+                a: _mm_loadu_si128(a.as_ptr() as *const _),
+                b: _mm_loadu_si128(b.as_ptr() as *const _),
+                c: _mm_loadu_si128(c.as_ptr() as *const _),
+                counter: _mm_set1_epi32(1),
+            }
         }
     }
 
     #[inline(always)]
-    pub(crate) fn nextuv(&mut self) -> u32x4 {
-        let tmp = self.a + self.b + self.counter;
-        self.counter += u32x4::splat(1);
-        self.a = self.b ^ (self.b >> 9);
-        self.b = self.c + (self.c << 3);
-        self.c = ((self.c << 21) | (self.c >> (32 - 21))) + tmp;
-        tmp
+    pub(crate) fn nextuv(&mut self) -> __m128i {
+        unsafe {
+            let tmp = _mm_add_epi32(_mm_add_epi32(self.a, self.b), self.counter);
+            self.counter = _mm_add_epi32(self.counter, _mm_set1_epi32(1));
+            self.a = _mm_xor_si128(self.b, _mm_srli_epi32(self.b, 9));
+            self.b = _mm_add_epi32(self.c, _mm_slli_epi32(self.c, 3));
+            self.c = _mm_add_epi32(
+                _mm_or_si128(_mm_slli_epi32(self.c, 21), _mm_srli_epi32(self.c, 11)),
+                tmp,
+            );
+            tmp
+        }
     }
 
     #[inline(always)]
-    pub(crate) fn nextfv(&mut self, scale: f32x4) -> f32x4 {
-        let arr: [u32; 4] = bytemuck::cast(self.nextuv());
-        f32x4::from([arr[0] as f32, arr[1] as f32, arr[2] as f32, arr[3] as f32]) * scale
+    fn u32x4_to_ps(v: __m128i) -> __m128 {
+        unsafe {
+            let lo = _mm_and_si128(v, _mm_set1_epi32(0xffff));
+            let hi = _mm_srli_epi32(v, 16);
+            _mm_add_ps(
+                _mm_mul_ps(_mm_cvtepi32_ps(hi), _mm_set1_ps(65536.0)),
+                _mm_cvtepi32_ps(lo),
+            )
+        }
     }
 
     #[inline(always)]
-    pub(crate) fn randiv(&mut self, v_range: u32x4, v_min: i32x4) -> i32x4 {
-        let v: u64x2 = bytemuck::cast(self.nextuv());
-        let r: u64x2 = bytemuck::cast(v_range);
-        let lo = u64x2::splat(0xffff_ffff);
-        let res_even: u32x4 = bytemuck::cast(((v & lo) * (r & lo)) >> 32);
-        let prod_odd: u32x4 = bytemuck::cast(((v >> 32) * (r >> 32)) & (lo << 32));
-        let merged: i32x4 = bytemuck::cast(res_even | prod_odd);
-        merged + v_min
+    pub(crate) fn nextfv(&mut self, scale: __m128) -> __m128 {
+        unsafe { _mm_mul_ps(Self::u32x4_to_ps(self.nextuv()), scale) }
     }
 
     #[inline(always)]
-    pub(crate) fn randfv(&mut self, v_mult: f32x4, v_min: f32x4) -> f32x4 {
-        let v_f32 = f32x4::from_i32x4(bytemuck::cast(self.nextuv()));
-        v_f32 * v_mult + v_min
+    pub(crate) fn randiv(&mut self, v_range: __m128i, v_min: __m128i) -> __m128i {
+        unsafe {
+            let uv = self.nextuv();
+            let hi = _mm_set1_epi64x((0xffff_ffffu64 << 32) as i64);
+            let res_even = _mm_srli_epi64(_mm_mul_epu32(uv, v_range), 32);
+            let prod_odd = _mm_and_si128(
+                _mm_mul_epu32(_mm_srli_epi64(uv, 32), _mm_srli_epi64(v_range, 32)),
+                hi,
+            );
+            _mm_add_epi32(_mm_or_si128(res_even, prod_odd), v_min)
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn randfv(&mut self, v_mult: __m128, v_min: __m128) -> __m128 {
+        unsafe { _mm_add_ps(_mm_mul_ps(Self::u32x4_to_ps(self.nextuv()), v_mult), v_min) }
     }
 
     #[inline(always)]
     pub fn nextu(&mut self) -> [u32; SFC32X4] {
-        bytemuck::cast(self.nextuv())
+        unsafe { std::mem::transmute(self.nextuv()) }
     }
 
     #[inline(always)]
@@ -334,4 +353,61 @@ mod tests {
     unsafe_test!(Sfc32x8);
     #[cfg(target_feature = "avx512f")]
     unsafe_test!(Sfc32x16);
+
+    fn scalar_lanes(seed: u32) -> [Sfc32; SFC32X4] {
+        let mut seedgen = SplitMix32::new(seed);
+        std::array::from_fn(|_| Sfc32 {
+            a: seedgen.nextu(),
+            b: seedgen.nextu(),
+            c: seedgen.nextu(),
+            counter: 1,
+        })
+    }
+
+    #[test]
+    fn sfc32x4_lanes_match_scalar() {
+        let mut vector = Sfc32x4::new(0);
+        let mut scalars = scalar_lanes(0);
+
+        for _ in 0..8 {
+            let got = vector.nextu();
+            let want: [u32; SFC32X4] = std::array::from_fn(|i| scalars[i].nextu());
+            assert_eq!(got, want);
+        }
+    }
+
+    #[test]
+    fn sfc32x4_randiv_randfv_match_scalar() {
+        let (min_i, max_i) = (-5i32, 7i32);
+        let (min_f, max_f) = (-2.0f32, 3.0f32);
+        let v_range = unsafe { _mm_set1_epi32((max_i as i64 - min_i as i64 + 1) as u32 as i32) };
+        let v_min = unsafe { _mm_set1_epi32(min_i) };
+        let v_mult = unsafe { _mm_set1_ps((max_f - min_f) * FSCALE32) };
+        let v_minf = unsafe { _mm_set1_ps(min_f) };
+        let scale = unsafe { _mm_set1_ps(FSCALE32) };
+
+        let mut vector = Sfc32x4::new(1);
+        let mut scalars = scalar_lanes(1);
+        for _ in 0..8 {
+            let got: [i32; SFC32X4] = unsafe { std::mem::transmute(vector.randiv(v_range, v_min)) };
+            let want: [i32; SFC32X4] = std::array::from_fn(|i| scalars[i].randi(min_i, max_i));
+            assert_eq!(got, want);
+        }
+
+        let mut vector = Sfc32x4::new(2);
+        let mut scalars = scalar_lanes(2);
+        for _ in 0..8 {
+            let got: [f32; SFC32X4] = unsafe { std::mem::transmute(vector.randfv(v_mult, v_minf)) };
+            let want: [f32; SFC32X4] = std::array::from_fn(|i| scalars[i].randf(min_f, max_f));
+            assert_eq!(got, want);
+        }
+
+        let mut vector = Sfc32x4::new(3);
+        let mut scalars = scalar_lanes(3);
+        for _ in 0..8 {
+            let got: [f32; SFC32X4] = unsafe { std::mem::transmute(vector.nextfv(scale)) };
+            let want: [f32; SFC32X4] = std::array::from_fn(|i| scalars[i].nextf());
+            assert_eq!(got, want);
+        }
+    }
 }

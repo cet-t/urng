@@ -7,7 +7,56 @@ use crate::{
 use bytemuck::cast_slice;
 use std::num::Wrapping;
 use std::ptr;
-use wide::u32x4;
+
+type U32x4 = [u32; 4];
+
+#[inline(always)]
+fn xor4(a: U32x4, b: U32x4) -> U32x4 {
+    [a[0] ^ b[0], a[1] ^ b[1], a[2] ^ b[2], a[3] ^ b[3]]
+}
+
+#[inline(always)]
+fn and4(a: U32x4, b: U32x4) -> U32x4 {
+    [a[0] & b[0], a[1] & b[1], a[2] & b[2], a[3] & b[3]]
+}
+
+#[inline(always)]
+fn shl4(a: U32x4, shift: u32) -> U32x4 {
+    [a[0] << shift, a[1] << shift, a[2] << shift, a[3] << shift]
+}
+
+#[inline(always)]
+fn shr4(a: U32x4, shift: u32) -> U32x4 {
+    [a[0] >> shift, a[1] >> shift, a[2] >> shift, a[3] >> shift]
+}
+
+#[inline(always)]
+fn lshift128(a: U32x4, bytes: u32) -> U32x4 {
+    bytemuck::cast(bytemuck::cast::<_, u128>(a) << (bytes * 8))
+}
+
+#[inline(always)]
+fn rshift128(a: U32x4, bytes: u32) -> U32x4 {
+    bytemuck::cast(bytemuck::cast::<_, u128>(a) >> (bytes * 8))
+}
+
+#[inline(always)]
+fn sfmt_recursion(
+    a: U32x4,
+    b: U32x4,
+    r1: U32x4,
+    r2: U32x4,
+    mask: U32x4,
+    sl1: u32,
+    sl2: u32,
+    sr1: u32,
+    sr2: u32,
+) -> U32x4 {
+    xor4(
+        xor4(xor4(a, lshift128(a, sl2)), and4(shr4(b, sr1), mask)),
+        xor4(rshift128(r1, sr2), shl4(r2, sl1)),
+    )
+}
 
 // --- Mt19937 ---
 
@@ -137,7 +186,7 @@ impl Rng32 for Mt19937 {
 #[repr(C)]
 #[repr(align(16))]
 pub struct Sfmt19937 {
-    state: [u32x4; SFMT_N],
+    state: [U32x4; SFMT_N],
     idx: usize,
 }
 
@@ -169,14 +218,14 @@ impl Sfmt19937 {
             raw_state[2 * i + 1] = (s >> 32) as u32;
         }
 
-        let mut state = [u32x4::default(); SFMT_N];
+        let mut state = [[0u32; 4]; SFMT_N];
         for i in 0..SFMT_N {
-            state[i] = u32x4::from([
+            state[i] = [
                 raw_state[4 * i],
                 raw_state[4 * i + 1],
                 raw_state[4 * i + 2],
                 raw_state[4 * i + 3],
-            ]);
+            ];
         }
 
         let mut rng = Self {
@@ -193,20 +242,13 @@ impl Sfmt19937 {
             let mut r1 = *ptr.add(SFMT_N - 2);
             let mut r2 = *ptr.add(SFMT_N - 1);
 
-            // Constant mask vector
-            let mask = u32x4::from([SFMT_MSK1, SFMT_MSK2, SFMT_MSK3, SFMT_MSK4]);
+            let mask = [SFMT_MSK1, SFMT_MSK2, SFMT_MSK3, SFMT_MSK4];
 
             for i in 0..(SFMT_N - SFMT_POS1) {
                 let p_i = ptr.add(i);
                 let a = *p_i;
                 let b = *ptr.add(i + SFMT_POS1);
-
-                // x = lshift128(a, SFMT_SL2=1)
-                let x: u32x4 = bytemuck::cast((bytemuck::cast::<_, u128>(a)) << 8);
-                // y = rshift128(c=r1, SFMT_SR2=1)
-                let y: u32x4 = bytemuck::cast((bytemuck::cast::<_, u128>(r1)) >> 8);
-
-                let r = a ^ x ^ ((b >> SFMT_SR1) & mask) ^ y ^ (r2 << SFMT_SL1);
+                let r = sfmt_recursion(a, b, r1, r2, mask, SFMT_SL1, 1, SFMT_SR1, 1);
 
                 *p_i = r;
                 r1 = r2;
@@ -217,13 +259,7 @@ impl Sfmt19937 {
                 let p_i = ptr.add(i);
                 let a = *p_i;
                 let b = *ptr.add(i + SFMT_POS1 - SFMT_N);
-
-                // x = lshift128(a, SFMT_SL2=1)
-                let x: u32x4 = bytemuck::cast((bytemuck::cast::<_, u128>(a)) << 8);
-                // y = rshift128(c=r1, SFMT_SR2=1)
-                let y: u32x4 = bytemuck::cast((bytemuck::cast::<_, u128>(r1)) >> 8);
-
-                let r = a ^ x ^ ((b >> SFMT_SR1) & mask) ^ y ^ (r2 << SFMT_SL1);
+                let r = sfmt_recursion(a, b, r1, r2, mask, SFMT_SL1, 1, SFMT_SR1, 1);
 
                 *p_i = r;
                 r1 = r2;
@@ -351,7 +387,7 @@ macro_rules! define_sfmt_variant {
             #[repr(C)]
             #[repr(align(16))]
             pub struct [<Sfmt $mexp>] {
-                state: [u32x4; $n],
+                state: [U32x4; $n],
                 idx: usize,
             }
 
@@ -364,14 +400,14 @@ macro_rules! define_sfmt_variant {
                         raw_state[2 * i]     = s as u32;
                         raw_state[2 * i + 1] = (s >> 32) as u32;
                     }
-                    let mut state = [u32x4::default(); $n];
+                    let mut state = [[0u32; 4]; $n];
                     for i in 0..$n {
-                        state[i] = u32x4::from([
+                        state[i] = [
                             raw_state[4 * i],
                             raw_state[4 * i + 1],
                             raw_state[4 * i + 2],
                             raw_state[4 * i + 3],
-                        ]);
+                        ];
                     }
                     let mut rng = Self { state, idx: $n * 4 };
                     rng.period_certification();
@@ -383,15 +419,23 @@ macro_rules! define_sfmt_variant {
                         let ptr = self.state.as_mut_ptr();
                         let mut r1 = *ptr.add($n - 2);
                         let mut r2 = *ptr.add($n - 1);
-                        let mask = u32x4::from([$msk1, $msk2, $msk3, $msk4]);
+                        let mask = [$msk1, $msk2, $msk3, $msk4];
 
                         for i in 0..($n - $pos1) {
                             let p_i = ptr.add(i);
                             let a = *p_i;
                             let b = *ptr.add(i + $pos1);
-                            let x: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(a) << ($sl2 as u32 * 8));
-                            let y: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(r1) >> ($sr2 as u32 * 8));
-                            let r = a ^ x ^ ((b >> $sr1 as u32) & mask) ^ y ^ (r2 << $sl1 as u32);
+                            let r = sfmt_recursion(
+                                a,
+                                b,
+                                r1,
+                                r2,
+                                mask,
+                                $sl1 as u32,
+                                $sl2 as u32,
+                                $sr1 as u32,
+                                $sr2 as u32,
+                            );
                             *p_i = r;
                             r1 = r2;
                             r2 = r;
@@ -401,9 +445,17 @@ macro_rules! define_sfmt_variant {
                             let p_i = ptr.add(i);
                             let a = *p_i;
                             let b = *ptr.add(i + $pos1 - $n);
-                            let x: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(a) << ($sl2 as u32 * 8));
-                            let y: u32x4 = bytemuck::cast(bytemuck::cast::<_, u128>(r1) >> ($sr2 as u32 * 8));
-                            let r = a ^ x ^ ((b >> $sr1 as u32) & mask) ^ y ^ (r2 << $sl1 as u32);
+                            let r = sfmt_recursion(
+                                a,
+                                b,
+                                r1,
+                                r2,
+                                mask,
+                                $sl1 as u32,
+                                $sl2 as u32,
+                                $sr1 as u32,
+                                $sr2 as u32,
+                            );
                             *p_i = r;
                             r1 = r2;
                             r2 = r;
