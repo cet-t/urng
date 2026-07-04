@@ -51,27 +51,26 @@ fn update_readme_version() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn regex_replace_version(content: &str, version: &str) -> String {
-    let mut result = String::with_capacity(content.len());
+    // 改行コード (CRLF/LF) やファイル末尾の状態を保持するため、行分割せず
+    // 生の文字列に対して `urng = "<version>"` の部分だけを置換する。
     let prefix = "urng = \"";
-    for line in content.lines() {
-        if let Some(start) = line.find(prefix) {
-            let after = &line[start + prefix.len()..];
-            if let Some(end) = after.find('"') {
-                let new_line = format!(
-                    "{}{}{}{}",
-                    &line[..start + prefix.len()],
-                    version,
-                    "\"",
-                    &after[end + 1..]
-                );
-                result.push_str(&new_line);
-                result.push('\n');
-                continue;
-            }
+    let mut result = String::with_capacity(content.len());
+    let mut rest = content;
+    while let Some(start) = rest.find(prefix) {
+        let value_start = start + prefix.len();
+        if let Some(rel_end) = rest[value_start..].find('"') {
+            let value_end = value_start + rel_end;
+            result.push_str(&rest[..value_start]);
+            result.push_str(version);
+            result.push('"');
+            rest = &rest[value_end + 1..];
+        } else {
+            // 閉じクォートが無い場合はそのまま残す
+            result.push_str(&rest[..value_start]);
+            rest = &rest[value_start..];
         }
-        result.push_str(line);
-        result.push('\n');
     }
+    result.push_str(rest);
     result
 }
 
