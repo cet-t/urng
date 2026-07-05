@@ -188,7 +188,7 @@ impl Rng32 for Mt19937 {
 #[repr(align(16))]
 pub struct Sfmt19937 {
     state: [u32x4; SFMT_N],
-    idx: usize,
+    idx: Wrap<usize>,
 }
 
 const SFMT_N: usize = 156;
@@ -231,7 +231,7 @@ impl Sfmt19937 {
 
         let mut rng = Self {
             state,
-            idx: SFMT_N * 4, // Force generate on first call. 156 * 4 = 624 u32s
+            idx: wrap!(SFMT_N * 4), // Force generate on first call. 156 * 4 = 624 u32s
         };
         rng.period_certification();
         rng
@@ -315,15 +315,15 @@ impl Sfmt19937 {
         while written < out.len() {
             if self.idx >= SFMT_N * 4 {
                 self.gen_rand_all();
-                self.idx = 0;
+                self.idx = 0.into();
             }
 
-            let available = SFMT_N * 4 - self.idx;
+            let available = SFMT_N * 4 - self.idx.raw();
             let take = available.min(out.len() - written);
 
             unsafe {
                 ptr::copy_nonoverlapping(
-                    (self.state.as_ptr() as *const u32).add(self.idx),
+                    (self.state.as_ptr() as *const u32).add(*self.idx.raw()),
                     out.as_mut_ptr().add(written),
                     take,
                 );
@@ -340,11 +340,11 @@ impl Rng32 for Sfmt19937 {
     fn nextu(&mut self) -> u32 {
         if self.idx >= SFMT_N * 4 {
             self.gen_rand_all();
-            self.idx = 0;
+            self.idx = 0.into();
         }
 
         let s: &[u32] = cast_slice(&self.state);
-        let val = s[self.idx];
+        let val = s[*self.idx.raw()];
         self.idx += 1;
         val
     }
@@ -389,7 +389,7 @@ macro_rules! define_sfmt_variant {
             #[repr(align(16))]
             pub struct [<Sfmt $mexp>] {
                 state: [u32x4; $n],
-                idx: usize,
+                idx: ::wrapn::Wrap<usize>,
             }
 
             impl [<Sfmt $mexp>] {
@@ -410,7 +410,7 @@ macro_rules! define_sfmt_variant {
                             raw_state[4 * i + 3],
                         ];
                     }
-                    let mut rng = Self { state, idx: $n * 4 };
+                    let mut rng = Self { state, idx: ($n * 4).into() };
                     rng.period_certification();
                     rng
                 }
@@ -505,13 +505,13 @@ macro_rules! define_sfmt_variant {
                     while written < out.len() {
                         if self.idx >= $n * 4 {
                             self.gen_rand_all();
-                            self.idx = 0;
+                            self.idx = 0.into();
                         }
-                        let available = $n * 4 - self.idx;
+                        let available = $n * 4 - self.idx.raw();
                         let take = available.min(out.len() - written);
                         unsafe {
                             ptr::copy_nonoverlapping(
-                                (self.state.as_ptr() as *const u32).add(self.idx),
+                                (self.state.as_ptr() as *const u32).add(*self.idx.raw()),
                                 out.as_mut_ptr().add(written),
                                 take,
                             );
@@ -527,10 +527,10 @@ macro_rules! define_sfmt_variant {
                 fn nextu(&mut self) -> u32 {
                     if self.idx >= $n * 4 {
                         self.gen_rand_all();
-                        self.idx = 0;
+                        self.idx = 0.into();
                     }
                     let s: &[u32] = cast_slice(&self.state);
-                    let val = s[self.idx];
+                    let val = s[*self.idx.raw()];
                     self.idx += 1;
                     val
                 }
@@ -703,17 +703,19 @@ define_sfmt_variant!(
 
 #[cfg(test)]
 mod tests {
+    use crate::safe_test;
+
     use super::*;
 
-    crate::safe_test!(Mt19937);
-    crate::safe_test!(Sfmt19937);
-    crate::safe_test!(Sfmt607);
-    crate::safe_test!(Sfmt1279);
-    crate::safe_test!(Sfmt2281);
-    crate::safe_test!(Sfmt4253);
-    crate::safe_test!(Sfmt11213);
-    crate::safe_test!(Sfmt44497);
-    crate::safe_test!(Sfmt86243);
-    crate::safe_test!(Sfmt132049);
-    crate::safe_test!(Sfmt216091);
+    safe_test!(Mt19937);
+    safe_test!(Sfmt19937);
+    safe_test!(Sfmt607);
+    safe_test!(Sfmt1279);
+    safe_test!(Sfmt2281);
+    safe_test!(Sfmt4253);
+    safe_test!(Sfmt11213);
+    safe_test!(Sfmt44497);
+    safe_test!(Sfmt86243);
+    safe_test!(Sfmt132049);
+    safe_test!(Sfmt216091);
 }
