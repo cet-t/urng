@@ -14,6 +14,15 @@ use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
 /// let mut rng = Sfc32::new(1);
 /// let _ = rng.nextu();
 /// ```
+///
+/// A time-seeded instance can also be created via `Default`:
+///
+/// ```
+/// use urng::prelude::*;
+///
+/// let mut rng = Sfc32::default();
+/// let _ = rng.nextu();
+/// ```
 #[repr(C, align(64))]
 pub struct Sfc32 {
     pub a: Wrap<u32>,

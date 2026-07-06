@@ -55,3 +55,31 @@ pub(crate) use philox::{
 pub(crate) use splitmix::{SPLITMIX32_GAMMA, SPLITMIX32x16, SPLITMIX32x16_PAR_CHUNK};
 #[cfg(feature = "cabi")]
 pub(crate) use squares::SQUARES32x8;
+
+crate::impl_default_from_seed32!(
+    Jsf32,
+    Mt19937,
+    Sfc32,
+    SplitMix32,
+    Xoroshiro64Ss,
+    Xorshift32,
+    Xorshift128,
+    Xorwow,
+    Xoshiro128Pp,
+    Xoshiro128Ss,
+);
+
+crate::impl_default_from_seed64!(
+    Pcg32,
+    Sfmt19937,
+    Sfmt607,
+    Sfmt1279,
+    Sfmt2281,
+    Sfmt4253,
+    Sfmt11213,
+    Sfmt44497,
+    Sfmt86243,
+    Sfmt132049,
+    Sfmt216091,
+    Squares32,
+);
