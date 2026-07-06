@@ -120,6 +120,38 @@ macro_rules! unsafe_test {
 }
 
 #[macro_export]
+/// Implements `Default` for one or more `seed: u32`-constructed RNGs, seeding
+/// via [`crate::_internal::default_seed32`] (a time-based, per-call mix).
+macro_rules! impl_default_from_seed32 {
+    ($($type:ty),* $(,)?) => {
+        $(
+            impl Default for $type {
+                #[inline]
+                fn default() -> Self {
+                    Self::new($crate::_internal::default_seed32())
+                }
+            }
+        )*
+    };
+}
+
+#[macro_export]
+/// Implements `Default` for one or more `seed: u64`-constructed RNGs, seeding
+/// via [`crate::_internal::default_seed64`] (a time-based, per-call mix).
+macro_rules! impl_default_from_seed64 {
+    ($($type:ty),* $(,)?) => {
+        $(
+            impl Default for $type {
+                #[inline]
+                fn default() -> Self {
+                    Self::new($crate::_internal::default_seed64())
+                }
+            }
+        )*
+    };
+}
+
+#[macro_export]
 macro_rules! impl_try_rng_trait {
     ($($type:ty),* $(,)?) => {
         $(

@@ -1,7 +1,32 @@
 ﻿#![allow(dead_code)]
 
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
+
 pub const FSCALE64: f64 = 1.0 / (u64::MAX as f64 + 1.0);
 pub const FSCALE32: f32 = 1.0 / (u32::MAX as f32 + 1.0);
+
+static DEFAULT_SEED_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Derives a time-based 64-bit seed for `Default` impls.
+///
+/// Mixes wall-clock nanoseconds with a call counter (to avoid identical
+/// seeds for back-to-back calls within the same timer tick) through the
+/// existing [`crate::rng64::SplitMix64::compute`] finalizer.
+pub(crate) fn default_seed64() -> u64 {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos() as u64;
+    let count = DEFAULT_SEED_COUNTER.fetch_add(1, Ordering::Relaxed);
+    crate::rng64::SplitMix64::compute(nanos ^ count.wrapping_mul(0x9E3779B97F4A7C15))
+}
+
+/// 32-bit counterpart of [`default_seed64`]: folds the 64-bit mix down via xor.
+pub(crate) fn default_seed32() -> u32 {
+    let z = default_seed64();
+    (z ^ (z >> 32)) as u32
+}
 
 /// Fills `out[..count]` from repeated calls to `next`.
 ///
@@ -231,6 +256,12 @@ pub(crate) fn chunk_seed32(base_seed: u32, chunk_idx: usize) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn default_seed_calls_are_distinct() {
+        assert_ne!(default_seed64(), default_seed64());
+        assert_ne!(default_seed32(), default_seed32());
+    }
 
     /// Sequential counter generator: makes dropped or duplicated batches
     /// detectable as exact-value mismatches.
