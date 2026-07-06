@@ -1,6 +1,6 @@
+use wrapn::Wrap;
+
 use crate::rng::Rng64;
-use crate::wrap;
-use std::num::Wrapping;
 
 // --- Lcg64 ---
 
@@ -21,7 +21,7 @@ use std::num::Wrapping;
 #[repr(C, align(64))]
 #[deprecated(since = "0.2.4", note = "Use Xoshiro256++/** instead.")]
 pub struct Lcg64 {
-    x: Wrapping<u64>,
+    x: Wrap<u64>,
     a: u64,
     b: u64,
     m: u64,
@@ -33,7 +33,7 @@ impl Lcg64 {
     /// Creates a new `Lcg64` instance.
     pub fn new(x: u64, a: u64, b: u64, m: u64) -> Self {
         Self {
-            x: wrap!(x),
+            x: x.into(),
             a: a | 1,
             b,
             m,
@@ -46,8 +46,8 @@ impl Lcg64 {
 impl Rng64 for Lcg64 {
     #[inline]
     fn nextu(&mut self) -> u64 {
-        self.x = wrap!((self.a * self.x.0 + self.b) % self.m);
-        self.x.0
+        self.x = (self.x * self.a + self.b) % self.m;
+        self.x.value()
     }
 }
 

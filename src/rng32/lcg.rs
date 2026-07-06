@@ -1,5 +1,6 @@
-use crate::{rng::Rng32, wrap};
-use std::num::Wrapping;
+use wrapn::Wrap;
+
+use crate::rng::Rng32;
 
 // --- Lcg32 ---
 
@@ -20,7 +21,7 @@ use std::num::Wrapping;
 #[deprecated(since = "0.2.4", note = "Use Xoshiro256++/** instead.")]
 #[repr(C)]
 pub struct Lcg32 {
-    x: Wrapping<u32>,
+    x: Wrap<u32>,
     a: u32,
     b: u32,
     m: u32,
@@ -34,7 +35,7 @@ impl Lcg32 {
     pub fn new(x: u32, a: u32, b: u32, m: u32) -> Self {
         // M>a, M>b, A>0, B>=0
         Self {
-            x: wrap!(x),
+            x: x.into(),
             a: a | 1,
             b,
             m,
@@ -49,8 +50,8 @@ impl Rng32 for Lcg32 {
     #[inline]
     fn nextu(&mut self) -> u32 {
         // X(n+1) = (a * X(n) + b) % M
-        self.x = wrap!((self.a * self.x.0 + self.b) % self.m);
-        self.x.0
+        self.x = (self.x * self.a + self.b) % self.m;
+        *self.x.raw()
     }
 }
 

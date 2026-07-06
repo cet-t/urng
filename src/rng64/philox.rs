@@ -1,3 +1,5 @@
+use wrapn::{Wrap, wrap};
+
 use crate::{_internal::FSCALE64, rng::Rng64, rng64::SplitMix64};
 
 // --- Philox64 ---
@@ -16,8 +18,8 @@ use crate::{_internal::FSCALE64, rng::Rng64, rng64::SplitMix64};
 /// ```
 #[repr(C, align(64))]
 pub struct Philox64 {
-    pub(crate) c: [u64; 2],
-    pub(crate) k: [u64; 2],
+    pub(crate) c: [Wrap<u64>; 2],
+    pub(crate) k: [Wrap<u64>; 2],
 }
 
 impl Philox64 {
@@ -25,16 +27,15 @@ impl Philox64 {
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
-            c: [1, 0],
-            k: [seedgen.nextu(), seedgen.nextu()],
+            c: wrap![1, 0],
+            k: wrap![seedgen.nextu(), seedgen.nextu()],
         }
     }
 
     /// Computes Philox output from counter and key values (pure function).
     #[inline]
     pub(crate) fn compute(c: [u64; 2], k: [u64; 2]) -> [u64; 2] {
-        let mut v0 = c[0];
-        let mut v1 = c[1];
+        let mut v = wrap![c[0], c[1]];
         let mut key = k[0];
 
         const M0: u128 = 0xD2B74407B1CE6E93;
@@ -46,14 +47,12 @@ impl Philox64 {
                 key = key.wrapping_add(W0);
             };
             (fin) => {
-                let prod = (v0 as u128).wrapping_mul(M0);
-                let hi = (prod >> 64) as u64;
-                let lo = prod as u64;
-                let next_v0 = hi ^ v1 ^ key;
-                let next_v1 = lo;
+                let prod = v[0].cast::<u128>() * M0;
+                let hi = (prod >> 64).cast::<u64>();
+                let lo = prod.cast::<u64>();
 
-                v0 = next_v0;
-                v1 = next_v1;
+                v[0] = hi ^ v[1] ^ key;
+                v[1] = lo;
             };
         }
 
@@ -68,16 +67,16 @@ impl Philox64 {
         step!();
         step!(fin);
 
-        [v0, v1]
+        v.map(|x| x.value())
     }
 
     /// Generates the next block of random numbers.
     #[inline]
     pub fn nextu(&mut self) -> [u64; 2] {
-        let out = Self::compute(self.c, self.k);
-        self.c[0] = self.c[0].wrapping_add(1);
+        let out = Self::compute(self.c.map(|x| x.value()), self.k.map(|x| x.value()));
+        self.c[0] += 1;
         if self.c[0] == 0 {
-            self.c[1] = self.c[1].wrapping_add(1);
+            self.c[1] += 1;
         }
         out
     }

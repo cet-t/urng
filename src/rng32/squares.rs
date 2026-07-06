@@ -1,9 +1,11 @@
+use std::arch::x86_64::*;
+
+use wrapn::{Wrap, wrap};
+
 use crate::{
     rng::{Rng32, Rng64},
     rng64::SplitMix64,
 };
-
-use std::arch::x86_64::*;
 
 // --- Squares32 ---
 
@@ -18,18 +20,18 @@ use std::arch::x86_64::*;
 /// let _ = rng.nextu();
 /// ```
 pub struct Squares32 {
-    pub(crate) c: u64,
-    pub(crate) k: u64,
+    pub(crate) c: Wrap<u64>,
+    pub(crate) k: Wrap<u64>,
 }
 
 impl Squares32 {
     /// Creates a new `Squares32` instance seeded with the given value.
     #[inline]
     pub fn new(seed: u64) -> Self {
-        let mut seedgen = SplitMix64::new(seed | 1);
+        let mut seedgen = SplitMix64::new(seed);
         Self {
-            c: 0,
-            k: seedgen.nextu(),
+            c: 0.into(),
+            k: seedgen.nextu().into(),
         }
     }
 
@@ -38,34 +40,32 @@ impl Squares32 {
     /// redundant multiplication in batch scenarios.
     #[inline(always)]
     pub fn compute_yz(y: u64, z: u64) -> u32 {
-        let mut x: u64;
-
-        x = y.wrapping_mul(y).wrapping_add(y);
+        let mut x = wrap!(y) * y + y;
         x = x.rotate_left(32);
 
-        x = x.wrapping_mul(x).wrapping_add(z);
+        x = x * x + z;
         x = x.rotate_left(32);
 
-        x = x.wrapping_mul(x).wrapping_add(y);
+        x = x * x + y;
         x = x.rotate_left(32);
 
-        (x.wrapping_mul(x).wrapping_add(z) >> 32) as u32
+        ((x * x + z) >> 32).cast::<u32>().value()
     }
 
     /// Convenience wrapper: compute from counter and key directly.
     #[inline(always)]
     pub fn compute(ctr: u64, key: u64) -> u32 {
-        let y = ctr.wrapping_mul(key);
-        let z = y.wrapping_add(key);
-        Self::compute_yz(y, z)
+        let y = wrap!(ctr) * key;
+        let z = y + key;
+        Self::compute_yz(y.value(), z.value())
     }
 }
 
 impl Rng32 for Squares32 {
     #[inline(always)]
     fn nextu(&mut self) -> u32 {
-        let out = Self::compute(self.c, self.k);
-        self.c = self.c.wrapping_add(1);
+        let out = Self::compute(self.c.value(), self.k.value());
+        self.c += 1;
         out
     }
 }
@@ -212,6 +212,7 @@ mod tests {
     use super::*;
 
     crate::safe_test!(Squares32);
+
     #[cfg(all(target_feature = "avx512f", target_feature = "avx512dq"))]
     crate::unsafe_test!(Squares32x8);
 }

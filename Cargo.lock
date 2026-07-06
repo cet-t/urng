@@ -1012,9 +1012,9 @@ dependencies = [
 
 [[package]]
 name = "wrapn"
-version = "0.3.0"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e249bbefa2663395f68136bde32fd79a98f2e598d1d48e74ce6a605eff6fc653"
+checksum = "f5ef8b69c53e9b5a27612c3db6bec71a750fc8248b44b0c69449c57435e982f0"
 dependencies = [
  "paste",
 ]

@@ -1,6 +1,7 @@
+use wrapn::{Wrap, wrap};
+
+use crate::rng::Rng32;
 use crate::rng32::SplitMix32;
-use crate::{rng::Rng32, wrap};
-use std::num::Wrapping;
 
 // --- Xorshift32 ---
 
@@ -18,7 +19,7 @@ use std::num::Wrapping;
 /// ```
 #[repr(C)]
 pub struct Xorshift32 {
-    a: Wrapping<u32>,
+    a: Wrap<u32>,
 }
 
 impl Xorshift32 {
@@ -26,7 +27,7 @@ impl Xorshift32 {
     pub fn new(seed: u32) -> Self {
         let mut sm = SplitMix32::new(seed);
         Self {
-            a: wrap!(sm.nextu()),
+            a: sm.nextu().into(),
         }
     }
 }
@@ -38,7 +39,7 @@ impl Rng32 for Xorshift32 {
         self.a = x ^ (x << 13);
         self.a ^= self.a >> 17;
         self.a ^= self.a << 5;
-        self.a.0
+        self.a.value()
     }
 }
 
@@ -60,7 +61,7 @@ impl Rng32 for Xorshift32 {
 /// ```
 #[repr(C)]
 pub struct Xorshift128 {
-    x: [u32; 4],
+    x: [Wrap<u32>; 4],
 }
 
 impl Xorshift128 {
@@ -70,7 +71,7 @@ impl Xorshift128 {
     pub fn new(seed: u32) -> Self {
         let mut sm = SplitMix32::new(seed);
         Self {
-            x: [sm.nextu(), sm.nextu(), sm.nextu(), sm.nextu()],
+            x: wrap![sm.nextu(), sm.nextu(), sm.nextu(), sm.nextu()],
         }
     }
 }
@@ -84,7 +85,7 @@ impl Rng32 for Xorshift128 {
         let s = self.x[0];
         (self.x[1], self.x[2], self.x[3]) = (s, self.x[1], self.x[2]);
         self.x[0] = t ^ s ^ (s >> 19);
-        self.x[0]
+        self.x[0].value()
     }
 }
 
@@ -104,8 +105,8 @@ impl Rng32 for Xorshift128 {
 /// ```
 #[repr(C)]
 pub struct Xorwow {
-    x: [Wrapping<u32>; 5],
-    c: Wrapping<u32>,
+    x: [Wrap<u32>; 5],
+    c: Wrap<u32>,
 }
 
 impl Xorwow {
@@ -135,8 +136,8 @@ impl Rng32 for Xorwow {
         t ^= t << 1;
         t ^= s ^ (s << 4);
         self.x[0] = t;
-        self.c += wrap!(362437);
-        (t + self.c).0
+        self.c += 362437;
+        (t + self.c).value()
     }
 }
 

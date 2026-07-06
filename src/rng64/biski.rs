@@ -1,5 +1,8 @@
-use crate::{rng::Rng64, rng64::SplitMix64};
 use std::arch::x86_64::*;
+
+use wrapn::Wrap;
+
+use crate::{rng::Rng64, rng64::SplitMix64};
 
 /// A [Biski64](https://github.com/danielcota/biski64) random number generator.
 ///
@@ -14,9 +17,9 @@ use std::arch::x86_64::*;
 /// ```
 #[repr(C, align(64))]
 pub struct Biski64 {
-    fast_loop: u64,
-    mix: u64,
-    loop_mix: u64,
+    fast_loop: Wrap<u64>,
+    mix: Wrap<u64>,
+    loop_mix: Wrap<u64>,
 }
 
 impl Biski64 {
@@ -24,9 +27,9 @@ impl Biski64 {
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
-            fast_loop: seedgen.nextu(),
-            mix: seedgen.nextu(),
-            loop_mix: seedgen.nextu(),
+            fast_loop: seedgen.nextu().into(),
+            mix: seedgen.nextu().into(),
+            loop_mix: seedgen.nextu().into(),
         }
     }
 }
@@ -34,17 +37,15 @@ impl Biski64 {
 impl Rng64 for Biski64 {
     #[inline(always)]
     fn nextu(&mut self) -> u64 {
-        let output = self.mix.wrapping_add(self.loop_mix);
+        let output = self.mix + self.loop_mix;
 
         (self.fast_loop, self.mix, self.loop_mix) = (
-            self.fast_loop.wrapping_add(0x9999999999999999),
-            self.mix
-                .rotate_left(16)
-                .wrapping_add(self.loop_mix.rotate_left(40)),
+            self.fast_loop + 0x9999999999999999,
+            self.mix.rotate_left(16) + self.loop_mix.rotate_left(40),
             self.fast_loop ^ self.mix,
         );
 
-        output
+        output.value()
     }
 }
 
@@ -78,10 +79,10 @@ impl Biski64x8 {
     /// Requires AVX512 support (guaranteed by `target-cpu=native` on modern x86_64).
     #[inline(always)]
     pub fn new(seed: u64) -> Self {
+        let mut sg = SplitMix64::new(seed);
         let mut fast_loop = [0u64; 8];
         let mut mix = [0u64; 8];
         let mut loop_mix = [0u64; 8];
-        let mut sg = SplitMix64::new(seed);
         for i in 0..8 {
             fast_loop[i] = sg.nextu();
             mix[i] = sg.nextu();
@@ -184,6 +185,7 @@ mod tests {
     use super::*;
 
     crate::safe_test!(Biski64);
+
     #[cfg(target_feature = "avx512f")]
     crate::unsafe_test!(Biski64x8);
 }

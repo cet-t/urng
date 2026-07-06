@@ -1,10 +1,10 @@
-use crate::rng::Rng64;
-use crate::rng64::SplitMix64;
-use crate::wrap;
-use std::num::Wrapping;
-
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
+
+use wrapn::{Wrap, wrap};
+
+use crate::rng::Rng64;
+use crate::rng64::SplitMix64;
 
 /// A xoshiro256++ random number generator.
 ///
@@ -21,7 +21,7 @@ use std::arch::x86_64::*;
 /// ```
 #[repr(C)]
 pub struct Xoshiro256Pp {
-    s: [Wrapping<u64>; 4],
+    s: [Wrap<u64>; 4],
 }
 
 impl Xoshiro256Pp {
@@ -30,11 +30,11 @@ impl Xoshiro256Pp {
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
-            s: [
-                wrap!(seedgen.nextu()),
-                wrap!(seedgen.nextu()),
-                wrap!(seedgen.nextu()),
-                wrap!(seedgen.nextu()),
+            s: wrap![
+                seedgen.nextu(),
+                seedgen.nextu(),
+                seedgen.nextu(),
+                seedgen.nextu(),
             ],
         }
     }
@@ -44,18 +44,17 @@ impl Rng64 for Xoshiro256Pp {
     #[inline]
     fn nextu(&mut self) -> u64 {
         let s = &mut self.s;
-        let res = wrap!((s[0] + s[3]).0.rotate_left(23)) + s[0];
+        let res = s[0] + (s[0] + s[3]).rotate_left(23);
         let t = s[1] << 17;
 
         s[2] ^= s[0];
         s[3] ^= s[1];
         s[1] ^= s[2];
         s[0] ^= s[3];
-
         s[2] ^= t;
-        s[3] = wrap!(s[3].0.rotate_left(45));
+        s[3] = s[3].rotate_left(45);
 
-        res.0
+        res.value()
     }
 }
 
@@ -71,9 +70,7 @@ impl Xoshiro256Ssx2 {
     #[cfg(target_arch = "x86_64")]
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
-
-        let mut s = [0u64; 8];
-        s.iter_mut().for_each(|v| *v = seedgen.nextu());
+        let s = [0u64; 8].map(|_| seedgen.nextu());
 
         unsafe {
             Self {
@@ -136,7 +133,7 @@ impl Xoshiro256Ssx2 {
 /// ```
 #[repr(C)]
 pub struct Xoshiro256Ss {
-    s: [Wrapping<u64>; 4],
+    s: [Wrap<u64>; 4],
 }
 
 impl Xoshiro256Ss {
@@ -145,11 +142,11 @@ impl Xoshiro256Ss {
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
-            s: [
-                wrap!(seedgen.nextu()),
-                wrap!(seedgen.nextu()),
-                wrap!(seedgen.nextu()),
-                wrap!(seedgen.nextu()),
+            s: wrap![
+                seedgen.nextu(),
+                seedgen.nextu(),
+                seedgen.nextu(),
+                seedgen.nextu(),
             ],
         }
     }
@@ -159,18 +156,17 @@ impl Rng64 for Xoshiro256Ss {
     #[inline]
     fn nextu(&mut self) -> u64 {
         let s = &mut self.s;
-        let res = wrap!((s[1] * wrap!(5)).0.rotate_left(7)) * wrap!(9);
+        let res = (s[1] * 5).rotate_left(7) * 9;
         let t = s[1] << 17;
 
         s[2] ^= s[0];
         s[3] ^= s[1];
         s[1] ^= s[2];
         s[0] ^= s[3];
-
         s[2] ^= t;
-        s[3] = wrap!(s[3].0.rotate_left(45));
+        s[3] = s[3].rotate_left(45);
 
-        res.0
+        res.value()
     }
 }
 

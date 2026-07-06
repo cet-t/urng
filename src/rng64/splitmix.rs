@@ -1,6 +1,6 @@
+use wrapn::{Wrap, wrap};
+
 use crate::rng::Rng64;
-use crate::wrap;
-use std::num::Wrapping;
 
 /// A SplitMix64 random number generator.
 ///
@@ -17,7 +17,7 @@ use std::num::Wrapping;
 /// ```
 #[repr(align(64))]
 pub struct SplitMix64 {
-    pub(crate) s: Wrapping<u64>,
+    pub(crate) s: Wrap<u64>,
 }
 
 impl SplitMix64 {
@@ -39,7 +39,7 @@ impl Rng64 for SplitMix64 {
     #[inline]
     fn nextu(&mut self) -> u64 {
         self.s += 0x9E3779B97F4A7C15;
-        Self::compute(self.s.0)
+        Self::compute(self.s.value())
     }
 }
 

@@ -56,4 +56,4 @@ paste = "1"
 rayon = { version = "1.10", optional = true }
 rand_core = { version = "0.10", optional = true }
 thiserror = { version = "2", optional = true }
-wrapn = "0.3.0"
+wrapn = "0.6.2"

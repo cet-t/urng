@@ -1,8 +1,9 @@
-use crate::rng::Rng64;
-use crate::{rng::Rng32, rng64::SplitMix64, wrap};
-use std::num::Wrapping;
-
 use std::arch::x86_64::*;
+
+use wrapn::Wrap;
+
+use crate::rng::Rng64;
+use crate::{rng::Rng32, rng64::SplitMix64};
 
 // --- Pcg32 ---
 
@@ -20,8 +21,8 @@ use std::arch::x86_64::*;
 /// ```
 #[repr(C)]
 pub struct Pcg32 {
-    state: Wrapping<u64>,
-    inc: Wrapping<u64>,
+    state: Wrap<u64>,
+    inc: Wrap<u64>,
 }
 
 impl Pcg32 {
@@ -29,8 +30,8 @@ impl Pcg32 {
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed | 1);
         Pcg32 {
-            state: wrap!(seedgen.nextu()),
-            inc: wrap!(seedgen.nextu()),
+            state: seedgen.nextu().into(),
+            inc: seedgen.nextu().into(),
         }
     }
 }
@@ -39,9 +40,9 @@ impl Rng32 for Pcg32 {
     #[inline]
     fn nextu(&mut self) -> u32 {
         let oldstate = self.state;
-        self.state = oldstate * wrap!(6364136223846793005) + self.inc;
-        let xorshifted = ((((oldstate >> 18) ^ oldstate) >> 27).0) as u32;
-        let rot = ((oldstate >> 59).0) as u32;
+        self.state = oldstate * 6364136223846793005 + self.inc;
+        let xorshifted = *(((oldstate >> 18) ^ oldstate) >> 27).raw() as u32;
+        let rot = *(oldstate >> 59).raw() as u32;
         xorshifted.rotate_right(rot)
     }
 }

@@ -1,5 +1,8 @@
-use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
 use std::arch::x86_64::*;
+
+use wrapn::Wrap;
+
+use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
 
 /// A SFC32 pseudo-random number generator.
 ///
@@ -13,20 +16,20 @@ use std::arch::x86_64::*;
 /// ```
 #[repr(C, align(64))]
 pub struct Sfc32 {
-    pub a: u32,
-    pub b: u32,
-    pub c: u32,
-    pub counter: u32,
+    pub a: Wrap<u32>,
+    pub b: Wrap<u32>,
+    pub c: Wrap<u32>,
+    pub counter: Wrap<u32>,
 }
 
 impl Sfc32 {
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
-            a: seedgen.nextu(),
-            b: seedgen.nextu(),
-            c: seedgen.nextu(),
-            counter: 1,
+            a: seedgen.nextu().into(),
+            b: seedgen.nextu().into(),
+            c: seedgen.nextu().into(),
+            counter: 1.into(),
         }
     }
 }
@@ -34,13 +37,13 @@ impl Sfc32 {
 impl Rng32 for Sfc32 {
     #[inline(always)]
     fn nextu(&mut self) -> u32 {
-        let tmp = self.a.wrapping_add(self.b).wrapping_add(self.counter);
-        self.counter = self.counter.wrapping_add(1);
+        let tmp = self.a + self.b + self.counter;
+        self.counter += 1;
         self.a = self.b ^ (self.b >> 9);
-        self.b = self.c.wrapping_add(self.c << 3);
+        self.b = self.c + (self.c << 3);
         self.c = self.c.rotate_right(11);
-        self.c = self.c.wrapping_add(tmp);
-        tmp
+        self.c += tmp;
+        tmp.value()
     }
 }
 
@@ -64,7 +67,6 @@ pub struct Sfc32x4 {
     pub(crate) counter: __m128i,
 }
 
-#[allow(dead_code)]
 impl Sfc32x4 {
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
@@ -357,10 +359,10 @@ mod tests {
     fn scalar_lanes(seed: u32) -> [Sfc32; SFC32X4] {
         let mut seedgen = SplitMix32::new(seed);
         std::array::from_fn(|_| Sfc32 {
-            a: seedgen.nextu(),
-            b: seedgen.nextu(),
-            c: seedgen.nextu(),
-            counter: 1,
+            a: seedgen.nextu().into(),
+            b: seedgen.nextu().into(),
+            c: seedgen.nextu().into(),
+            counter: 1.into(),
         })
     }
 

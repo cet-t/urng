@@ -1,4 +1,6 @@
-use crate::{rng::Rng32, rng32::SplitMix32};
+use wrapn::{Wrap, wrap};
+
+use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
 
 // --- Threefry32x4 ---
 
@@ -18,11 +20,11 @@ const THREEFRY32_C240: u32 = 0x1BD11BDA;
 /// ```
 #[repr(C, align(64))]
 pub struct Threefry32x4 {
-    pub(crate) c: [u32; 4],
-    pub(crate) k: [u32; 5],
-    pub(crate) tw: [u32; 3],
-    pub(crate) index: usize,
-    pub(crate) buffer: [u32; 4],
+    pub(crate) c: [Wrap<u32>; 4],
+    pub(crate) k: [Wrap<u32>; 5],
+    pub(crate) tw: [Wrap<u32>; 3],
+    pub(crate) index: Wrap<usize>,
+    pub(crate) buffer: [Wrap<u32>; 4],
 }
 
 impl Threefry32x4 {
@@ -30,22 +32,22 @@ impl Threefry32x4 {
     ///
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
-        let mut k = [0u32; 5];
+        let mut k = wrap![0u32; 5];
         for i in 0..4 {
-            k[i] = seedgen.nextu();
+            k[i] = seedgen.nextu().into();
         }
-        k[4] = THREEFRY32_C240 ^ k[0] ^ k[1] ^ k[2] ^ k[3];
+        k[4] = k[0] ^ k[1] ^ k[2] ^ k[3] ^ THREEFRY32_C240;
 
         let tw0 = seedgen.nextu();
         let tw1 = seedgen.nextu();
-        let tw = [tw0, tw1, tw0 ^ tw1];
+        let tw = wrap![tw0, tw1, tw0 ^ tw1];
 
         Self {
-            c: [0; 4],
+            c: wrap![0; 4],
             k,
             tw,
-            index: 4,
-            buffer: [0; 4],
+            index: 4.into(),
+            buffer: wrap![0; 4],
         }
     }
 
@@ -57,15 +59,15 @@ impl Threefry32x4 {
     /// * `k`  - 5-word key schedule (k\[4\] = parity word).
     /// * `tw` - 3-word tweak schedule (tw\[2\] = tw\[0\] ^ tw\[1\]).
     #[inline(always)]
-    pub fn compute(c: [u32; 4], k: &[u32; 5], tw: &[u32; 3]) -> [u32; 4] {
-        let mut v = c;
+    pub(crate) fn compute(c: [u32; 4], k: &[u32; 5], tw: &[u32; 3]) -> [u32; 4] {
+        let mut v = c.map(|x| wrap!(x));
 
         macro_rules! round {
             ($r_sh_0:expr, $r_sh_1:expr) => {
-                let y0 = v[0].wrapping_add(v[1]);
+                let y0 = v[0] + v[1];
                 let f1 = v[1].rotate_left($r_sh_0) ^ y0;
 
-                let y1 = v[2].wrapping_add(v[3]);
+                let y1 = v[2] + v[3];
                 let f3 = v[3].rotate_left($r_sh_1) ^ y1;
 
                 v[0] = y0;
@@ -77,10 +79,10 @@ impl Threefry32x4 {
 
         macro_rules! inject_key {
             ($s:expr) => {
-                v[0] = v[0].wrapping_add(k[$s % 5]);
-                v[1] = v[1].wrapping_add(k[($s + 1) % 5].wrapping_add(tw[$s % 3]));
-                v[2] = v[2].wrapping_add(k[($s + 2) % 5].wrapping_add(tw[($s + 1) % 3]));
-                v[3] = v[3].wrapping_add(k[($s + 3) % 5].wrapping_add($s as u32));
+                v[0] += k[$s % 5];
+                v[1] += wrap!(k[($s + 1) % 5]) + tw[$s % 3];
+                v[2] += wrap!(k[($s + 2) % 5]) + tw[($s + 1) % 3];
+                v[3] += wrap!(k[($s + 3) % 5]) + $s as u32;
             };
         }
 
@@ -120,24 +122,29 @@ impl Threefry32x4 {
         let ksi5_3 = k[3].wrapping_add(5);
 
         [
-            v[0].wrapping_add(ksi5_0) ^ c[0],
-            v[1].wrapping_add(ksi5_1) ^ c[1],
-            v[2].wrapping_add(ksi5_2) ^ c[2],
-            v[3].wrapping_add(ksi5_3) ^ c[3],
+            v[0] + ksi5_0 ^ c[0],
+            v[1] + ksi5_1 ^ c[1],
+            v[2] + ksi5_2 ^ c[2],
+            v[3] + ksi5_3 ^ c[3],
         ]
+        .map(|x| x.value())
     }
 
     #[inline(always)]
     fn next_block(&mut self) -> [u32; 4] {
-        let dst = Self::compute(self.c, &self.k, &self.tw);
+        let dst = Self::compute(
+            self.c.map(|x| x.value()),
+            &self.k.map(|x| x.value()),
+            &self.tw.map(|x| x.value()),
+        );
 
-        self.c[0] = self.c[0].wrapping_add(1);
+        self.c[0] += 1;
         if self.c[0] == 0 {
-            self.c[1] = self.c[1].wrapping_add(1);
+            self.c[1] += 1;
             if self.c[1] == 0 {
-                self.c[2] = self.c[2].wrapping_add(1);
+                self.c[2] += 1;
                 if self.c[2] == 0 {
-                    self.c[3] = self.c[3].wrapping_add(1);
+                    self.c[3] += 1;
                 }
             }
         }
@@ -149,49 +156,34 @@ impl Threefry32x4 {
     #[inline]
     pub fn nextu(&mut self) -> [u32; 4] {
         if self.index >= 4 {
-            self.buffer = self.next_block();
-            self.index = 0;
+            self.buffer = self.next_block().map(|x| x.into());
+            self.index = 0.into();
         }
         let val = self.buffer;
         self.index += 4;
-        val
+        val.map(|x| x.value())
     }
 
     /// Generates the next 4 random `f32` values in the range [0, 1).
     #[inline]
     pub fn nextf(&mut self) -> [f32; 4] {
-        let out = self.nextu();
-        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
-        let mut dst = [0f32; 4];
-        for i in 0..4 {
-            dst[i] = out[i] as f32 * SCALE;
-        }
-        dst
+        self.nextu().map(|x| x as f32 * FSCALE32)
     }
 
     /// Generates 4 random `i32` values in the range [min, max].
     #[inline]
     pub fn randi(&mut self, min: i32, max: i32) -> [i32; 4] {
         let range = (max as i64 - min as i64 + 1) as u64;
-        let out = self.nextu();
-        let mut dst = [0i32; 4];
-        for i in 0..4 {
-            dst[i] = ((out[i] as u64 * range) >> 32) as i32 + min;
-        }
-        dst
+        self.nextu()
+            .map(|x| ((x as u64 * range) >> 32) as i32 + min)
     }
 
     /// Generates 4 random `f32` values in the range [min, max).
     #[inline]
     pub fn randf(&mut self, min: f32, max: f32) -> [f32; 4] {
         let range = max - min;
-        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
-        let out = self.nextu();
-        let mut dst = [0f32; 4];
-        for i in 0..4 {
-            dst[i] = (out[i] as f32 * scale) + min;
-        }
-        dst
+        let scale = range * FSCALE32;
+        self.nextu().map(|x| (x as f32 * scale) + min)
     }
 }
 
@@ -211,10 +203,10 @@ impl Threefry32x4 {
 /// let _ = rng.nextu();
 /// ```
 pub struct Threefry32x2 {
-    pub(crate) c: [u32; 2],
-    pub(crate) k: [u32; 3],
-    pub(crate) buffer: [u32; 2],
-    pub(crate) index: usize,
+    pub(crate) c: [Wrap<u32>; 2],
+    pub(crate) k: [Wrap<u32>; 3],
+    pub(crate) buffer: [Wrap<u32>; 2],
+    pub(crate) index: Wrap<usize>,
 }
 
 impl Threefry32x2 {
@@ -225,13 +217,12 @@ impl Threefry32x2 {
         let mut sm = SplitMix32::new(seed);
         let k0 = sm.nextu();
         let k1 = sm.nextu();
-        let k2 = k0 ^ k1 ^ THREEFRY32_C240;
 
         Self {
-            c: [0, 0],
-            k: [k0, k1, k2],
-            buffer: [0; 2],
-            index: 2,
+            c: wrap![0, 0],
+            k: wrap![k0, k1, k0 ^ k1 ^ THREEFRY32_C240],
+            buffer: wrap![0; 2],
+            index: 2.into(),
         }
     }
 
@@ -243,21 +234,20 @@ impl Threefry32x2 {
     /// * `k` - 3-word key schedule (k[2] = k[0] ^ k[1] ^ C240).
     #[inline(always)]
     pub(crate) fn compute(c: [u32; 2], k: &[u32; 3]) -> [u32; 2] {
-        let mut v = c;
+        let mut v = c.map(|x| wrap!(x));
 
         macro_rules! round {
             ($r_sh:expr) => {
-                let y = v[0].wrapping_add(v[1]);
-                let f = v[1].rotate_left($r_sh) ^ y;
+                let y = v[0] + v[1];
                 v[0] = y;
-                v[1] = f;
+                v[1] = v[1].rotate_left($r_sh) ^ y;
             };
         }
 
         macro_rules! inject_key {
             ($s:expr) => {
-                v[0] = v[0].wrapping_add(k[$s % 3]);
-                v[1] = v[1].wrapping_add(k[($s + 1) % 3].wrapping_add($s as u32));
+                v[0] = v[0] + k[$s % 3];
+                v[1] = v[1] + k[($s + 1) % 3] + $s as u32;
             };
         }
 
@@ -294,16 +284,21 @@ impl Threefry32x2 {
         let ksi5_0 = k[2];
         let ksi5_1 = k[0].wrapping_add(5);
 
-        [v[0].wrapping_add(ksi5_0), v[1].wrapping_add(ksi5_1)]
+        [v[0] + ksi5_0, v[1] + ksi5_1].map(|x| x.value())
     }
 
     #[inline(always)]
     fn next_block(&mut self) -> [u32; 2] {
-        let dst = Self::compute(self.c, &self.k);
-        let (n_c0, overflow) = self.c[0].overflowing_add(1);
-        self.c[0] = n_c0;
+        let k = self.k.map(|x| x.value());
+        let dst = Self::compute(self.c.map(|x| x.value()), &k);
+        self.k
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, x)| *x = k[i].into());
+        let (n_c0, overflow) = self.c[0].value().overflowing_add(1);
+        self.c[0] = n_c0.into();
         if overflow {
-            self.c[1] = self.c[1].wrapping_add(1);
+            self.c[1] += 1;
         }
         dst
     }
@@ -312,40 +307,33 @@ impl Threefry32x2 {
     #[inline]
     pub fn nextu(&mut self) -> [u32; 2] {
         if self.index >= 2 {
-            self.buffer = self.next_block();
-            self.index = 0;
+            self.buffer = self.next_block().map(|x| x.into());
+            self.index = 0.into();
         }
         let val = self.buffer;
         self.index += 2;
-        val
+        val.map(|x| x.value())
     }
 
     /// Generates the next 2 random `f32` values in the range [0, 1).
     #[inline]
     pub fn nextf(&mut self) -> [f32; 2] {
-        let out = self.nextu();
-        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
-        [out[0] as f32 * SCALE, out[1] as f32 * SCALE]
+        self.nextu().map(|x| x as f32 * FSCALE32)
     }
 
     /// Generates 2 random `i32` values in the range [min, max].
     #[inline]
     pub fn randi(&mut self, min: i32, max: i32) -> [i32; 2] {
         let range = (max as i64 - min as i64 + 1) as u64;
-        let out = self.nextu();
-        [
-            ((out[0] as u64 * range) >> 32) as i32 + min,
-            ((out[1] as u64 * range) >> 32) as i32 + min,
-        ]
+        self.nextu()
+            .map(|x| ((x as u64 * range) >> 32) as i32 + min)
     }
 
     /// Generates 2 random `f32` values in the range [min, max).
     #[inline]
     pub fn randf(&mut self, min: f32, max: f32) -> [f32; 2] {
-        let range = max - min;
-        let scale = range * (1.0 / (u32::MAX as f32 + 1.0));
-        let out = self.nextu();
-        [(out[0] as f32 * scale) + min, (out[1] as f32 * scale) + min]
+        let scale = (max - min) * FSCALE32;
+        self.nextu().map(|x| x as f32 * scale + min)
     }
 }
 

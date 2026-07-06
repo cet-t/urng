@@ -1,12 +1,14 @@
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
+
+use wrapn::{Wrap, wrap};
+
 use crate::_internal::FSCALE32;
 use crate::rng::Rng32;
 use crate::rng32::SplitMix32;
 
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
-
 pub struct Xoroshiro64Ss {
-    s: [u32; 2],
+    s: [Wrap<u32>; 2],
 }
 
 impl Xoroshiro64Ss {
@@ -14,7 +16,7 @@ impl Xoroshiro64Ss {
         let mut seedgen = SplitMix32::new(seed);
 
         Self {
-            s: [seedgen.nextu(), seedgen.nextu()],
+            s: wrap![seedgen.nextu(), seedgen.nextu()],
         }
     }
 }
@@ -24,13 +26,13 @@ impl Rng32 for Xoroshiro64Ss {
     fn nextu(&mut self) -> u32 {
         let s0 = self.s[0];
         let mut s1 = self.s[1];
-        let result = s0.wrapping_mul(0x9E3779BB).rotate_left(5).wrapping_mul(5);
+        let result = (s0 * 0x9E3779BB).rotate_left(5) * 5;
 
         s1 ^= s0;
         self.s[0] = s0.rotate_left(26) ^ s1 ^ (s1 << 9);
         self.s[1] = s1.rotate_left(13);
 
-        result
+        result.value()
     }
 }
 
@@ -220,6 +222,7 @@ impl Xoroshiro64Ssx16 {
 mod tests {
     use super::*;
     use crate::safe_test;
+
     #[cfg(target_feature = "avx512f")]
     use crate::unsafe_test;
 
