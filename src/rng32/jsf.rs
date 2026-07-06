@@ -1,10 +1,12 @@
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
+
+use wrapn::Wrap;
+
 use crate::{
     rng::{Rng32, Rng32V256, Rng32V512},
     rng32::SplitMix32,
 };
-
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
 
 /// JSF (Jenkins Small Fast) 32-bit RNG implementation.
 ///
@@ -17,10 +19,10 @@ use std::arch::x86_64::*;
 /// ```
 #[repr(C, align(64))]
 pub struct Jsf32 {
-    pub(crate) a: u32,
-    pub(crate) b: u32,
-    pub(crate) c: u32,
-    pub(crate) d: u32,
+    pub(crate) a: Wrap<u32>,
+    pub(crate) b: Wrap<u32>,
+    pub(crate) c: Wrap<u32>,
+    pub(crate) d: Wrap<u32>,
 }
 
 impl Jsf32 {
@@ -28,10 +30,10 @@ impl Jsf32 {
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
-            a: 0xf1ea5eed,
-            b: seedgen.nextu(),
-            c: seedgen.nextu(),
-            d: seedgen.nextu(),
+            a: 0xf1ea5eed.into(),
+            b: seedgen.nextu().into(),
+            c: seedgen.nextu().into(),
+            d: seedgen.nextu().into(),
         }
     }
 }
@@ -39,12 +41,12 @@ impl Jsf32 {
 impl Rng32 for Jsf32 {
     #[inline(always)]
     fn nextu(&mut self) -> u32 {
-        let e = self.a.wrapping_sub(self.b.rotate_left(27));
+        let e = self.a - self.b.rotate_left(27);
         self.a = self.b ^ self.c.rotate_left(17);
-        self.b = self.c.wrapping_add(self.d);
-        self.c = self.d.wrapping_add(e);
-        self.d = e.wrapping_add(self.a);
-        self.d
+        self.b = self.c + self.d;
+        self.c = self.d + e;
+        self.d = e + self.a;
+        *self.d.raw()
     }
 }
 

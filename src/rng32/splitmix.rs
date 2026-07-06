@@ -1,7 +1,8 @@
-use crate::{rng::Rng32, wrap};
-use std::num::Wrapping;
-
 use std::arch::x86_64::*;
+
+use wrapn::{Wrap, wrap};
+
+use crate::rng::Rng32;
 
 /// A SplitMix32 pseudo-random number generator.
 ///
@@ -18,11 +19,11 @@ use std::arch::x86_64::*;
 /// ```
 #[repr(C)]
 pub struct SplitMix32 {
-    state: Wrapping<u32>,
+    state: Wrap<u32>,
 }
 
-const A: Wrapping<u64> = wrap!(0xFF51_AFD7_ED55_8CCD);
-const B: Wrapping<u64> = wrap!(0xC4CE_B9FE_1A85_EC53);
+const A: u64 = 0xFF51_AFD7_ED55_8CCD;
+const B: u64 = 0xC4CE_B9FE_1A85_EC53;
 
 impl SplitMix32 {
     /// Creates a new `SplitMix32` instance seeded with the given value.
@@ -38,10 +39,10 @@ impl Rng32 for SplitMix32 {
     fn nextu(&mut self) -> u32 {
         self.state += wrap!(0x9E3779B9);
 
-        let mut z = wrap!(self.state.0 as u64);
+        let mut z = self.state.cast::<u64>();
         z = (z ^ (z >> 16)) * A;
         z = (z ^ (z >> 16)) * B;
-        (z ^ (z >> 16)).0 as u32
+        (z ^ (z >> 16)).cast::<u32>().value()
     }
 }
 

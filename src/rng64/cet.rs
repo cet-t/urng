@@ -1,8 +1,10 @@
-use crate::rng::Rng64;
-use crate::rng64::SplitMix64;
-
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
+
+use wrapn::{Wrap, wrap};
+
+use crate::rng::Rng64;
+use crate::rng64::SplitMix64;
 
 /// A 64-bit Self-made random number generator.
 ///
@@ -19,7 +21,7 @@ use std::arch::x86_64::*;
 /// ```
 #[repr(C)]
 pub struct Cet64 {
-    s: u64,
+    s: Wrap<u64>,
 }
 
 const SP1: u64 = 0xFFFFFFFFFFFFFF43;
@@ -30,28 +32,30 @@ impl Cet64 {
     /// Creates a new `Cet64` instance with a given seed.
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
-        Self { s: seedgen.nextu() }
+        Self {
+            s: seedgen.nextu().into(),
+        }
     }
 }
 
 impl Rng64 for Cet64 {
     #[inline(always)]
     fn nextu(&mut self) -> u64 {
-        self.s = self.s.wrapping_add(SP1);
+        self.s += SP1;
 
         let mut x = self.s;
         x ^= x >> 30;
-        x = x.wrapping_mul(SP2);
+        x *= SP2;
         x ^= x >> 27;
-        x = x.wrapping_mul(P1);
+        x *= P1;
         x ^= x >> 31;
 
-        x
+        x.value()
     }
 }
 
 pub struct Cet256 {
-    s: [u64; 4],
+    s: [Wrap<u64>; 4],
 }
 
 impl Cet256 {
@@ -59,7 +63,7 @@ impl Cet256 {
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
-            s: [
+            s: wrap![
                 seedgen.nextu(),
                 seedgen.nextu(),
                 seedgen.nextu(),
@@ -72,24 +76,24 @@ impl Cet256 {
 impl Rng64 for Cet256 {
     #[inline(always)]
     fn nextu(&mut self) -> u64 {
-        self.s[0] = self.s[0].wrapping_add(SP1);
+        self.s[0] += SP1;
         let c0 = (self.s[0] < SP1) as u64;
-        self.s[1] = self.s[1].wrapping_add(c0);
+        self.s[1] += c0;
         let c1 = (self.s[1] < c0) as u64;
-        self.s[2] = self.s[2].wrapping_add(c1);
+        self.s[2] += c1;
         let c2 = (self.s[2] < c1) as u64;
-        self.s[3] = self.s[3].wrapping_add(c2);
+        self.s[3] += c2;
 
         let mut x = self.s[0] ^ self.s[3];
-        x = x.wrapping_add(self.s[1].rotate_left(17));
+        x += self.s[1].rotate_left(17);
 
         x ^= x >> 30;
-        x = x.wrapping_mul(SP2);
+        x *= SP2;
         x ^= x >> 27;
-        x = x.wrapping_mul(P1);
+        x *= P1;
         x ^= x >> 31;
 
-        x
+        x.value()
     }
 }
 
@@ -102,11 +106,8 @@ pub struct Cet64x8 {
 impl Cet64x8 {
     /// Creates a new `Cet64x8` from 8 independent seeds.
     pub fn new(seed: u64) -> Self {
-        let mut s = [0u64; 8];
         let mut seedgen = SplitMix64::new(seed);
-        for lane in &mut s {
-            *lane = seedgen.nextu();
-        }
+        let s = [0u64; 8].map(|_| seedgen.nextu());
         unsafe {
             Self {
                 s: _mm512_loadu_si512(s.as_ptr() as *const __m512i),
@@ -303,6 +304,7 @@ mod tests {
 
     crate::safe_test!(Cet64);
     crate::safe_test!(Cet256);
+
     #[cfg(all(target_feature = "avx512f", target_feature = "avx512dq"))]
     crate::unsafe_test!(Cet64x8);
     #[cfg(all(target_feature = "avx512f", target_feature = "avx512dq"))]

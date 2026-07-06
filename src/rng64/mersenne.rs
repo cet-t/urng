@@ -1,52 +1,56 @@
-use crate::rng::Rng64;
-use crate::rng64::SplitMix64;
-use bytemuck;
 use std::ptr;
 
-type U32x4 = [u32; 4];
+use bytemuck;
+use wrapn::{Wrap, wrap};
+
+use crate::rng::Rng64;
+use crate::rng64::SplitMix64;
+
+#[allow(non_camel_case_types)]
+type u32x4 = [u32; 4];
 
 #[inline(always)]
-fn xor4(a: U32x4, b: U32x4) -> U32x4 {
+fn xor4(a: u32x4, b: u32x4) -> u32x4 {
     [a[0] ^ b[0], a[1] ^ b[1], a[2] ^ b[2], a[3] ^ b[3]]
 }
 
 #[inline(always)]
-fn and4(a: U32x4, b: U32x4) -> U32x4 {
+fn and4(a: u32x4, b: u32x4) -> u32x4 {
     [a[0] & b[0], a[1] & b[1], a[2] & b[2], a[3] & b[3]]
 }
 
 #[inline(always)]
-fn shl4(a: U32x4, shift: u32) -> U32x4 {
+fn shl4(a: u32x4, shift: u32) -> u32x4 {
     [a[0] << shift, a[1] << shift, a[2] << shift, a[3] << shift]
 }
 
 #[inline(always)]
-fn shr4(a: U32x4, shift: u32) -> U32x4 {
+fn shr4(a: u32x4, shift: u32) -> u32x4 {
     [a[0] >> shift, a[1] >> shift, a[2] >> shift, a[3] >> shift]
 }
 
 #[inline(always)]
-fn lshift128(a: U32x4, bytes: u32) -> U32x4 {
+fn lshift128(a: u32x4, bytes: u32) -> u32x4 {
     bytemuck::cast(bytemuck::cast::<_, u128>(a) << (bytes * 8))
 }
 
 #[inline(always)]
-fn rshift128(a: U32x4, bytes: u32) -> U32x4 {
+fn rshift128(a: u32x4, bytes: u32) -> u32x4 {
     bytemuck::cast(bytemuck::cast::<_, u128>(a) >> (bytes * 8))
 }
 
 #[inline(always)]
 fn sfmt_recursion(
-    a: U32x4,
-    b: U32x4,
-    r1: U32x4,
-    r2: U32x4,
-    mask: U32x4,
+    a: u32x4,
+    b: u32x4,
+    r1: u32x4,
+    r2: u32x4,
+    mask: u32x4,
     sl1: u32,
     sl2: u32,
     sr1: u32,
     sr2: u32,
-) -> U32x4 {
+) -> u32x4 {
     xor4(
         xor4(xor4(a, lshift128(a, sl2)), and4(shr4(b, sr1), mask)),
         xor4(rshift128(r1, sr2), shl4(r2, sl1)),
@@ -67,8 +71,8 @@ fn sfmt_recursion(
 /// ```
 #[repr(C, align(64))]
 pub struct Mt1993764 {
-    mt: [u64; N],
-    mti: usize,
+    mt: [Wrap<u64>; N],
+    mti: Wrap<usize>,
 }
 
 const N: usize = 312;
@@ -81,31 +85,14 @@ impl Mt1993764 {
     /// Creates a new `Mt1993764` instance seeded via `SplitMix64`.
     ///
     pub fn new(seed: u64) -> Self {
-        let mut mt = [0u64; N];
+        let mut mt = [wrap!(0); N];
         let mut seedgen = SplitMix64::new(seed);
-        mt[0] = seedgen.nextu();
+        mt[0] = seedgen.nextu().into();
         for i in 1..N {
             let prev = mt[i - 1];
-            mt[i] = 6364136223846793005u64
-                .wrapping_mul(prev ^ (prev >> 62))
-                .wrapping_add(i as u64);
+            mt[i] = (prev ^ (prev >> 62)) * 6364136223846793005u64 + (i as u64);
         }
-        Self { mt, mti: N }
-    }
-
-    /// Generates the next random `u64` value.
-    #[inline]
-    pub fn nextu(&mut self) -> u64 {
-        if self.mti >= N {
-            self.twist();
-        }
-        let mut y = self.mt[self.mti];
-        self.mti += 1;
-        y ^= (y >> 29) & 0x5555555555555555;
-        y ^= (y << 17) & 0x71D67FFFEDA60000;
-        y ^= (y << 37) & 0xFFF7EEE000000000;
-        y ^= y >> 43;
-        y
+        Self { mt, mti: N.into() }
     }
 
     #[inline]
@@ -117,9 +104,9 @@ impl Mt1993764 {
             }
 
             let idx = self.mti;
-            let available = N - idx;
+            let available = N - idx.raw();
             let take = available.min(out.len() - written);
-            let src = &self.mt[idx..idx + take];
+            let src = &self.mt[idx.value()..(idx + take).value()];
             let dst = &mut out[written..written + take];
 
             for (d, &y) in dst.iter_mut().zip(src.iter()) {
@@ -128,7 +115,7 @@ impl Mt1993764 {
                 v ^= (v << 17) & 0x71D67FFFEDA60000;
                 v ^= (v << 37) & 0xFFF7EEE000000000;
                 v ^= v >> 43;
-                *d = v;
+                *d = v.value();
             }
 
             self.mti += take;
@@ -159,14 +146,23 @@ impl Mt1993764 {
             x_a ^= MATRIX_A;
         }
         self.mt[N - 1] = self.mt[M - 1] ^ x_a;
-        self.mti = 0;
+        self.mti = 0.into();
     }
 }
 
 impl Rng64 for Mt1993764 {
     #[inline]
     fn nextu(&mut self) -> u64 {
-        self.nextu()
+        if self.mti >= N {
+            self.twist();
+        }
+        let mut y = self.mt[self.mti.value()];
+        self.mti += 1;
+        y ^= (y >> 29) & 0x5555555555555555;
+        y ^= (y << 17) & 0x71D67FFFEDA60000;
+        y ^= (y << 37) & 0xFFF7EEE000000000;
+        y ^= y >> 43;
+        y.value()
     }
 }
 
@@ -184,8 +180,8 @@ impl Rng64 for Mt1993764 {
 /// ```
 #[repr(C, align(64))]
 pub struct Sfmt1993764 {
-    state: [U32x4; SFMT_N],
-    idx: usize,
+    state: [u32x4; SFMT_N],
+    idx: Wrap<usize>,
 }
 
 const SFMT_N: usize = 156;
@@ -231,7 +227,7 @@ impl Sfmt1993764 {
 
         let mut rng = Self {
             state,
-            idx: SFMT_N * 2, // Force generate on first call
+            idx: (SFMT_N * 2).into(), // Force generate on first call
         };
         rng.period_certification();
         rng
@@ -312,22 +308,22 @@ impl Sfmt1993764 {
         while written < out.len() {
             if self.idx >= SFMT_N * 2 {
                 self.gen_rand_all();
-                self.idx = 0;
+                self.idx = 0.into();
             }
 
-            let available = SFMT_N * 2 - self.idx;
-            let take = available.min(out.len() - written);
+            let available = wrap!(SFMT_N * 2) - self.idx;
+            let take = available.min(wrap!(out.len() - written));
 
             unsafe {
                 ptr::copy_nonoverlapping(
-                    (self.state.as_ptr() as *const u64).add(self.idx),
+                    (self.state.as_ptr() as *const u64).add(self.idx.value()),
                     out.as_mut_ptr().add(written),
-                    take,
+                    take.value(),
                 );
             }
 
             self.idx += take;
-            written += take;
+            written += take.value();
         }
     }
 }
@@ -337,11 +333,11 @@ impl Rng64 for Sfmt1993764 {
     fn nextu(&mut self) -> u64 {
         if self.idx >= SFMT_N * 2 {
             self.gen_rand_all();
-            self.idx = 0;
+            self.idx = 0.into();
         }
 
         let s: &[u64] = bytemuck::cast_slice(&self.state);
-        let val = s[self.idx];
+        let val = s[self.idx.value()];
         self.idx += 1;
         val
     }

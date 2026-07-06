@@ -1,8 +1,10 @@
-use crate::rng::Rng64;
-use crate::rng64::SplitMix64;
-
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
+
+use wrapn::Wrap;
+
+use crate::rng::Rng64;
+use crate::rng64::SplitMix64;
 
 // --- Sfc64 ---
 
@@ -18,10 +20,10 @@ use std::arch::x86_64::*;
 /// ```
 #[repr(C, align(64))]
 pub struct Sfc64 {
-    a: u64,
-    b: u64,
-    c: u64,
-    counter: u64,
+    a: Wrap<u64>,
+    b: Wrap<u64>,
+    c: Wrap<u64>,
+    counter: Wrap<u64>,
 }
 
 impl Sfc64 {
@@ -29,10 +31,10 @@ impl Sfc64 {
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
-            a: seedgen.nextu(),
-            b: seedgen.nextu(),
-            c: seedgen.nextu(),
-            counter: 1,
+            a: seedgen.nextu().into(),
+            b: seedgen.nextu().into(),
+            c: seedgen.nextu().into(),
+            counter: 1.into(),
         }
     }
 }
@@ -40,13 +42,13 @@ impl Sfc64 {
 impl Rng64 for Sfc64 {
     #[inline(always)]
     fn nextu(&mut self) -> u64 {
-        let res = self.a.wrapping_add(self.b).wrapping_add(self.counter);
+        let res = self.a + self.b + self.counter;
         self.a = self.b ^ (self.b >> 11);
-        self.b = self.c.wrapping_add(self.c << 3);
+        self.b = self.c + (self.c << 3);
         self.c = res.rotate_left(24);
 
-        self.counter = self.counter.wrapping_add(1);
-        res
+        self.counter += 1;
+        res.value()
     }
 }
 
@@ -190,8 +192,9 @@ impl Sfc64x8 {
 
 #[cfg(test)]
 mod tests {
-    #[cfg(target_feature = "avx512f")]
     use super::*;
+
+    crate::safe_test!(Sfc64);
 
     #[cfg(target_feature = "avx512f")]
     crate::unsafe_test!(Sfc64x8);

@@ -1,5 +1,6 @@
-use bytemuck::cast_slice;
 use std::ptr;
+
+use bytemuck::cast_slice;
 use wrapn::{Wrap, wrap};
 
 use crate::{

@@ -1,5 +1,6 @@
-use crate::{rng::Rng64, rng64::SplitMix64, wrap};
-use std::num::Wrapping;
+use wrapn::{Wrap, wrap};
+
+use crate::{rng::Rng64, rng64::SplitMix64};
 
 /// A xoshiro128++ random number generator.
 ///
@@ -15,7 +16,7 @@ use std::num::Wrapping;
 /// ```
 #[repr(C)]
 pub struct Xoroshiro128Pp {
-    s: [Wrapping<u64>; 2],
+    s: [Wrap<u64>; 2],
 }
 
 impl Xoroshiro128Pp {
@@ -23,7 +24,7 @@ impl Xoroshiro128Pp {
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed | 1);
         Self {
-            s: [Wrapping(seedgen.nextu()), Wrapping(seedgen.nextu())],
+            s: wrap![seedgen.nextu(), seedgen.nextu()],
         }
     }
 
@@ -33,24 +34,22 @@ impl Xoroshiro128Pp {
         const JUMP: [u64; 2] = [0x2bd7a6a6e99c2ddc, 0x0992ccaf6a6fca05];
 
         macro_rules! jump {
-            ($i:expr, $s0:ident, $s1:ident) => {
+            ($i:expr, $s:ident) => {
                 // TODO: unrolling
                 for b in 0..64 {
                     if (JUMP[$i] & (1 << b)) != 0 {
-                        $s0 ^= self.s[0].0;
-                        $s1 ^= self.s[1].0;
+                        $s[0] ^= self.s[0];
+                        $s[1] ^= self.s[1];
                     }
                     self.nextu();
                 }
             };
         }
 
-        let mut s0 = 0;
-        let mut s1 = 0;
-        jump!(0, s0, s1);
-        jump!(1, s0, s1);
-
-        self.s = wrap![s0, s1];
+        let mut s = wrap![0; 2];
+        jump!(0, s);
+        jump!(1, s);
+        self.s = s;
     }
 
     /// Applies the long-jump function for advancing by $2^{96}$ steps.
@@ -59,47 +58,40 @@ impl Xoroshiro128Pp {
         const LONG_JUMP: [u64; 2] = [0x360fd5f2cf8d5d99, 0x9c6e6877736c46e3];
 
         macro_rules! long_jump {
-            ($i:expr, $s0:ident, $s1:ident) => {
+            ($i:expr, $s:ident) => {
                 for i in 0..LONG_JUMP.len() {
+                    // TODO: unrolling
                     for b in 0..64 {
                         if (LONG_JUMP[i] & (1 << b)) != 0 {
-                            $s0 ^= self.s[0].0;
-                            $s1 ^= self.s[1].0;
+                            $s[0] ^= self.s[0];
+                            $s[1] ^= self.s[1];
                         }
                         self.nextu();
                     }
 
-                    self.s = wrap![$s0, $s1];
+                    self.s = $s;
                 }
             };
         }
 
-        let mut s0 = 0;
-        let mut s1 = 0;
-        long_jump!(0, s0, s1);
-        long_jump!(1, s0, s1);
-
-        self.s = wrap![s0, s1];
+        let mut s = wrap![0; 2];
+        long_jump!(0, s);
+        long_jump!(1, s);
+        self.s = s;
     }
 }
 
 impl Rng64 for Xoroshiro128Pp {
     #[inline]
     fn nextu(&mut self) -> u64 {
-        let s0 = self.s[0];
-        let s1 = self.s[1];
-        let result = s0 + s1;
+        let s = self.s;
+        let result = s[0] + s[1];
 
-        let s0 = s0.0;
-        let s1 = s1.0;
+        self.s[0] = s[1] ^ s[0];
+        self.s[1] = self.s[1] ^ s[0].rotate_left(24) ^ (self.s[1] << 16);
+        self.s[1] = self.s[1].rotate_left(37);
 
-        self.s = wrap![
-            s1 ^ s0,
-            s0.rotate_left(24) ^ self.s[1].0 ^ (self.s[1].0 << 16)
-        ];
-        self.s[1] = wrap!(self.s[1].0.rotate_left(37));
-
-        result.0
+        *result.raw()
     }
 }
 
@@ -117,15 +109,15 @@ impl Rng64 for Xoroshiro128Pp {
 /// ```
 #[repr(C)]
 pub struct Xoroshiro128Ss {
-    s: [Wrapping<u64>; 2],
+    s: [Wrap<u64>; 2],
 }
 
 impl Xoroshiro128Ss {
     /// Creates a new `Xoroshiro128Ss` instance.
     pub fn new(seed: u64) -> Self {
-        let mut seedgen = SplitMix64::new(seed | 1);
+        let mut seedgen = SplitMix64::new(seed);
         Self {
-            s: [Wrapping(seedgen.nextu()), Wrapping(seedgen.nextu())],
+            s: wrap![seedgen.nextu(), seedgen.nextu()],
         }
     }
 
@@ -135,24 +127,22 @@ impl Xoroshiro128Ss {
         const JUMP: [u64; 2] = [0xdf900294d8f554a5, 0x170865df4b3201fc];
 
         macro_rules! jump {
-            ($i:expr, $s0:ident, $s1:ident) => {
+            ($i:expr, $s:ident) => {
                 // TODO: unrolling
                 for b in 0..64 {
                     if (JUMP[$i] & (1 << b)) != 0 {
-                        $s0 ^= self.s[0].0;
-                        $s1 ^= self.s[1].0;
+                        $s[0] ^= self.s[0];
+                        $s[1] ^= self.s[1];
                     }
                     self.nextu();
                 }
             };
         }
 
-        let mut s0 = 0;
-        let mut s1 = 0;
-        jump!(0, s0, s1);
-        jump!(1, s0, s1);
-
-        self.s = wrap![s0, s1];
+        let mut s = wrap![0; 2];
+        jump!(0, s);
+        jump!(1, s);
+        self.s = s;
     }
 
     /// Applies the long-jump function for advancing by $2^{96}$ steps.
@@ -161,42 +151,38 @@ impl Xoroshiro128Ss {
         const LONG_JUMP: [u64; 2] = [0xd2a98b26625eee7b, 0xdddf9b1090aa7ac1];
 
         macro_rules! long_jump {
-            ($i:expr, $s0:ident, $s1:ident) => {
+            ($i:expr, $s:ident) => {
                 for i in 0..LONG_JUMP.len() {
                     for b in 0..64 {
                         if (LONG_JUMP[i] & (1 << b)) != 0 {
-                            $s0 ^= self.s[0].0;
-                            $s1 ^= self.s[1].0;
+                            $s[0] ^= self.s[0];
+                            $s[1] ^= self.s[1];
                         }
                         self.nextu();
                     }
 
-                    self.s = wrap![$s0, $s1];
+                    self.s = $s;
                 }
             };
         }
 
-        let mut s0 = 0;
-        let mut s1 = 0;
-        long_jump!(0, s0, s1);
-        long_jump!(1, s0, s1);
-
-        self.s = wrap![s0, s1];
+        let mut s = wrap![0; 2];
+        long_jump!(0, s);
+        long_jump!(1, s);
+        self.s = s;
     }
 }
 
 impl Rng64 for Xoroshiro128Ss {
     #[inline]
     fn nextu(&mut self) -> u64 {
-        let s0 = self.s[0];
-        let s1 = self.s[1];
-        let result = wrap!((s0 * wrap!(5)).0.rotate_left(7)) * wrap!(9);
+        let result = (self.s[0] * 5).rotate_left(7) * 9;
 
-        let s1 = s1 ^ s0;
-        self.s[0] = wrap!(s0.0.rotate_left(24) ^ s1.0 ^ (s1.0 << 16));
-        self.s[1] = wrap!(s1.0.rotate_left(37));
+        self.s[1] = self.s[1] ^ self.s[0];
+        self.s[0] = self.s[1] ^ self.s[0].rotate_left(24) ^ (self.s[1] << 16);
+        self.s[1] = self.s[1].rotate_left(37);
 
-        result.0
+        result.value()
     }
 }
 

@@ -340,8 +340,8 @@ pub extern "C" fn squares32_next_u32s(ptr: *mut Squares32, out: *mut u32, count:
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c;
-        let k = rng.k;
+        let c0 = rng.c.value();
+        let k = rng.k.value();
         let k4 = k.wrapping_mul(4);
 
         buffer
@@ -377,7 +377,7 @@ pub extern "C" fn squares32_next_u32s(ptr: *mut Squares32, out: *mut u32, count:
                 }
             });
 
-        rng.c = rng.c.wrapping_add(count as u64);
+        rng.c += count as u64;
     }
 }
 
@@ -388,8 +388,8 @@ pub extern "C" fn squares32_next_f32s(ptr: *mut Squares32, out: *mut f32, count:
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c;
-        let k = rng.k;
+        let c0 = rng.c.value();
+        let k = rng.k.value();
         let k4 = k.wrapping_mul(4);
         const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
 
@@ -425,7 +425,7 @@ pub extern "C" fn squares32_next_f32s(ptr: *mut Squares32, out: *mut f32, count:
                 }
             });
 
-        rng.c = rng.c.wrapping_add(count as u64);
+        rng.c += count as u64;
     }
 }
 
@@ -442,8 +442,8 @@ pub extern "C" fn squares32_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c;
-        let k = rng.k;
+        let c0 = rng.c.value();
+        let k = rng.k.value();
         let k4 = k.wrapping_mul(4);
         let range = (max as i64 - min as i64 + 1) as u64;
 
@@ -479,7 +479,7 @@ pub extern "C" fn squares32_rand_i32s(
                 }
             });
 
-        rng.c = rng.c.wrapping_add(count as u64);
+        rng.c += count as u64;
     }
 }
 
@@ -496,8 +496,8 @@ pub extern "C" fn squares32_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c;
-        let k = rng.k;
+        let c0 = rng.c.value();
+        let k = rng.k.value();
         let k4 = k.wrapping_mul(4);
         let combined_scale = (max - min) * (1.0f32 / (u32::MAX as f32 + 1.0));
 
@@ -533,7 +533,7 @@ pub extern "C" fn squares32_rand_f32s(
                 }
             });
 
-        rng.c = rng.c.wrapping_add(count as u64);
+        rng.c += count as u64;
     }
 }
 

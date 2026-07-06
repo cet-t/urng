@@ -1,3 +1,5 @@
+use wrapn::Wrap;
+
 use crate::rng::Rng64;
 use crate::rng64::SplitMix64;
 
@@ -18,14 +20,16 @@ use crate::rng64::SplitMix64;
 /// ```
 #[repr(C)]
 pub struct Xorshift64 {
-    a: u64,
+    a: Wrap<u64>,
 }
 
 impl Xorshift64 {
     /// Creates a new `Xorshift64` instance.
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
-        Self { a: seedgen.nextu() }
+        Self {
+            a: seedgen.nextu().into(),
+        }
     }
 }
 
@@ -37,7 +41,7 @@ impl Rng64 for Xorshift64 {
         x ^= x >> 7;
         x ^= x << 17;
         self.a = x;
-        x
+        x.value()
     }
 }
 

@@ -1,14 +1,8 @@
-use std::{
-    arch::x86_64::{
-        __m512, __m512i, _mm512_add_epi32, _mm512_add_ps, _mm512_cvtepu32_ps, _mm512_loadu_si512,
-        _mm512_mask_blend_epi32, _mm512_mul_epu32, _mm512_mul_ps, _mm512_or_si512,
-        _mm512_set1_epi32, _mm512_set1_epi64, _mm512_set1_ps, _mm512_slli_epi32, _mm512_srli_epi32,
-        _mm512_srli_epi64, _mm512_storeu_ps, _mm512_xor_epi32,
-    },
-    num::Wrapping,
-};
+use std::arch::x86_64::*;
 
-use crate::{rng::Rng32, rng32::SplitMix32, wrap};
+use wrapn::{Wrap, wrap};
+
+use crate::{rng::Rng32, rng32::SplitMix32};
 
 // --- Xoshiro128++ ---
 
@@ -27,7 +21,7 @@ use crate::{rng::Rng32, rng32::SplitMix32, wrap};
 /// ```
 #[repr(C)]
 pub struct Xoshiro128Pp {
-    s: [Wrapping<u32>; 4],
+    s: [Wrap<u32>; 4],
 }
 
 impl Xoshiro128Pp {
@@ -51,7 +45,7 @@ impl Xoshiro128Pp {
 impl Rng32 for Xoshiro128Pp {
     #[inline]
     fn nextu(&mut self) -> u32 {
-        let res = wrap!((self.s[0] + self.s[3]).0.rotate_left(7)) + self.s[0];
+        let res = (self.s[0] + self.s[3]).rotate_left(7) + self.s[0];
         let t = self.s[1] << 9;
 
         self.s[2] ^= self.s[0];
@@ -59,9 +53,9 @@ impl Rng32 for Xoshiro128Pp {
         self.s[1] ^= self.s[2];
         self.s[0] ^= self.s[3];
         self.s[2] ^= t;
-        self.s[3] = wrap!(self.s[3].0.rotate_left(11));
+        self.s[3] = self.s[3].rotate_left(11);
 
-        res.0
+        res.value()
     }
 }
 
@@ -83,7 +77,7 @@ impl Rng32 for Xoshiro128Pp {
 /// ```
 #[repr(C)]
 pub struct Xoshiro128Ss {
-    s: [Wrapping<u32>; 4],
+    s: [Wrap<u32>; 4],
 }
 
 impl Xoshiro128Ss {
@@ -104,7 +98,7 @@ impl Xoshiro128Ss {
 impl Rng32 for Xoshiro128Ss {
     #[inline]
     fn nextu(&mut self) -> u32 {
-        let res = wrap!((self.s[1] * wrap!(5)).0.rotate_left(7)) * wrap!(9);
+        let res = (self.s[1] * 5).rotate_left(7) * 9;
         let t = self.s[1] << 9;
 
         self.s[2] ^= self.s[0];
@@ -112,9 +106,9 @@ impl Rng32 for Xoshiro128Ss {
         self.s[1] ^= self.s[2];
         self.s[0] ^= self.s[3];
         self.s[2] ^= t;
-        self.s[3] = wrap!(self.s[3].0.rotate_left(11));
+        self.s[3] = self.s[3].rotate_left(11);
 
-        res.0
+        res.value()
     }
 }
 

@@ -66,15 +66,15 @@ where
 #[inline(always)]
 fn fry4_advance(rng: &mut Threefry32x4, count: usize) {
     let num_blocks = (count.div_ceil(64) * 16) as u64;
-    let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
+    let c0_64 = (rng.c[0].value() as u64) | ((rng.c[1].value() as u64) << 32);
     let new_c64 = c0_64.wrapping_add(num_blocks);
-    rng.c[0] = new_c64 as u32;
-    rng.c[1] = (new_c64 >> 32) as u32;
+    rng.c[0] = (new_c64 as u32).into();
+    rng.c[1] = ((new_c64 >> 32) as u32).into();
     if new_c64 < c0_64 {
-        let (n_c2, ovf3) = rng.c[2].overflowing_add(1);
-        rng.c[2] = n_c2;
+        let (n_c2, ovf3) = rng.c[2].value().overflowing_add(1);
+        rng.c[2] = n_c2.into();
         if ovf3 {
-            rng.c[3] = rng.c[3].wrapping_add(1);
+            rng.c[3] += 1;
         }
     }
 }
@@ -86,7 +86,11 @@ pub extern "C" fn threefry32x4_next_u32s(ptr: *mut Threefry32x4, out: *mut u32, 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        fry4_fill(buffer, rng.c, rng.k, rng.tw, |x| x);
+        fry4_fill(
+            buffer,
+            rng.c.map(|x| x.value()),
+            rng.k.map(|x| x.value()),
+            rng.tw.map(|x| x.value()), |x| x);
         fry4_advance(rng, count);
     }
 }
@@ -99,7 +103,11 @@ pub extern "C" fn threefry32x4_next_f32s(ptr: *mut Threefry32x4, out: *mut f32, 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        fry4_fill(buffer, rng.c, rng.k, rng.tw, |x| x as f32 * SCALE);
+        fry4_fill(
+            buffer,
+            rng.c.map(|x| x.value()),
+            rng.k.map(|x| x.value()),
+            rng.tw.map(|x| x.value()), |x| x as f32 * SCALE);
         fry4_advance(rng, count);
     }
 }
@@ -118,7 +126,11 @@ pub extern "C" fn threefry32x4_rand_i32s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let range = (max as i64 - min as i64 + 1) as u64;
-        fry4_fill(buffer, rng.c, rng.k, rng.tw, |x| {
+        fry4_fill(
+            buffer,
+            rng.c.map(|x| x.value()),
+            rng.k.map(|x| x.value()),
+            rng.tw.map(|x| x.value()), |x| {
             ((x as u64 * range) >> 32) as i32 + min
         });
         fry4_advance(rng, count);
@@ -140,7 +152,11 @@ pub extern "C" fn threefry32x4_rand_f32s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let mult = (max - min) * SCALE;
-        fry4_fill(buffer, rng.c, rng.k, rng.tw, |x| x as f32 * mult + min);
+        fry4_fill(
+            buffer,
+            rng.c.map(|x| x.value()),
+            rng.k.map(|x| x.value()),
+            rng.tw.map(|x| x.value()), |x| x as f32 * mult + min);
         fry4_advance(rng, count);
     }
 }
@@ -205,10 +221,10 @@ where
 #[inline(always)]
 fn fry2_advance(rng: &mut Threefry32x2, count: usize) {
     let num_blocks = (count.div_ceil(64) * 32) as u64;
-    let c0_64 = (rng.c[0] as u64) | ((rng.c[1] as u64) << 32);
+    let c0_64 = (rng.c[0].value() as u64) | ((rng.c[1].value() as u64) << 32);
     let new_c64 = c0_64.wrapping_add(num_blocks);
-    rng.c[0] = new_c64 as u32;
-    rng.c[1] = (new_c64 >> 32) as u32;
+    rng.c[0] = (new_c64 as u32).into();
+    rng.c[1] = ((new_c64 >> 32) as u32).into();
 }
 
 /// Fills the output buffer with the next random `u32` values.
@@ -218,7 +234,10 @@ pub extern "C" fn threefry32x2_next_u32s(ptr: *mut Threefry32x2, out: *mut u32, 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        fry2_fill(buffer, rng.c, rng.k, |x| x);
+        fry2_fill(
+            buffer,
+            rng.c.map(|x| x.value()),
+            rng.k.map(|x| x.value()), |x| x);
         fry2_advance(rng, count);
     }
 }
@@ -231,7 +250,10 @@ pub extern "C" fn threefry32x2_next_f32s(ptr: *mut Threefry32x2, out: *mut f32, 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        fry2_fill(buffer, rng.c, rng.k, |x| x as f32 * SCALE);
+        fry2_fill(
+            buffer,
+            rng.c.map(|x| x.value()),
+            rng.k.map(|x| x.value()), |x| x as f32 * SCALE);
         fry2_advance(rng, count);
     }
 }
@@ -250,7 +272,10 @@ pub extern "C" fn threefry32x2_rand_i32s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let range = (max as i64 - min as i64 + 1) as u64;
-        fry2_fill(buffer, rng.c, rng.k, |x| {
+        fry2_fill(
+            buffer,
+            rng.c.map(|x| x.value()),
+            rng.k.map(|x| x.value()), |x| {
             ((x as u64 * range) >> 32) as i32 + min
         });
         fry2_advance(rng, count);

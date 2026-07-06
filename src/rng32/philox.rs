@@ -1,10 +1,10 @@
+use std::arch::x86_64::*;
+
+use wrapn::{Wrap, wrap};
+
 use crate::_internal::FSCALE32;
 use crate::rng::Rng32;
 use crate::rng32::SplitMix32;
-use crate::wrap;
-use std::num::Wrapping;
-
-use std::arch::x86_64::*;
 
 // --- Philox32 ---
 
@@ -22,8 +22,8 @@ use std::arch::x86_64::*;
 /// ```
 #[repr(C)]
 pub struct Philox32x4 {
-    pub(crate) c: [Wrapping<u32>; 4],
-    pub(crate) k: [Wrapping<u32>; 2],
+    pub(crate) c: [Wrap<u32>; 4],
+    pub(crate) k: [Wrap<u32>; 2],
 }
 
 impl Philox32x4 {
@@ -44,9 +44,9 @@ impl Philox32x4 {
 
     /// Computes Philox output from counter and key values (pure function).
     #[inline(always)]
-    pub(crate) fn compute(c: [Wrapping<u32>; 4], k: [Wrapping<u32>; 2]) -> [u32; 4] {
-        let mut x = [c[0].0, c[1].0, c[2].0, c[3].0];
-        let mut key = wrap![k[0].0, k[1].0];
+    pub(crate) fn compute(c: [Wrap<u32>; 4], k: [Wrap<u32>; 2]) -> [u32; 4] {
+        let mut x = c; //.map(|x| *x.raw());
+        let mut key = k; //.map(|x| *x.raw());
 
         const M0: u64 = 0xD2511F53;
         const M1: u64 = 0xCD9E8D57;
@@ -57,39 +57,37 @@ impl Philox32x4 {
             () => {
                 step!(fin);
 
-                // key[0] = key[0].wrapping_add(W0);
-                // key[1] = key[1].wrapping_add(W1);
-                key = [key[0] * wrap!(W0), key[1] * wrap!(W1)];
+                key[0] += W0;
+                key[1] += W1;
             };
             (fin) => {
-                let prod0 = (x[0] as u64).wrapping_mul(M0);
-                let hi0 = (prod0 >> 32) as u32;
-                let lo0 = prod0 as u32;
+                let prod0 = x[0].cast::<u64>() * M0;
+                let hi0 = (prod0 >> 32).cast::<u32>();
+                let lo0 = prod0.cast::<u32>();
 
-                let prod1 = (x[2] as u64).wrapping_mul(M1);
-                let hi1 = (prod1 >> 32) as u32;
-                let lo1 = prod1 as u32;
+                let prod1 = x[2].cast::<u64>() * M1;
+                let hi1 = (prod1 >> 32).cast::<u32>();
+                let lo1 = prod1.cast::<u32>();
 
-                x[0] = hi1 ^ x[1] ^ key[0].0;
+                x[0] = hi1 ^ x[1] ^ key[0];
                 x[1] = lo1;
-                x[2] = hi0 ^ x[3] ^ key[1].0;
+                x[2] = hi0 ^ x[3] ^ key[1];
                 x[3] = lo0;
 
-                // key[0] = key[0].wrapping_add(W0);
-                // key[1] = key[1].wrapping_add(W1);
-                key = [key[0] * wrap!(W0), key[1] * wrap!(W1)];
+                key[0] += W0;
+                key[1] += W1;
 
-                let prod0 = (x[0] as u64).wrapping_mul(M0);
-                let hi0 = (prod0 >> 32) as u32;
-                let lo0 = prod0 as u32;
+                let prod0 = x[0].cast::<u64>() * M0;
+                let hi0 = (prod0 >> 32).cast::<u32>();
+                let lo0 = prod0.cast::<u32>();
 
-                let prod1 = (x[2] as u64).wrapping_mul(M1);
-                let hi1 = (prod1 >> 32) as u32;
-                let lo1 = prod1 as u32;
+                let prod1 = x[2].cast::<u64>() * M1;
+                let hi1 = (prod1 >> 32).cast::<u32>();
+                let lo1 = prod1.cast::<u32>();
 
-                x[0] = hi1 ^ x[1] ^ key[0].0;
+                x[0] = hi1 ^ x[1] ^ key[0];
                 x[1] = lo1;
-                x[2] = hi0 ^ x[3] ^ key[1].0;
+                x[2] = hi0 ^ x[3] ^ key[1];
                 x[3] = lo0;
             };
         }
@@ -105,7 +103,7 @@ impl Philox32x4 {
         step!();
         step!(fin);
 
-        x
+        x.map(|x| x.value())
     }
 
     /// Generates the next block of random numbers.
@@ -113,11 +111,11 @@ impl Philox32x4 {
     pub fn nextu(&mut self) -> [u32; 4] {
         let out = Self::compute(self.c, self.k);
         self.c[0] += 1;
-        if self.c[0].0 == 0 {
+        if self.c[0] == 0 {
             self.c[1] += 1;
-            if self.c[1].0 == 0 {
+            if self.c[1] == 0 {
                 self.c[2] += 1;
-                if self.c[2].0 == 0 {
+                if self.c[2] == 0 {
                     self.c[3] += 1;
                 }
             }
