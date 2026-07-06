@@ -22,10 +22,19 @@ Enable the `rand` feature to implement [`rand_core::SeedableRng`] and [`rand_cor
 
 ```toml
 [dependencies]
-urng = { version = "0.7.0", features = ["rand"] }
+urng = { version = "0.8.0", features = ["rand"] }
 ```
 
 > Requires `rand_core = "0.10"`. The `rand` crate itself is only needed as a dev-dependency for tests; consumers only need `urng` with the `rand` feature.
+
+### Optional `testing` Feature
+
+Enable the `testing` feature for a statistical test harness (chi-squared uniformity test and Monte Carlo π estimation) usable against any `Rng32`/`Rng64` generator, or against `rand`-ecosystem RNGs when combined with the `rand` feature. See [Testing](#testing) below.
+
+```toml
+[dependencies]
+urng = { version = "0.8.0", features = ["testing"] }
+```
 
 When enabled, all scalar generators (`Mt19937`, `Sfmt*`, `Pcg32`, `Sfc32`, `SplitMix32`, `Squares32`, `Xoroshiro64Ss`, `Xorshift32`, `Xorshift128`, `Xorwow`, `Xoshiro128Pp`, `Xoshiro128Ss`) implement:
 
@@ -150,9 +159,45 @@ Hardware-noise-assisted seed generation. Wraps an existing `Rng32`/`Rng64` and m
 
 `next_seed_pair()` returns `(raw, processed)` — the raw hardware value and the mixed seed.
 
+## Testing
+
+> Requires the `testing` feature.
+
+A statistical test harness for validating RNG quality, generic over any `Rng32`/`Rng64` implementation.
+
+| Struct                          | Module          | Purpose                              |
+| ------------------------------- | --------------- | ------------------------------------ |
+| `ChiSq32` / `ChiSq64`           | `urng::testing` | Chi-squared uniformity test          |
+| `ChiSqSuite32` / `ChiSqSuite64` | `urng::testing` | Run named chi-squared cases together |
+| `McPi32` / `McPi64`             | `urng::testing` | Monte Carlo estimation of π          |
+| `McPiSuite32` / `McPiSuite64`   | `urng::testing` | Run named Monte Carlo cases together |
+
+```rust
+use urng::prelude::*;
+use urng::testing::{ChiSq32, ChiSqVerdict};
+
+let mut rng = Sfc32::new(0);
+let mut chisq = ChiSq32::from_urng(&mut rng);
+let result = chisq.run("Sfc32").unwrap();
+assert_eq!(result.verdict, ChiSqVerdict::Pass);
+```
+
+With the `rand` feature also enabled, `from_rand`/`with_config_from_rand` accept any `rand_core::Rng` implementation directly (via the internal `RandAdapter`), so external generators can be validated with the same harness without manually wrapping them.
+
 ## Usage Examples
 
 Most generators expose the same basic workflow: create an instance with `new`, then use `nextu`, `nextf`, `randi`, `randf`, or `choice` depending on the output type you need. SIMD and counter-based generators return fixed-size arrays instead of single values.
+
+Scalar generators (both 32-bit and 64-bit; SIMD variants are not included) also implement `Default`, seeding themselves from a time-based, per-call mix so no explicit seed is required:
+
+```rust
+use urng::prelude::*;
+
+let mut rng = Sfc32::default();
+let _ = rng.nextu();
+```
+
+> The deprecated `Lcg32`/`Lcg64` implement `Default` with the fixed parameters `new(8, 13, 5, 24)` instead, since an LCG has no single sensible auto-generated seed.
 
 ### Basic Usage
 
