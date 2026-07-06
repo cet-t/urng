@@ -200,6 +200,21 @@ macro_rules! impl_mcpi_for_rng {
                 }
             }
 
+            #[cfg(feature = "rand")]
+            impl<'a, R: rand_core::Rng + 'a> [<McPi $bits>]<'a, crate::testing::rand_adapter::RandAdapter<R>> {
+                #[doc = concat!("Creates a new `McPi", $bits, "` from any `rand_core::Rng` implementation, without manually wrapping it in `RandAdapter`.")]
+                pub fn from_rand(rng: &'a mut R) -> Self {
+                    Self::new(crate::testing::rand_adapter::RandAdapter::from_mut(rng))
+                }
+
+                pub fn with_config_from_rand(
+                    rng: &'a mut R,
+                    config: McPiConfig,
+                ) -> Result<Self, McPiError> {
+                    Self::with_config(crate::testing::rand_adapter::RandAdapter::from_mut(rng), config)
+                }
+            }
+
             pub struct [<McPiSuite $bits>]<'a> {
                 config: McPiConfig,
                 cases: Vec<McPiCase<'a>>,

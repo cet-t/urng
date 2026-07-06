@@ -6,11 +6,20 @@ use crate::rng::{Rng32, Rng64};
 use rand_core::Rng as RandRng;
 
 /// Wraps any `rand_core::Rng` implementation so it satisfies urng's [`Rng32`]/[`Rng64`] traits.
+#[repr(transparent)]
 pub struct RandAdapter<R: RandRng>(pub R);
 
 impl<R: RandRng> RandAdapter<R> {
     pub fn new(rng: R) -> Self {
         Self(rng)
+    }
+
+    /// Reinterprets a `&mut R` as `&mut RandAdapter<R>` with no copy, since
+    /// `RandAdapter` is `#[repr(transparent)]` over `R`. This is what lets
+    /// `ChiSq{32,64}::from_rand`/`McPi{32,64}::from_rand` accept a plain
+    /// `&mut impl rand_core::Rng` directly.
+    pub fn from_mut(rng: &mut R) -> &mut Self {
+        unsafe { &mut *(rng as *mut R as *mut Self) }
     }
 }
 
@@ -75,16 +84,16 @@ mod tests {
 
     #[test]
     fn rand_adapter_works_with_chisq() {
-        let mut rng = RandAdapter::new(DummyRandRng(42));
-        let mut chisq = ChiSq32::new(&mut rng);
+        let mut rng = DummyRandRng(42);
+        let mut chisq = ChiSq32::from_rand(&mut rng);
         let res = chisq.run("dummy_rand_rng").unwrap();
         assert_eq!(res.verdict, ChiSqVerdict::Pass);
     }
 
     #[test]
     fn rand_adapter_works_with_mcpi() {
-        let mut rng = RandAdapter::new(DummyRandRng(7));
-        let mut mcpi = McPi32::new(&mut rng);
+        let mut rng = DummyRandRng(7);
+        let mut mcpi = McPi32::from_rand(&mut rng);
         let res = mcpi.run("dummy_rand_rng").unwrap();
         assert_eq!(res.verdict, McPiVerdict::Pass);
     }

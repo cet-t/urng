@@ -216,6 +216,21 @@ macro_rules! impl_chisq_for_rng {
                 }
             }
 
+            #[cfg(feature = "rand")]
+            impl<'a, R: rand_core::Rng + 'a> [<ChiSq $bits>]<'a, crate::testing::rand_adapter::RandAdapter<R>> {
+                #[doc = concat!("Creates a new `ChiSq", $bits, "` from any `rand_core::Rng` implementation, without manually wrapping it in `RandAdapter`.")]
+                pub fn from_rand(rng: &'a mut R) -> Self {
+                    Self::new(crate::testing::rand_adapter::RandAdapter::from_mut(rng))
+                }
+
+                pub fn with_config_from_rand(
+                    rng: &'a mut R,
+                    config: ChiSqConfig,
+                ) -> Result<Self, ChiSqError> {
+                    Self::with_config(crate::testing::rand_adapter::RandAdapter::from_mut(rng), config)
+                }
+            }
+
             pub struct [<ChiSqSuite $bits>]<'a> {
                 config: ChiSqConfig,
                 cases: Vec<ChiSqCase<'a>>,
