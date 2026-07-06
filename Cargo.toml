@@ -1,6 +1,6 @@
 [package]
 name = "urng"
-version = "0.7.2"
+version = "0.8.0"
 edition = "2024"
 license = "MIT"
 rust-version = "1.92"
@@ -25,6 +25,7 @@ colored = "3.1.1"
 thousands = "0.2.0"
 plotters = "0.3"
 anyhow = "1"
+rand_sfc = "0.2.0"
 
 [[example]]
 name = "main"
@@ -35,6 +36,12 @@ path = "examples/cabi/main.rs"
 name = "test"
 required-features = ["cabi"]
 path = "examples/cabi/test.rs"
+
+[[example]]
+name = "testing"
+required-features = ["testing", "rand"]
+path = "examples/testing/main.rs"
+
 
 [features]
 rand = ["dep:rand_core"]
