@@ -45,6 +45,13 @@ impl Lcg32 {
 }
 
 #[allow(deprecated)]
+impl Default for Lcg32 {
+    fn default() -> Self {
+        Self::new(8, 13, 5, 24)
+    }
+}
+
+#[allow(deprecated)]
 impl Rng32 for Lcg32 {
     /// Generates the next random `u32` value.
     #[inline]
