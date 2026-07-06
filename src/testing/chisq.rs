@@ -187,11 +187,16 @@ macro_rules! impl_chisq_for_rng {
             }
 
             impl<'a, R: [<Rng $bits>] + 'a> [<ChiSq $bits>]<'a, R> {
-                pub fn new(rng: &'a mut R) -> Self {
+                pub fn from_urng(rng: &'a mut R) -> Self {
                     Self {
                         rng,
                         config: ChiSqConfig::default(),
                     }
+                }
+
+                #[deprecated(note = "use `from_urng` instead")]
+                pub fn new(rng: &'a mut R) -> Self {
+                    Self::from_urng(rng)
                 }
 
                 pub fn with_config(rng: &'a mut R, config: ChiSqConfig) -> Result<Self, ChiSqError> {
@@ -220,7 +225,7 @@ macro_rules! impl_chisq_for_rng {
             impl<'a, R: rand_core::Rng + 'a> [<ChiSq $bits>]<'a, crate::testing::rand_adapter::RandAdapter<R>> {
                 #[doc = concat!("Creates a new `ChiSq", $bits, "` from any `rand_core::Rng` implementation, without manually wrapping it in `RandAdapter`.")]
                 pub fn from_rand(rng: &'a mut R) -> Self {
-                    Self::new(crate::testing::rand_adapter::RandAdapter::from_mut(rng))
+                    Self::from_urng(crate::testing::rand_adapter::RandAdapter::from_mut(rng))
                 }
 
                 pub fn with_config_from_rand(
@@ -340,7 +345,7 @@ mod tests {
     #[test]
     fn chisq32_works() {
         let mut rng = Sfmt19937::new(0);
-        let mut chisq = ChiSq32::new(&mut rng);
+        let mut chisq = ChiSq32::from_urng(&mut rng);
         let res = unsafe { chisq.run(stringify!(Sfmt19937)).unwrap_unchecked() };
         assert_eq!(res.verdict, ChiSqVerdict::Pass);
     }
@@ -348,7 +353,7 @@ mod tests {
     #[test]
     fn chisq64_works() {
         let mut rng = Sfmt1993764::new(0);
-        let mut chisq = ChiSq64::new(&mut rng);
+        let mut chisq = ChiSq64::from_urng(&mut rng);
         let res = unsafe { chisq.run(stringify!(Sfmt1993764)).unwrap_unchecked() };
         assert_eq!(res.verdict, ChiSqVerdict::Pass);
     }
