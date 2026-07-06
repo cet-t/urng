@@ -45,8 +45,8 @@ impl Philox32x4 {
     /// Computes Philox output from counter and key values (pure function).
     #[inline(always)]
     pub(crate) fn compute(c: [Wrap<u32>; 4], k: [Wrap<u32>; 2]) -> [u32; 4] {
-        let mut x = c; //.map(|x| *x.raw());
-        let mut key = k; //.map(|x| *x.raw());
+        let mut x = c;
+        let mut key = k;
 
         const M0: u64 = 0xD2511F53;
         const M1: u64 = 0xCD9E8D57;
