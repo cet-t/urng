@@ -171,11 +171,16 @@ macro_rules! impl_mcpi_for_rng {
             }
 
             impl<'a, R: [<Rng $bits>] + 'a> [<McPi $bits>]<'a, R> {
-                pub fn new(rng: &'a mut R) -> Self {
+                pub fn from_urng(rng: &'a mut R) -> Self {
                     Self {
                         rng,
                         config: McPiConfig::default(),
                     }
+                }
+
+                #[deprecated(note = "use `from_urng` instead")]
+                pub fn new(rng: &'a mut R) -> Self {
+                    Self::from_urng(rng)
                 }
 
                 pub fn with_config(rng: &'a mut R, config: McPiConfig) -> Result<Self, McPiError> {
@@ -197,6 +202,21 @@ macro_rules! impl_mcpi_for_rng {
                     let name = validate_case_name(name.into())?;
                     let mut sampler = || [<unit_f64_from_u $bits>](self.rng.nextu());
                     run_mcpi(name, &mut sampler, self.config)
+                }
+            }
+
+            #[cfg(feature = "rand")]
+            impl<'a, R: rand_core::Rng + 'a> [<McPi $bits>]<'a, crate::testing::rand_adapter::RandAdapter<R>> {
+                #[doc = concat!("Creates a new `McPi", $bits, "` from any `rand_core::Rng` implementation, without manually wrapping it in `RandAdapter`.")]
+                pub fn from_rand(rng: &'a mut R) -> Self {
+                    Self::from_urng(crate::testing::rand_adapter::RandAdapter::from_mut(rng))
+                }
+
+                pub fn with_config_from_rand(
+                    rng: &'a mut R,
+                    config: McPiConfig,
+                ) -> Result<Self, McPiError> {
+                    Self::with_config(crate::testing::rand_adapter::RandAdapter::from_mut(rng), config)
                 }
             }
 
@@ -309,7 +329,7 @@ mod tests {
     #[test]
     fn mcpi32_works() {
         let mut rng = Sfmt19937::new(0);
-        let mut mcpi = McPi32::new(&mut rng);
+        let mut mcpi = McPi32::from_urng(&mut rng);
         let res = unsafe { mcpi.run(stringify!(Sfmt19937)).unwrap_unchecked() };
         assert_eq!(res.verdict, McPiVerdict::Pass);
     }
@@ -317,7 +337,7 @@ mod tests {
     #[test]
     fn mcpi64_works() {
         let mut rng = Sfmt1993764::new(0);
-        let mut mcpi = McPi64::new(&mut rng);
+        let mut mcpi = McPi64::from_urng(&mut rng);
         let res = unsafe { mcpi.run(stringify!(Sfmt1993764)).unwrap_unchecked() };
         assert_eq!(res.verdict, McPiVerdict::Pass);
     }

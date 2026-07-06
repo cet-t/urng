@@ -6,6 +6,10 @@
 pub(crate) mod _internal;
 pub mod chisq;
 pub mod mcpi;
+#[cfg(feature = "rand")]
+pub mod rand_adapter;
 
 pub use chisq::*;
 pub use mcpi::*;
+#[cfg(feature = "rand")]
+pub use rand_adapter::*;

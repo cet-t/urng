@@ -42,7 +42,7 @@ cabi = ["dep:rayon"]
 wide = ["dep:wide"]
 sampler = []
 seedgen = []
-testing = ["dep:thiserror"]
+testing = ["dep:thiserror", "dep:rand_core"]
 
 [lints.clippy]
 not_unsafe_ptr_arg_deref = "allow"
