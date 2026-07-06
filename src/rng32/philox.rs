@@ -57,8 +57,8 @@ impl Philox32x4 {
             () => {
                 step!(fin);
 
-                key[0] += W0;
-                key[1] += W1;
+                key[0] *= W0;
+                key[1] *= W1;
             };
             (fin) => {
                 let prod0 = x[0].cast::<u64>() * M0;
@@ -74,8 +74,8 @@ impl Philox32x4 {
                 x[2] = hi0 ^ x[3] ^ key[1];
                 x[3] = lo0;
 
-                key[0] += W0;
-                key[1] += W1;
+                key[0] *= W0;
+                key[1] *= W1;
 
                 let prod0 = x[0].cast::<u64>() * M0;
                 let hi0 = (prod0 >> 32).cast::<u32>();
