@@ -1,4 +1,4 @@
-use wrapn::{Wrap, wrap};
+﻿use wrapn::{Wrap, wrap};
 
 use crate::{rng::Rng64, rng64::SplitMix64};
 
@@ -9,7 +9,7 @@ use crate::{rng::Rng64, rng64::SplitMix64};
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = Xoroshiro128Pp::new(1);
 /// let _ = rng.nextu();
@@ -102,7 +102,7 @@ impl Rng64 for Xoroshiro128Pp {
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = Xoroshiro128Ss::new(1);
 /// let _ = rng.nextu();

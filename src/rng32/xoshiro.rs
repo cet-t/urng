@@ -1,4 +1,4 @@
-use std::arch::x86_64::*;
+﻿use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
@@ -14,7 +14,7 @@ use crate::{rng::Rng32, rng32::SplitMix32};
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = Xoshiro128Pp::new(1);
 /// assert_eq!(rng.nextu(), 4075539671);

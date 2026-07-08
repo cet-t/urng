@@ -1,4 +1,4 @@
-use wrapn::Wrap;
+﻿use wrapn::Wrap;
 
 use crate::{SplitMix64, rng::Rng64};
 
@@ -9,7 +9,7 @@ use crate::{SplitMix64, rng::Rng64};
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = TwistedGFSR::new(0);
 /// let _ = rng.nextu();

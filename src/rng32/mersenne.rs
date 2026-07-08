@@ -1,4 +1,4 @@
-use std::ptr;
+﻿use std::ptr;
 
 use bytemuck::cast_slice;
 use wrapn::{Wrap, wrap};
@@ -67,7 +67,7 @@ fn sfmt_recursion(
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = Mt19937::new(1);
 /// let _ = rng.nextu();
@@ -180,7 +180,7 @@ impl Rng32 for Mt19937 {
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = Sfmt19937::new(1);
 /// let _ = rng.nextu();
