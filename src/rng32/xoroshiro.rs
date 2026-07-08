@@ -1,8 +1,9 @@
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
+#[cfg(feature = "simd")]
 use crate::_internal::FSCALE32;
 use crate::rng::Rng32;
 use crate::rng32::SplitMix32;
@@ -36,15 +37,17 @@ impl Rng32 for Xoroshiro64Ss {
     }
 }
 
+#[cfg(feature = "simd")]
 pub(crate) const XOROSHIRO64SSX8: usize = 8;
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Xoroshiro64Ssx8 {
     s0: __m256i,
     s1: __m256i,
 }
 
+#[cfg(feature = "simd")]
 #[allow(dead_code)]
 impl Xoroshiro64Ssx8 {
     /// Initializes the generator with a given seed, filling the state arrays with values derived from the seed.
@@ -125,15 +128,17 @@ impl Xoroshiro64Ssx8 {
     }
 }
 
+#[cfg(feature = "simd")]
 pub(crate) const XOROSHIRO64SSX16: usize = 16;
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Xoroshiro64Ssx16 {
     s0: __m512i,
     s1: __m512i,
 }
 
+#[cfg(feature = "simd")]
 #[allow(dead_code)]
 impl Xoroshiro64Ssx16 {
     /// Initializes the generator with a given seed, filling the state arrays with values derived from the seed.
@@ -223,10 +228,10 @@ mod tests {
     use super::*;
     use crate::safe_test;
 
-    #[cfg(target_feature = "avx512f")]
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     use crate::unsafe_test;
 
     safe_test!(Xoroshiro64Ss);
-    #[cfg(target_feature = "avx512f")]
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     unsafe_test!(Xoroshiro64Ssx16);
 }

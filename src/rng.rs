@@ -1,3 +1,4 @@
+#[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
 use crate::_internal::{FSCALE32, FSCALE64};
@@ -79,6 +80,7 @@ macro_rules! impl_rng_trait {
 impl_rng_trait!(32);
 impl_rng_trait!(64);
 
+#[cfg(feature = "simd")]
 pub trait Rng32V256 {
     /// Generates the next random `__m256i` value containing 8 `u32` integers in the range [0, 2^32).
     ///
@@ -145,6 +147,7 @@ pub trait Rng32V256 {
     }
 }
 
+#[cfg(feature = "simd")]
 pub trait Rng32V512 {
     /// Generates the next random `__m512i` value containing 16 `u32` integers in the range [0, 2^32).
     ///

@@ -1,3 +1,4 @@
+#[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
@@ -147,28 +148,33 @@ impl Philox32x4 {
 
 // --- Philox32x4-10 x4 ---
 
+#[cfg(feature = "simd")]
 #[allow(non_upper_case_globals)]
 pub const PHILOX32x16: usize = 16;
+#[cfg(feature = "simd")]
 #[allow(non_upper_case_globals)]
 pub const PHILOX32x4x4_PAR_CHUNK: usize = 131_072;
+#[cfg(feature = "simd")]
 #[allow(non_upper_case_globals)]
 pub const PHILOX32x4x4_CHUNK_RATIO: u128 = (PHILOX32x4x4_PAR_CHUNK / PHILOX32x16) as u128;
+#[cfg(feature = "simd")]
 #[allow(non_upper_case_globals)]
 pub const PHILOX32x4x4_SHIFT: u128 = PHILOX32x4x4_CHUNK_RATIO.trailing_zeros() as u128;
+#[cfg(feature = "simd")]
 #[allow(non_upper_case_globals)]
 pub const PHILOX32x16_SHIFT: usize = PHILOX32x16.trailing_zeros() as usize;
 
 /// A Philox 4x32x4 random number generator.
 ///
 /// This is a counter-based RNG suitable for parallel applications.
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Philox32x4x4 {
     pub(crate) c: __m512i,
     pub(crate) k: __m512i,
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 impl Philox32x4x4 {
     /// Creates a new `Philox32x4x4` instance seeded with the given value.
     /// Requires AVX-512F support.
@@ -318,6 +324,7 @@ impl Philox32x4x4 {
 ///
 /// let _ = core::mem::size_of::<Philox32>();
 /// ```
+#[cfg(feature = "simd")]
 #[repr(C)]
 pub struct Philox32([u8; 0]);
 
@@ -326,6 +333,6 @@ mod tests {
     use super::*;
 
     crate::safe_test!(Philox32x4);
-    #[cfg(target_feature = "avx512f")]
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     crate::unsafe_test!(Philox32x4x4);
 }

@@ -27,6 +27,17 @@ urng = { version = "0.8.0", features = ["rand"] }
 
 > Requires `rand_core = "0.10"`. The `rand` crate itself is only needed as a dev-dependency for tests; consumers only need `urng` with the `rand` feature.
 
+### Optional `simd` Feature
+
+Enable the `simd` feature to build the AVX2/AVX-512 SIMD generators (the `x4`/`x8`/`x16`/`x2`-suffixed structs and the `*Simd` runtime dispatchers, e.g. `Sfc32x4`, `Sfc32x8`, `Sfc32x16`, `Pcg32Simd`). Without it, only the scalar generators are compiled.
+
+```toml
+[dependencies]
+urng = { version = "0.8.0", features = ["simd"] }
+```
+
+> When combined with the `cabi` feature, the SIMD generators' C-ABI exports (e.g. `sfc32x8_new`) are also only available with `simd` enabled.
+
 ### Optional `testing` Feature
 
 Enable the `testing` feature for a statistical test harness (chi-squared uniformity test and Monte Carlo π estimation) usable against any `Rng32`/`Rng64` generator, or against `rand`-ecosystem RNGs when combined with the `rand` feature. See [Testing](#testing) below.
@@ -47,7 +58,7 @@ When enabled, all scalar generators (`Mt19937`, `Sfmt*`, `Pcg32`, `Sfc32`, `Spli
 
 Generators are divided into two categories: standard generators and AVX-accelerated SIMD generators.
 Standard generators implement either the `Rng32` or `Rng64` trait (or return fixed-size arrays for counter-based variants).
-AVX generators expose a bulk-generation API and are listed separately.
+AVX generators expose a bulk-generation API and are listed separately; they require the `simd` feature (see [above](#optional-simd-feature)).
 
 ### 32-bit Generators (`urng::rng32`)
 

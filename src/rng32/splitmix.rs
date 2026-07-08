@@ -1,4 +1,5 @@
-﻿use std::arch::x86_64::*;
+﻿#[cfg(feature = "simd")]
+use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
@@ -46,10 +47,13 @@ impl Rng32 for SplitMix32 {
     }
 }
 
+#[cfg(feature = "simd")]
 #[allow(non_upper_case_globals)]
 pub const SPLITMIX32x16: usize = 16;
+#[cfg(feature = "simd")]
 #[allow(non_upper_case_globals)]
 pub const SPLITMIX32x16_PAR_CHUNK: usize = 8192;
+#[cfg(feature = "simd")]
 pub const SPLITMIX32_GAMMA: u32 = 0x9E37_79B9;
 
 /// AVX-512 implementation of SplitMix32 producing 16 values per step.
@@ -64,13 +68,13 @@ pub const SPLITMIX32_GAMMA: u32 = 0x9E37_79B9;
 ///     let _ = rng.nextu();
 /// }
 /// ```
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct SplitMix32x16 {
     pub(crate) state: __m512i,
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 impl SplitMix32x16 {
     /// Creates a new `SplitMix32x16` instance.
     ///
@@ -135,6 +139,7 @@ impl SplitMix32x16 {
 ///
 /// let _ = core::mem::size_of::<SplitMix32Simd>();
 /// ```
+#[cfg(feature = "simd")]
 #[repr(C)]
 pub struct SplitMix32Simd([u8; 0]);
 

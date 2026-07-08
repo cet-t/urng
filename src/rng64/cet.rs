@@ -1,4 +1,4 @@
-﻿#[cfg(target_arch = "x86_64")]
+﻿#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
@@ -98,11 +98,13 @@ impl Rng64 for Cet256 {
 }
 
 /// An 8-way SIMD CET64 generator using AVX-512 512-bit intrinsics.
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Cet64x8 {
     s: __m512i,
 }
 
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 impl Cet64x8 {
     /// Creates a new `Cet64x8` from 8 independent seeds.
     pub fn new(seed: u64) -> Self {
@@ -201,11 +203,13 @@ impl Cet64x8 {
 /// A 2-way SIMD CET256 generator using AVX-512 storage layout.
 ///
 /// Internal lane mapping is `[s0, s1, s2, s3, s0, s1, s2, s3]`.
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Cet256x2 {
     s: __m512i,
 }
 
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 impl Cet256x2 {
     /// Creates a new `Cet256x2` from 2 independent seeds.
     pub fn new(seed: u64) -> Self {
@@ -305,8 +309,8 @@ mod tests {
     crate::safe_test!(Cet64);
     crate::safe_test!(Cet256);
 
-    #[cfg(all(target_feature = "avx512f", target_feature = "avx512dq"))]
+    #[cfg(all(feature = "simd", target_feature = "avx512f", target_feature = "avx512dq"))]
     crate::unsafe_test!(Cet64x8);
-    #[cfg(all(target_feature = "avx512f", target_feature = "avx512dq"))]
+    #[cfg(all(feature = "simd", target_feature = "avx512f", target_feature = "avx512dq"))]
     crate::unsafe_test!(Cet256x2);
 }

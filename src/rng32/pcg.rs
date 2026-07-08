@@ -1,4 +1,5 @@
-﻿use std::arch::x86_64::*;
+﻿#[cfg(feature = "simd")]
+use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
@@ -49,9 +50,13 @@ impl Rng32 for Pcg32 {
 
 // --- Pcg32x8 (AVX-512) ---
 
+#[cfg(feature = "simd")]
 pub const PCG32X8_LANE: usize = 8;
+#[cfg(feature = "simd")]
 pub const PCG32X8_PAR_CHUNK: usize = 131_072;
+#[cfg(feature = "simd")]
 pub const PCG32X8_PAR_CHUNK_BLOCKS: u64 = (PCG32X8_PAR_CHUNK / PCG32X8_LANE) as u64;
+#[cfg(feature = "simd")]
 pub const PCG32_MULT: u64 = 6364136223846793005;
 
 /// AVX-512 implementation of PCG32 producing 8 values per step.
@@ -66,14 +71,14 @@ pub const PCG32_MULT: u64 = 6364136223846793005;
 ///     let _ = rng.nextu();
 /// }
 /// ```
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Pcg32x8 {
     pub(crate) state: __m512i,
     pub(crate) inc: __m512i,
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 impl Pcg32x8 {
     /// Creates a new `Pcg32x8` instance with 8 independent PCG32 streams.
     /// Requires AVX-512F support.
@@ -114,7 +119,7 @@ impl Pcg32x8 {
         std::mem::transmute(out256)
     }
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
     #[inline]
     #[allow(unsafe_op_in_unsafe_fn)]
     #[target_feature(enable = "avx512f")]
@@ -156,6 +161,7 @@ impl Pcg32x8 {
 ///
 /// let _ = core::mem::size_of::<Pcg32Simd>();
 /// ```
+#[cfg(feature = "simd")]
 #[repr(C)]
 pub struct Pcg32Simd([u8; 0]);
 

@@ -1,14 +1,6 @@
-#[cfg(target_arch = "x86_64")]
-use crate::rng32::jsf::JSF32X16;
-use crate::{
-    _internal::chunk_seed32,
-    rng::{Rng32, Rng32V512},
-    rng32::{Jsf32, jsf::Jsf32x16},
-};
-use rayon::prelude::*;
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
-use std::{ptr, slice::from_raw_parts_mut};
+use crate::rng::Rng32;
+use crate::rng32::Jsf32;
+use std::slice::from_raw_parts_mut;
 
 /// Creates a new `Jsf32` instance.
 /// The caller is responsible for freeing the memory using `jsf32_free`.
@@ -94,6 +86,19 @@ pub extern "C" fn jsf32_rand_f32s(
         crate::_internal::par_fill_reseed32(buffer, base_seed, Jsf32::new, |r| r.randf(min, max));
     }
 }
+
+#[cfg(feature = "simd")]
+pub use simd::*;
+
+#[cfg(feature = "simd")]
+mod simd {
+use crate::_internal::chunk_seed32;
+use crate::rng::Rng32V512;
+use crate::rng32::jsf::{JSF32X16, Jsf32x16};
+use rayon::prelude::*;
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
+use std::{ptr, slice::from_raw_parts_mut};
 
 // --- Jsf32x16 (AVX-512) ---
 
@@ -488,3 +493,5 @@ pub extern "C" fn jsf32x16_rand_f32s(
             });
     }
 }
+
+} // mod simd

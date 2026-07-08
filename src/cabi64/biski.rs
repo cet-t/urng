@@ -1,12 +1,9 @@
 use crate::{
     rng::Rng64,
-    rng64::{Biski64, SplitMix64, biski::Biski64x8},
+    rng64::{Biski64, SplitMix64},
 };
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
-
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
 
 /// Creates a new heap-allocated `Biski64` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`biski64_free`].
@@ -122,6 +119,20 @@ pub extern "C" fn biski64_rand_f64s(
     }
 }
 
+const STRIDE: u64 = 0x9E3779B97F4A7C15;
+
+#[cfg(feature = "simd")]
+pub use simd::*;
+
+#[cfg(feature = "simd")]
+mod simd {
+use super::{STRIDE, SplitMix64};
+use crate::rng::Rng64;
+use crate::rng64::biski::Biski64x8;
+use rayon::prelude::*;
+use std::arch::x86_64::*;
+use std::slice::from_raw_parts_mut;
+
 #[unsafe(no_mangle)]
 pub extern "C" fn biski64x8_new(seed: u64) -> *mut Biski64x8 {
     Box::into_raw(Box::new(Biski64x8::new(seed)))
@@ -135,7 +146,6 @@ pub extern "C" fn biski64x8_free(ptr: *mut Biski64x8) {
 }
 
 const BISKI64X8_PAR_CHUNK: usize = 0x4000;
-const STRIDE: u64 = 0x9E3779B97F4A7C15;
 
 /// 6-way interleaved Biski64x8 with AVX-512 SoA layout.
 #[cfg(target_arch = "x86_64")]
@@ -722,3 +732,5 @@ pub extern "C" fn biski64x8_rand_f64s(
         *rng = Biski64x8::new(seed);
     }
 }
+
+} // mod simd

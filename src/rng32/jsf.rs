@@ -1,12 +1,11 @@
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
-use crate::{
-    rng::{Rng32, Rng32V256, Rng32V512},
-    rng32::SplitMix32,
-};
+#[cfg(feature = "simd")]
+use crate::rng::{Rng32V256, Rng32V512};
+use crate::{rng::Rng32, rng32::SplitMix32};
 
 /// JSF (Jenkins Small Fast) 32-bit RNG implementation.
 ///
@@ -50,6 +49,7 @@ impl Rng32 for Jsf32 {
     }
 }
 
+#[cfg(feature = "simd")]
 #[repr(C, align(64))]
 pub struct Jsf32x8 {
     pub(crate) a: __m256i,
@@ -58,8 +58,10 @@ pub struct Jsf32x8 {
     pub(crate) d: __m256i,
 }
 
+#[cfg(feature = "simd")]
 pub(crate) const JSF32X8: usize = 8;
 
+#[cfg(feature = "simd")]
 impl Jsf32x8 {
     /// # Safety
     #[target_feature(enable = "avx2")]
@@ -83,6 +85,7 @@ impl Jsf32x8 {
     }
 }
 
+#[cfg(feature = "simd")]
 impl Rng32V256 for Jsf32x8 {
     #[inline]
     #[target_feature(enable = "avx2")]
@@ -112,6 +115,7 @@ impl Rng32V256 for Jsf32x8 {
 /// let mut rng = unsafe { Jsf32x16::new(12345) };
 /// let _ = unsafe { rng.nextu() };
 /// ```
+#[cfg(feature = "simd")]
 #[repr(C, align(64))]
 pub struct Jsf32x16 {
     pub(crate) a: __m512i,
@@ -120,8 +124,10 @@ pub struct Jsf32x16 {
     pub(crate) d: __m512i,
 }
 
+#[cfg(feature = "simd")]
 pub(crate) const JSF32X16: usize = 16;
 
+#[cfg(feature = "simd")]
 impl Jsf32x16 {
     /// # Safety
     #[target_feature(enable = "avx512f")]
@@ -145,6 +151,7 @@ impl Jsf32x16 {
     }
 }
 
+#[cfg(feature = "simd")]
 impl Rng32V512 for Jsf32x16 {
     #[inline]
     #[target_feature(enable = "avx512f")]
@@ -162,12 +169,12 @@ impl Rng32V512 for Jsf32x16 {
 mod tests {
     use super::*;
     use crate::safe_test;
-    #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+    #[cfg(all(feature = "simd", any(target_feature = "avx2", target_feature = "avx512f")))]
     use crate::unsafe_test;
 
     safe_test!(Jsf32);
-    #[cfg(target_feature = "avx2")]
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
     unsafe_test!(Jsf32x8);
-    #[cfg(target_feature = "avx512f")]
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     unsafe_test!(Jsf32x16);
 }

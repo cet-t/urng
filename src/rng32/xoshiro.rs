@@ -1,4 +1,5 @@
-﻿use std::arch::x86_64::*;
+﻿#[cfg(feature = "simd")]
+use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
@@ -118,7 +119,7 @@ impl Rng32 for Xoshiro128Ss {
 ///
 /// State: four `__m512i` registers, each holding 16 × u32 values for s[0]..s[3].
 /// Requires AVX-512F support.
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Xoshiro128Ppx16 {
     s0: __m512i,
@@ -127,7 +128,7 @@ pub struct Xoshiro128Ppx16 {
     s3: __m512i,
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 impl Xoshiro128Ppx16 {
     /// Creates a new `Xoshiro128Ppx16` instance seeded with the given value.
     ///
@@ -290,7 +291,7 @@ impl Xoshiro128Ppx16 {
 ///
 /// State: four `__m512i` registers, each holding 16 × u32 values for s[0]..s[3].
 /// Requires AVX-512F support.
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Xoshiro128Ssx16 {
     s0: __m512i,
@@ -299,7 +300,7 @@ pub struct Xoshiro128Ssx16 {
     s3: __m512i,
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 impl Xoshiro128Ssx16 {
     /// Creates a new `Xoshiro128Ssx16` instance seeded with the given value.
     ///

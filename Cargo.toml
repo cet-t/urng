@@ -29,12 +29,12 @@ rand_sfc = "0.2.0"
 
 [[example]]
 name = "main"
-required-features = ["cabi"]
+required-features = ["cabi", "simd"]
 path = "examples/cabi/main.rs"
 
 [[example]]
 name = "test"
-required-features = ["cabi"]
+required-features = ["cabi", "simd"]
 path = "examples/cabi/test.rs"
 
 [[example]]
@@ -47,6 +47,7 @@ path = "examples/testing/main.rs"
 rand = ["dep:rand_core"]
 cabi = ["dep:rayon"]
 wide = ["dep:wide"]
+simd = []
 sampler = []
 seedgen = []
 testing = ["dep:thiserror", "dep:rand_core"]

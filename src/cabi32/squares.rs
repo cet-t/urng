@@ -1,16 +1,19 @@
-use crate::dispatch_simd;
-use crate::rng32::{SQUARES32x8, Squares32, Squares32Simd, Squares32x8};
+use crate::rng32::Squares32;
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
-use std::arch::x86_64::*;
 use std::slice::from_raw_parts_mut;
 
+#[cfg(feature = "simd")]
+mod simd_chunks {
+use crate::rng32::{SQUARES32x8, Squares32x8};
+use std::arch::x86_64::*;
+
 #[allow(non_upper_case_globals)]
-const SQUARES32x8_PAR_CHUNK: usize = 8192;
+pub(super) const SQUARES32x8_PAR_CHUNK: usize = 8192;
 
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f,avx512dq")]
-unsafe fn squares32x8_next_u32s_chunk(
+pub(super) unsafe fn squares32x8_next_u32s_chunk(
     chunk_idx: usize,
     chunk: &mut [u32],
     c0: u64,
@@ -87,7 +90,7 @@ unsafe fn squares32x8_next_u32s_chunk(
 
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f,avx512dq")]
-unsafe fn squares32x8_next_f32s_chunk(
+pub(super) unsafe fn squares32x8_next_f32s_chunk(
     chunk_idx: usize,
     chunk: &mut [f32],
     c0: u64,
@@ -155,7 +158,7 @@ unsafe fn squares32x8_next_f32s_chunk(
 
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f,avx512dq")]
-unsafe fn squares32x8_rand_i32s_chunk(
+pub(super) unsafe fn squares32x8_rand_i32s_chunk(
     chunk_idx: usize,
     chunk: &mut [i32],
     c0: u64,
@@ -244,7 +247,7 @@ unsafe fn squares32x8_rand_i32s_chunk(
 
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx512f,avx512dq")]
-unsafe fn squares32x8_rand_f32s_chunk(
+pub(super) unsafe fn squares32x8_rand_f32s_chunk(
     chunk_idx: usize,
     chunk: &mut [f32],
     c0: u64,
@@ -311,6 +314,8 @@ unsafe fn squares32x8_rand_f32s_chunk(
         }
     }
 }
+
+} // mod simd_chunks
 
 /// Creates a new `Squares32` instance.
 /// The caller is responsible for freeing the memory using `squares32_free`.
@@ -536,6 +541,17 @@ pub extern "C" fn squares32_rand_f32s(
         rng.c += count as u64;
     }
 }
+
+#[cfg(feature = "simd")]
+pub use simd::*;
+
+#[cfg(feature = "simd")]
+mod simd {
+use super::*;
+use super::simd_chunks::*;
+use crate::dispatch_simd;
+use crate::rng32::{SQUARES32x8, Squares32Simd, Squares32x8};
+use std::arch::x86_64::*;
 
 /// Creates a new `Squares32x8` instance.
 /// The caller is responsible for freeing the memory using `squares32x8_free`.
@@ -823,3 +839,5 @@ pub extern "C" fn squares32simd_rand_f32s(
         max
     )
 }
+
+} // mod simd

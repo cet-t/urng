@@ -1,16 +1,6 @@
-use rayon::prelude::*;
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
-use std::{ptr, slice::from_raw_parts_mut};
+use std::slice::from_raw_parts_mut;
 
-use crate::{
-    _internal::{FSCALE32, chunk_seed32},
-    rng::Rng32,
-    rng32::{
-        Sfc32,
-        sfc::{SFC32X4, SFC32X8, SFC32X16, Sfc32x4, Sfc32x8, Sfc32x16},
-    },
-};
+use crate::{rng::Rng32, rng32::Sfc32};
 
 // --- Sfc32 ---
 
@@ -73,6 +63,21 @@ pub extern "C" fn sfc32_rand_f32s(
         crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Sfc32::new, |r| r.randf(min, max));
     }
 }
+
+#[cfg(feature = "simd")]
+pub use simd::*;
+
+#[cfg(feature = "simd")]
+mod simd {
+use rayon::prelude::*;
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
+use std::{ptr, slice::from_raw_parts_mut};
+
+use crate::{
+    _internal::{FSCALE32, chunk_seed32},
+    rng32::sfc::{SFC32X4, SFC32X8, SFC32X16, Sfc32x4, Sfc32x8, Sfc32x16},
+};
 
 // --- Sfc32x4 ---
 
@@ -1013,3 +1018,5 @@ pub extern "C" fn sfc32x16_rand_f32s(
             });
     }
 }
+
+} // mod simd

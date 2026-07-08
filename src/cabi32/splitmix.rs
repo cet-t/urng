@@ -1,12 +1,5 @@
-use crate::dispatch_simd;
 use crate::rng::Rng32;
-use crate::rng32::{
-    SPLITMIX32_GAMMA, SPLITMIX32x16, SPLITMIX32x16_PAR_CHUNK, SplitMix32, SplitMix32Simd,
-    SplitMix32x16,
-};
-use rayon::iter::{IndexedParallelIterator, ParallelIterator};
-use rayon::slice::ParallelSliceMut;
-use std::arch::x86_64::*;
+use crate::rng32::SplitMix32;
 use std::slice::from_raw_parts_mut;
 
 /// Creates a new `SplitMix32` instance.
@@ -81,6 +74,20 @@ pub extern "C" fn splitmix32_rand_f32s(
         });
     }
 }
+
+#[cfg(feature = "simd")]
+pub use simd::*;
+
+#[cfg(feature = "simd")]
+mod simd {
+use super::*;
+use crate::dispatch_simd;
+use crate::rng32::{
+    SPLITMIX32_GAMMA, SPLITMIX32x16, SPLITMIX32x16_PAR_CHUNK, SplitMix32Simd, SplitMix32x16,
+};
+use rayon::iter::{IndexedParallelIterator, ParallelIterator};
+use rayon::slice::ParallelSliceMut;
+use std::arch::x86_64::*;
 
 /// Creates a new `SplitMix32x16` instance.
 /// The caller is responsible for freeing the memory using `splitmix32x16_free`.
@@ -190,3 +197,5 @@ pub extern "C" fn splitmix32simd_next_u32s(ptr: *mut SplitMix32Simd, out: *mut u
         count
     )
 }
+
+} // mod simd

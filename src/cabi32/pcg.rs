@@ -1,12 +1,5 @@
-use crate::dispatch_simd;
 use crate::rng::Rng32;
-use crate::rng32::{
-    PCG32_MULT, PCG32X8_LANE, PCG32X8_PAR_CHUNK, PCG32X8_PAR_CHUNK_BLOCKS, Pcg32, Pcg32Simd,
-    Pcg32x8,
-};
-use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
-use rayon::slice::ParallelSliceMut;
-use std::arch::x86_64::*;
+use crate::rng32::Pcg32;
 use std::slice::from_raw_parts_mut;
 
 /// Creates a new `Pcg32` instance.
@@ -97,6 +90,18 @@ pub extern "C" fn pcg32_rand_f32s(
         );
     }
 }
+
+#[cfg(feature = "simd")]
+pub use simd::*;
+
+#[cfg(feature = "simd")]
+mod simd {
+use super::*;
+use crate::dispatch_simd;
+use crate::rng32::{PCG32_MULT, PCG32X8_LANE, PCG32X8_PAR_CHUNK, PCG32X8_PAR_CHUNK_BLOCKS, Pcg32Simd, Pcg32x8};
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use rayon::slice::ParallelSliceMut;
+use std::arch::x86_64::*;
 
 #[inline(always)]
 fn pcg32_advance_lcg(state: u64, inc: u64, delta: u64) -> u64 {
@@ -619,3 +624,5 @@ pub extern "C" fn pcg32simd_rand_f32s(
         max
     )
 }
+
+} // mod simd

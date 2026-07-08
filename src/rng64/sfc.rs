@@ -1,4 +1,4 @@
-﻿#[cfg(target_arch = "x86_64")]
+﻿#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
 use wrapn::Wrap;
@@ -66,7 +66,7 @@ impl Rng64 for Sfc64 {
 ///     let _ = rng.nextu();
 /// }
 /// ```
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Sfc64x8 {
     a: __m512i,
@@ -75,7 +75,7 @@ pub struct Sfc64x8 {
     counter: __m512i,
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 impl Sfc64x8 {
     /// Creates a new `Sfc64x8` from 8 independent seeds.
     ///
@@ -196,6 +196,6 @@ mod tests {
 
     crate::safe_test!(Sfc64);
 
-    #[cfg(target_feature = "avx512f")]
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     crate::unsafe_test!(Sfc64x8);
 }

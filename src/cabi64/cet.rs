@@ -1,33 +1,12 @@
 use crate::rng::Rng64;
-use crate::rng64::{Cet64, Cet64x8, Cet256, Cet256x2, SplitMix64};
+use crate::rng64::{Cet64, Cet256, SplitMix64};
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
 
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
-
 const STRIDE: u64 = 0x9E3779B97F4A7C15;
-const CET_SP1: u64 = 0xFFFFFFFFFFFFFF43;
-const CET_P1: u64 = 0x94D049BB133111EB;
 
 const CET64_PAR_CHUNK: usize = 0x10000;
 const CET256_PAR_CHUNK: usize = 0x10000;
-const CET64X8_PAR_CHUNK: usize = 0x10000;
-const CET256X2_PAR_CHUNK: usize = 0x10000;
-
-#[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx512f")]
-#[allow(unsafe_op_in_unsafe_fn)]
-unsafe fn cet_mul_sp2_vec(x: __m512i) -> __m512i {
-    // CET_SP2 == -229 mod 2^64.
-    let x8 = _mm512_slli_epi64(x, 8);
-    let x5 = _mm512_slli_epi64(x, 5);
-    let x2 = _mm512_slli_epi64(x, 2);
-    let t0 = _mm512_sub_epi64(x8, x5);
-    let t1 = _mm512_add_epi64(x2, x);
-    let t = _mm512_add_epi64(t0, t1);
-    _mm512_sub_epi64(_mm512_setzero_si512(), t)
-}
 
 /// Creates a new heap-allocated `Cet64` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`cet64_free`].
@@ -238,6 +217,35 @@ pub extern "C" fn cet256_rand_f64s(
                 }
             });
     }
+}
+
+#[cfg(feature = "simd")]
+pub use simd::*;
+
+#[cfg(feature = "simd")]
+mod simd {
+use super::{STRIDE, SplitMix64};
+use crate::rng64::{Cet64x8, Cet256x2};
+use rayon::prelude::*;
+use std::arch::x86_64::*;
+use std::slice::from_raw_parts_mut;
+
+const CET_SP1: u64 = 0xFFFFFFFFFFFFFF43;
+const CET_P1: u64 = 0x94D049BB133111EB;
+const CET64X8_PAR_CHUNK: usize = 0x10000;
+const CET256X2_PAR_CHUNK: usize = 0x10000;
+
+#[target_feature(enable = "avx512f")]
+#[allow(unsafe_op_in_unsafe_fn)]
+unsafe fn cet_mul_sp2_vec(x: __m512i) -> __m512i {
+    // CET_SP2 == -229 mod 2^64.
+    let x8 = _mm512_slli_epi64(x, 8);
+    let x5 = _mm512_slli_epi64(x, 5);
+    let x2 = _mm512_slli_epi64(x, 2);
+    let t0 = _mm512_sub_epi64(x8, x5);
+    let t1 = _mm512_add_epi64(x2, x);
+    let t = _mm512_add_epi64(t0, t1);
+    _mm512_sub_epi64(_mm512_setzero_si512(), t)
 }
 
 #[unsafe(no_mangle)]
@@ -488,3 +496,5 @@ pub extern "C" fn cet256x2_next_u64s(ptr: *mut Cet256x2, out: *mut u64, count: u
         *rng = Cet256x2::new(next_seed);
     }
 }
+
+} // mod simd

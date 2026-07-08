@@ -1,8 +1,11 @@
-﻿use std::arch::x86_64::*;
+﻿#[cfg(feature = "simd")]
+use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
-use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
+#[cfg(feature = "simd")]
+use crate::_internal::FSCALE32;
+use crate::{rng::Rng32, rng32::SplitMix32};
 
 /// A SFC32 pseudo-random number generator.
 ///
@@ -56,6 +59,7 @@ impl Rng32 for Sfc32 {
     }
 }
 
+#[cfg(feature = "simd")]
 pub(crate) const SFC32X4: usize = 4;
 
 /// A SFC32 pseudo-random number generator.
@@ -68,6 +72,7 @@ pub(crate) const SFC32X4: usize = 4;
 /// let mut rng = Sfc32x4::new(1);
 /// let _ = rng.nextu();
 /// ```
+#[cfg(feature = "simd")]
 #[repr(C, align(64))]
 pub struct Sfc32x4 {
     pub(crate) a: __m128i,
@@ -76,6 +81,7 @@ pub struct Sfc32x4 {
     pub(crate) counter: __m128i,
 }
 
+#[cfg(feature = "simd")]
 impl Sfc32x4 {
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
@@ -160,6 +166,7 @@ impl Sfc32x4 {
     }
 }
 
+#[cfg(feature = "simd")]
 pub(crate) const SFC32X8: usize = 8;
 
 /// A SFC32 pseudo-random number generator.
@@ -172,6 +179,7 @@ pub(crate) const SFC32X8: usize = 8;
 /// let mut rng = unsafe { Sfc32x8::new(1) };
 /// let _ = rng.nextu();
 /// ```
+#[cfg(feature = "simd")]
 #[repr(C, align(64))]
 pub struct Sfc32x8 {
     pub(crate) a: __m256i,
@@ -180,6 +188,7 @@ pub struct Sfc32x8 {
     pub(crate) counter: __m256i,
 }
 
+#[cfg(feature = "simd")]
 #[allow(dead_code)]
 impl Sfc32x8 {
     ///
@@ -254,6 +263,7 @@ impl Sfc32x8 {
     }
 }
 
+#[cfg(feature = "simd")]
 pub(crate) const SFC32X16: usize = 16;
 
 /// A SFC32 pseudo-random number generator.
@@ -266,6 +276,7 @@ pub(crate) const SFC32X16: usize = 16;
 /// let mut rng = unsafe { Sfc32x16::new(1) };
 /// let _ = rng.nextu();
 /// ```
+#[cfg(feature = "simd")]
 #[repr(C, align(64))]
 pub struct Sfc32x16 {
     pub(crate) a: __m512i,
@@ -274,6 +285,7 @@ pub struct Sfc32x16 {
     pub(crate) counter: __m512i,
 }
 
+#[cfg(feature = "simd")]
 #[allow(dead_code)]
 impl Sfc32x16 {
     ///
@@ -359,12 +371,14 @@ mod tests {
     use crate::unsafe_test;
 
     safe_test!(Sfc32);
+    #[cfg(feature = "simd")]
     safe_test!(Sfc32x4);
-    #[cfg(target_feature = "avx2")]
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
     unsafe_test!(Sfc32x8);
-    #[cfg(target_feature = "avx512f")]
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     unsafe_test!(Sfc32x16);
 
+    #[cfg(feature = "simd")]
     fn scalar_lanes(seed: u32) -> [Sfc32; SFC32X4] {
         let mut seedgen = SplitMix32::new(seed);
         std::array::from_fn(|_| Sfc32 {
@@ -375,6 +389,7 @@ mod tests {
         })
     }
 
+    #[cfg(feature = "simd")]
     #[test]
     fn sfc32x4_lanes_match_scalar() {
         let mut vector = Sfc32x4::new(0);
@@ -387,6 +402,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "simd")]
     #[test]
     fn sfc32x4_randiv_randfv_match_scalar() {
         let (min_i, max_i) = (-5i32, 7i32);

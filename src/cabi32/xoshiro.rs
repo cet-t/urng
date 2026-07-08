@@ -1,36 +1,6 @@
-use crate::_internal::chunk_seed32;
 use crate::rng::Rng32;
-use crate::rng32::{Xoshiro128Pp, Xoshiro128Ppx16, Xoshiro128Ss, Xoshiro128Ssx16};
-use rayon::iter::{IndexedParallelIterator, ParallelIterator};
-use rayon::slice::ParallelSliceMut;
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
-use std::{ptr, slice::from_raw_parts_mut};
-
-#[cfg(target_arch = "x86_64")]
-const XOSHIRO128X16_LANES: usize = 16;
-#[cfg(target_arch = "x86_64")]
-const XOSHIRO128X16_PAR_CHUNK: usize = 1 << 20;
-
-#[cfg(target_arch = "x86_64")]
-#[inline]
-#[target_feature(enable = "avx512f")]
-unsafe fn xoshiro128ppx16_base_seed(rng: &mut Xoshiro128Ppx16) -> u32 {
-    let mut tmp = [0u32; XOSHIRO128X16_LANES];
-    let v = unsafe { rng.nextu_vec() };
-    unsafe { _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v) };
-    tmp[0]
-}
-
-#[cfg(target_arch = "x86_64")]
-#[inline]
-#[target_feature(enable = "avx512f")]
-unsafe fn xoshiro128ssx16_base_seed(rng: &mut Xoshiro128Ssx16) -> u32 {
-    let mut tmp = [0u32; XOSHIRO128X16_LANES];
-    let v = unsafe { rng.nextu_vec() };
-    unsafe { _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v) };
-    tmp[0]
-}
+use crate::rng32::{Xoshiro128Pp, Xoshiro128Ss};
+use std::slice::from_raw_parts_mut;
 
 // --- Xoshiro128++ ---
 
@@ -204,6 +174,44 @@ pub extern "C" fn xoshiro128ss_rand_f32s(
             r.randf(min, max)
         });
     }
+}
+
+#[cfg(feature = "simd")]
+pub use simd::*;
+
+#[cfg(feature = "simd")]
+mod simd {
+use crate::_internal::chunk_seed32;
+use crate::rng32::{Xoshiro128Ppx16, Xoshiro128Ssx16};
+use rayon::iter::{IndexedParallelIterator, ParallelIterator};
+use rayon::slice::ParallelSliceMut;
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
+use std::{ptr, slice::from_raw_parts_mut};
+
+#[cfg(target_arch = "x86_64")]
+const XOSHIRO128X16_LANES: usize = 16;
+#[cfg(target_arch = "x86_64")]
+const XOSHIRO128X16_PAR_CHUNK: usize = 1 << 20;
+
+#[cfg(target_arch = "x86_64")]
+#[inline]
+#[target_feature(enable = "avx512f")]
+unsafe fn xoshiro128ppx16_base_seed(rng: &mut Xoshiro128Ppx16) -> u32 {
+    let mut tmp = [0u32; XOSHIRO128X16_LANES];
+    let v = unsafe { rng.nextu_vec() };
+    unsafe { _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v) };
+    tmp[0]
+}
+
+#[cfg(target_arch = "x86_64")]
+#[inline]
+#[target_feature(enable = "avx512f")]
+unsafe fn xoshiro128ssx16_base_seed(rng: &mut Xoshiro128Ssx16) -> u32 {
+    let mut tmp = [0u32; XOSHIRO128X16_LANES];
+    let v = unsafe { rng.nextu_vec() };
+    unsafe { _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v) };
+    tmp[0]
 }
 
 // --- Xoshiro128++ x16 ---
@@ -843,3 +851,5 @@ pub extern "C" fn xoshiro128ssx16_rand_f32s(
             });
     }
 }
+
+} // mod simd

@@ -1,10 +1,7 @@
 use crate::rng::Rng64;
-use crate::rng64::{SplitMix64, Xoshiro256Pp, Xoshiro256Ss, Xoshiro256Ssx2};
+use crate::rng64::{SplitMix64, Xoshiro256Pp, Xoshiro256Ss};
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
-
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
 
 /// Creates a new heap-allocated `Xoshiro256Pp` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`xoshiro256pp_free`].
@@ -123,6 +120,17 @@ pub extern "C" fn xoshiro256pp_rand_f64s(
             });
     }
 }
+
+#[cfg(feature = "simd")]
+pub use simd::*;
+
+#[cfg(feature = "simd")]
+mod simd {
+use crate::rng::Rng64;
+use crate::rng64::{SplitMix64, Xoshiro256Ssx2};
+use rayon::prelude::*;
+use std::arch::x86_64::*;
+use std::slice::from_raw_parts_mut;
 
 /// Creates a new heap-allocated `Xoshiro256Ssx2` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`xoshiro256ssx2_free`].
@@ -313,6 +321,8 @@ pub extern "C" fn xoshiro256ssx2_next_u64s(ptr: *mut Xoshiro256Ssx2, out: *mut u
         *rng = Xoshiro256Ssx2::new(new_seed);
     }
 }
+
+} // mod simd
 
 /// Creates a new heap-allocated `Xoshiro256Ss` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`xoshiro256ss_free`].
