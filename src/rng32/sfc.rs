@@ -1,4 +1,4 @@
-use std::arch::x86_64::*;
+﻿use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
@@ -9,7 +9,7 @@ use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = Sfc32::new(1);
 /// let _ = rng.nextu();
@@ -18,7 +18,7 @@ use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
 /// A time-seeded instance can also be created via `Default`:
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = Sfc32::default();
 /// let _ = rng.nextu();

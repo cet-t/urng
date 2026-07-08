@@ -1,4 +1,4 @@
-use std::arch::x86_64::*;
+﻿use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
@@ -14,7 +14,7 @@ use crate::{rng::Rng32, rng64::SplitMix64};
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = Pcg32::new(1);
 /// let _ = rng.nextu();

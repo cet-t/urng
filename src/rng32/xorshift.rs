@@ -1,4 +1,4 @@
-use wrapn::{Wrap, wrap};
+﻿use wrapn::{Wrap, wrap};
 
 use crate::rng::Rng32;
 use crate::rng32::SplitMix32;
@@ -12,7 +12,7 @@ use crate::rng32::SplitMix32;
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = Xorshift32::new(1);
 /// let _ = rng.nextu();
@@ -53,7 +53,7 @@ impl Rng32 for Xorshift32 {
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = Xorshift128::new(1);
 /// let _ = rng.nextu();
@@ -98,7 +98,7 @@ impl Rng32 for Xorshift128 {
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = Xorwow::new(1);
 /// assert_eq!(rng.nextu(), 3932718581);

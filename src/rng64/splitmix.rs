@@ -1,4 +1,4 @@
-use wrapn::{Wrap, wrap};
+﻿use wrapn::{Wrap, wrap};
 
 use crate::rng::Rng64;
 
@@ -10,7 +10,7 @@ use crate::rng::Rng64;
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = SplitMix64::new(1);
 /// assert_eq!(rng.nextu(), 10451216379200822465);

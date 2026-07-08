@@ -1,4 +1,4 @@
-[<img alt="crates.io" src="https://img.shields.io/crates/v/urng.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/urng)
+﻿[<img alt="crates.io" src="https://img.shields.io/crates/v/urng.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/urng)
 [<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-urng-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/urng)
 [<img alt="github" src="https://img.shields.io/badge/github-cet--t%2Furng-5f5fff?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/cet-t/urng)
 
@@ -173,7 +173,7 @@ A statistical test harness for validating RNG quality, generic over any `Rng32`/
 | `McPiSuite32` / `McPiSuite64`   | `urng::testing` | Run named Monte Carlo cases together |
 
 ```rust
-use urng::prelude::*;
+use urng::*;
 use urng::testing::{ChiSq32, ChiSqVerdict};
 
 let mut rng = Sfc32::new(0);
@@ -191,7 +191,7 @@ Most generators expose the same basic workflow: create an instance with `new`, t
 Scalar generators (both 32-bit and 64-bit; SIMD variants are not included) also implement `Default`, seeding themselves from a time-based, per-call mix so no explicit seed is required:
 
 ```rust
-use urng::prelude::*;
+use urng::*;
 
 let mut rng = Sfc32::default();
 let _ = rng.nextu();
@@ -202,7 +202,7 @@ let _ = rng.nextu();
 ### Basic Usage
 
 ```rust
-use urng::prelude::*;
+use urng::*;
 
 fn main() {
     // 1. Initialize with a seed

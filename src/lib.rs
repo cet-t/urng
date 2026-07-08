@@ -13,7 +13,7 @@
 //! * **Small Fast Chaotic**: [`rng64::Sfc64`] (64-bit).
 //! * **Threefry**: [`rng32::Threefry32x4`] (4x32-bit), [`rng32::Threefry32x2`] (2x32-bit).
 //! * **Threefish**: [`rng64::Threefish256`] (256-bit block cipher PRNG).
-//! * **Xorshift**: [`rng32::Xorshift32`] (32-bit), [`rng64::Xorshift64`] (64-bit), [`rng128::Xorshift128`] (128-bit state).
+//! * **Xorshift**: [`rng32::Xorshift32`] (32-bit), [`rng64::Xorshift64`] (64-bit), [`rng32::Xorshift128`] (128-bit state).
 //! * **Xorwow**: [`rng32::Xorwow`] (32-bit).
 //! * **Xoshiro** (32-bit): [`rng32::Xoshiro128Pp`], [`rng32::Xoshiro128Ss`].
 //! * **Xoshiro** (64-bit): [`rng64::Xoshiro256Pp`], [`rng64::Xoshiro256Ss`].
@@ -84,12 +84,3 @@ pub mod testing;
 
 #[macro_use]
 pub mod macros;
-
-/// Convenient re-exports of the RNG traits and generators.
-pub mod prelude {
-    pub use crate::rng::*;
-    #[allow(ambiguous_glob_reexports)]
-    pub use crate::rng32::*;
-    #[allow(ambiguous_glob_reexports)]
-    pub use crate::rng64::*;
-}

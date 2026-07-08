@@ -1,4 +1,4 @@
-#[cfg(target_arch = "x86_64")]
+﻿#[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
@@ -14,7 +14,7 @@ use crate::rng64::SplitMix64;
 /// # Examples
 ///
 /// ```
-/// use urng::prelude::*;
+/// use urng::*;
 ///
 /// let mut rng = Cet64::new(1);
 /// let _ = rng.nextu();
