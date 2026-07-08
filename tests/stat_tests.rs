@@ -4,17 +4,19 @@ mod stat;
 use anyhow::Result;
 use std::fs;
 use std::sync::OnceLock;
-#[cfg(target_feature = "avx512f")]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 use urng::rng::Rng32V512;
 use urng::rng::{Rng32, Rng64};
-#[cfg(target_feature = "avx2")]
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
 use urng::rng32::Sfc32x8;
+#[cfg(feature = "simd")]
+use urng::rng32::Sfc32x4;
 use urng::rng32::{
-    Jsf32, Mt19937, Pcg32, Philox32x4, Sfc32, Sfc32x4, Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253,
-    Sfmt11213, Sfmt19937, Sfmt44497, Sfmt86243, Sfmt132049, Sfmt216091, SplitMix32, Squares32,
-    Threefry32x2, Threefry32x4, Xorshift32, Xorshift128, Xorwow,
+    Jsf32, Mt19937, Pcg32, Philox32x4, Sfc32, Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253, Sfmt11213,
+    Sfmt19937, Sfmt44497, Sfmt86243, Sfmt132049, Sfmt216091, SplitMix32, Squares32, Threefry32x2,
+    Threefry32x4, Xorshift32, Xorshift128, Xorwow,
 };
-#[cfg(target_feature = "avx512f")]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 use urng::rng32::{Jsf32x16, Sfc32x16, Xoroshiro64Ssx16};
 use urng::rng64::{
     Biski64, Cet64, Cet256, Mt1993764, Philox64, Sfc64, Sfmt1993764, SplitMix64, Threefish256,
@@ -98,7 +100,7 @@ fn gen_arr4f32<F: FnMut() -> [f32; 4]>(mut f: F) -> impl FnMut() -> f64 {
     }
 }
 
-#[cfg(target_feature = "avx2")]
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
 fn gen_arr8f32<F: FnMut() -> [f32; 8]>(mut f: F) -> impl FnMut() -> f64 {
     let mut buf = [0f32; 8];
     let mut i = 4usize;
@@ -113,7 +115,7 @@ fn gen_arr8f32<F: FnMut() -> [f32; 8]>(mut f: F) -> impl FnMut() -> f64 {
     }
 }
 
-#[cfg(target_feature = "avx512f")]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 fn gen_arr16f32<F: FnMut() -> [f32; 16]>(mut f: F) -> impl FnMut() -> f64 {
     let mut buf = [0f32; 16];
     let mut i = 16usize;
@@ -446,15 +448,16 @@ fn build_suite() -> Result<Suite> {
     reg!(arr2f32 chi, monte, Threefry32x2);
     reg!(s32 chi, monte, Squares32);
     reg!(s32 chi, monte, Jsf32);
-    #[cfg(target_feature = "avx512f")]
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     reg!(arr16f32 chi, monte, Jsf32x16);
     reg!(s32 chi, monte, Sfc32);
+    #[cfg(feature = "simd")]
     reg!(arr4f32 chi, monte, Sfc32x4);
-    #[cfg(target_feature = "avx2")]
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
     reg!(arr8f32 chi, monte, Sfc32x8);
-    #[cfg(target_feature = "avx512f")]
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     reg!(arr16f32 chi, monte, Sfc32x16);
-    #[cfg(target_feature = "avx512f")]
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     reg!(arr16f32 chi, monte, Xoroshiro64Ssx16);
 
     // rng64  (nextu → u64 scalar, except Philox64 → [u64;2] and Threefish256 → [f64;4])

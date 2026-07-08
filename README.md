@@ -182,6 +182,7 @@ A statistical test harness for validating RNG quality, generic over any `Rng32`/
 | `ChiSqSuite32` / `ChiSqSuite64` | `urng::testing` | Run named chi-squared cases together |
 | `McPi32` / `McPi64`             | `urng::testing` | Monte Carlo estimation of π          |
 | `McPiSuite32` / `McPiSuite64`   | `urng::testing` | Run named Monte Carlo cases together |
+| `Test32` / `Test64`             | `urng::testing` | Blanket trait adding `run_chisq`/`run_mcpi` directly to any `Rng32`/`Rng64` implementor |
 
 ```rust
 use urng::*;
@@ -190,6 +191,17 @@ use urng::testing::{ChiSq32, ChiSqVerdict};
 let mut rng = Sfc32::new(0);
 let mut chisq = ChiSq32::from_urng(&mut rng);
 let result = chisq.run("Sfc32").unwrap();
+assert_eq!(result.verdict, ChiSqVerdict::Pass);
+```
+
+`Test32`/`Test64` skip the explicit harness construction for the common case — call `run_chisq`/`run_mcpi` straight on the generator:
+
+```rust
+use urng::*;
+use urng::testing::{ChiSqVerdict, Test32};
+
+let mut rng = Sfc32::new(0);
+let result = rng.run_chisq("Sfc32").unwrap();
 assert_eq!(result.verdict, ChiSqVerdict::Pass);
 ```
 
