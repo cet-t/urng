@@ -1,4 +1,4 @@
-﻿#[cfg(target_arch = "x86_64")]
+﻿#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
@@ -59,12 +59,13 @@ impl Rng64 for Xoshiro256Pp {
 }
 
 /// AVX-512 vectorized xoshiro256++ variant producing 2 `u64` values per call.
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Xoshiro256Ssx2 {
     pub(crate) s: __m512i,
 }
 
+#[cfg(feature = "simd")]
 impl Xoshiro256Ssx2 {
     /// Creates a new `Xoshiro256Ssx2` instance.
     #[cfg(target_arch = "x86_64")]

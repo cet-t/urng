@@ -1,10 +1,7 @@
 use crate::rng::Rng64;
-use crate::rng64::{Sfc64, Sfc64x8, SplitMix64};
+use crate::rng64::{Sfc64, SplitMix64};
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
-
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
 
 /// Creates a new heap-allocated `Sfc64` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`sfc64_free`].
@@ -123,6 +120,15 @@ pub extern "C" fn sfc64_rand_f64s(
             });
     }
 }
+
+#[cfg(feature = "simd")]
+pub use simd::*;
+
+#[cfg(feature = "simd")]
+mod simd {
+use super::*;
+use crate::rng64::Sfc64x8;
+use std::arch::x86_64::*;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn sfc64x8_new(seed: u64) -> *mut Sfc64x8 {
@@ -294,3 +300,5 @@ pub extern "C" fn sfc64x8_next_u64s(ptr: *mut Sfc64x8, out: *mut u64, count: usi
         *rng = Sfc64x8::new(seed);
     }
 }
+
+} // mod simd

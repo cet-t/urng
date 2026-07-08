@@ -1,4 +1,5 @@
-﻿use std::arch::x86_64::*;
+﻿#[cfg(feature = "simd")]
+use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
@@ -72,6 +73,7 @@ impl Rng32 for Squares32 {
 
 // C-ABI exports for Squares32
 
+#[cfg(feature = "simd")]
 #[allow(non_upper_case_globals)]
 pub const SQUARES32x8: usize = 8;
 
@@ -87,7 +89,7 @@ pub const SQUARES32x8: usize = 8;
 ///     let _ = rng.nextu();
 /// }
 /// ```
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C)]
 #[repr(align(64))]
 pub struct Squares32x8 {
@@ -97,7 +99,7 @@ pub struct Squares32x8 {
     pub k: __m512i,
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 impl Squares32x8 {
     /// Creates a new `Squares32x8` instance from a 32-bit seed.
     /// The seed is used to initialize the counters and keys.
@@ -204,6 +206,7 @@ impl Squares32x8 {
 ///
 /// let _ = core::mem::size_of::<Squares32Simd>();
 /// ```
+#[cfg(feature = "simd")]
 #[repr(C)]
 pub struct Squares32Simd([u8; 0]);
 
@@ -213,6 +216,6 @@ mod tests {
 
     crate::safe_test!(Squares32);
 
-    #[cfg(all(target_feature = "avx512f", target_feature = "avx512dq"))]
+    #[cfg(all(feature = "simd", target_feature = "avx512f", target_feature = "avx512dq"))]
     crate::unsafe_test!(Squares32x8);
 }

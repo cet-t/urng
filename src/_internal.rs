@@ -82,7 +82,7 @@ pub(crate) unsafe fn fill_chunk<T: Copy, const N: usize, F: FnMut() -> [T; N]>(
 /// straight to memory, bypassing the cache (no RFO read traffic).
 /// Requires `N * size_of::<T>()` to be a multiple of 32 bytes.
 /// Falls back to cached stores when `chunk` is not 32-byte aligned.
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[target_feature(enable = "avx2")]
 #[allow(unsafe_op_in_unsafe_fn)]
 pub(crate) unsafe fn fill_chunk_nt<T: Copy, const N: usize, F: FnMut() -> [T; N]>(
@@ -158,7 +158,7 @@ pub(crate) unsafe fn fill_chunk_auto<T: Copy, const N: usize, F: FnMut() -> [T; 
     nt: bool,
     generate: F,
 ) {
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
     if nt && std::arch::is_x86_feature_detected!("avx2") {
         return unsafe { fill_chunk_nt(chunk, generate) };
     }
@@ -292,7 +292,7 @@ mod tests {
         }
     }
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
     #[test]
     fn fill_chunk_nt_writes_every_element() {
         if !std::arch::is_x86_feature_detected!("avx2") {
@@ -308,7 +308,7 @@ mod tests {
     /// Batches smaller than one 32-byte store must fall back to cached
     /// stores instead of silently dropping every store (regression test:
     /// sfc32x4 once produced 4-element batches and wrote nothing).
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
     #[test]
     fn fill_chunk_nt_small_batch_falls_back() {
         if !std::arch::is_x86_feature_detected!("avx2") {

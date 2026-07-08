@@ -1,3 +1,4 @@
+#[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
 use wrapn::Wrap;
@@ -61,7 +62,7 @@ impl Rng64 for Biski64 {
 ///     let _ = rng.nextu();
 /// }
 /// ```
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Biski64x8 {
     fast_loop: __m512i,
@@ -69,9 +70,10 @@ pub struct Biski64x8 {
     loop_mix: __m512i,
 }
 
+#[cfg(feature = "simd")]
 pub(crate) const INC: u64 = 0x9999999999999999;
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 impl Biski64x8 {
     /// Creates a new `Biski64x8` from 8 independent seeds.
     ///
@@ -186,6 +188,6 @@ mod tests {
 
     crate::safe_test!(Biski64);
 
-    #[cfg(target_feature = "avx512f")]
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     crate::unsafe_test!(Biski64x8);
 }
