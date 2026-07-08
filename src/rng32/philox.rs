@@ -4,6 +4,7 @@ use std::arch::x86_64::*;
 use wrapn::{Wrap, wrap};
 
 use crate::_internal::FSCALE32;
+#[allow(unused_imports)]
 use crate::rng::Rng32;
 use crate::rng32::SplitMix32;
 
@@ -11,20 +12,25 @@ use crate::rng32::SplitMix32;
 
 /// A Philox 4x32 random number generator.
 ///
-/// This is a counter-based RNG suitable for parallel applications.
+/// This is a counter-based RNG suitable for parallel applications. Implements
+/// [`Rng32`] directly: each call to [`Rng32::nextu`] hands out one `u32` from
+/// an internal 4-word buffer, recomputing a fresh block every 4th call.
 ///
 /// # Examples
 ///
 /// ```
 /// use urng::rng32::Philox32x4;
+/// use urng::rng::Rng32;
 ///
 /// let mut rng = Philox32x4::new(1);
-/// let _ = rng.nextu();
+/// let _: u32 = rng.nextu();
 /// ```
 #[repr(C)]
 pub struct Philox32x4 {
     pub(crate) c: [Wrap<u32>; 4],
     pub(crate) k: [Wrap<u32>; 2],
+    pub(crate) buf: [Wrap<u32>; 4],
+    pub(crate) pos: Wrap<usize>,
 }
 
 impl Philox32x4 {
@@ -40,6 +46,8 @@ impl Philox32x4 {
                 seedgen.nextu(),
             ],
             k: wrap![seedgen.nextu(), seedgen.nextu()],
+            buf: wrap![0; 4],
+            pos: 4.into(),
         }
     }
 
@@ -107,9 +115,13 @@ impl Philox32x4 {
         x.map(|x| x.value())
     }
 
-    /// Generates the next block of random numbers.
+    /// Generates the next block of 4 random `u32` values in one call.
+    ///
+    /// This is the raw bulk-generation path (used internally to refill the
+    /// scalar [`Rng32::nextu`] buffer, and available directly for
+    /// throughput-sensitive callers that want the whole block at once).
     #[inline(always)]
-    pub fn nextu(&mut self) -> [u32; 4] {
+    pub fn next_raw(&mut self) -> [u32; 4] {
         let out = Self::compute(self.c, self.k);
         self.c[0] += 1;
         if self.c[0] == 0 {
@@ -123,28 +135,9 @@ impl Philox32x4 {
         }
         out
     }
-
-    /// Generates the next random `f32` value in the range [0, 1).
-    #[inline(always)]
-    pub fn nextf(&mut self) -> [f32; 4] {
-        self.nextu().map(|x| x as f32 * FSCALE32)
-    }
-
-    /// Generates a random `i32` value in the range [min, max].
-    #[inline(always)]
-    pub fn randi(&mut self, min: i32, max: i32) -> [i32; 4] {
-        let range = (max as i64 - min as i64 + 1) as u64;
-        self.nextu()
-            .map(|x| ((x as u64 * range) >> 32) as i32 + min)
-    }
-
-    /// Generates a random `f32` value in the range [min, max).
-    #[inline(always)]
-    pub fn randf(&mut self, min: f32, max: f32) -> [f32; 4] {
-        let scale = (max - min) * FSCALE32;
-        self.nextu().map(|x| (x as f32 * scale) + min)
-    }
 }
+
+crate::impl_ring_rng32!(Philox32x4, 4, next_raw);
 
 // --- Philox32x4-10 x4 ---
 

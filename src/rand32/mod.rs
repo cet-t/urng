@@ -53,11 +53,11 @@ impl rand_core::TryRng for Philox32x4 {
     type Error = std::convert::Infallible;
 
     fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
-        Ok(self.nextu()[0])
+        Ok(self.nextu())
     }
 
     fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
-        let out = self.nextu();
+        let out = self.next_raw();
         Ok((out[0] as u64) << 32 | out[1] as u64)
     }
 
@@ -67,7 +67,7 @@ impl rand_core::TryRng for Philox32x4 {
         let mut i = 0;
         while i < dst.len() {
             if buf_pos >= 16 {
-                let arr = self.nextu();
+                let arr = self.next_raw();
                 for j in 0..4 {
                     buf[j * 4..(j + 1) * 4].copy_from_slice(&arr[j].to_le_bytes());
                 }

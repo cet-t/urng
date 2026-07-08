@@ -1,25 +1,31 @@
 use wrapn::{Wrap, wrap};
 
+#[allow(unused_imports)]
 use crate::{_internal::FSCALE64, rng::Rng64, rng64::SplitMix64};
 
 // --- Philox64 ---
 
 /// A Philox 2x64 random number generator.
 ///
-/// This is a counter-based RNG suitable for parallel applications.
+/// This is a counter-based RNG suitable for parallel applications. Implements
+/// [`Rng64`] directly: each call to [`Rng64::nextu`] hands out one `u64` from
+/// an internal 2-word buffer, recomputing a fresh block every 2nd call.
 ///
 /// # Examples
 ///
 /// ```
 /// use urng::rng64::Philox64;
+/// use urng::rng::Rng64;
 ///
 /// let mut rng = Philox64::new(1);
-/// let _ = rng.nextu();
+/// let _: u64 = rng.nextu();
 /// ```
 #[repr(C, align(64))]
 pub struct Philox64 {
     pub(crate) c: [Wrap<u64>; 2],
     pub(crate) k: [Wrap<u64>; 2],
+    pub(crate) buf: [Wrap<u64>; 2],
+    pub(crate) pos: Wrap<usize>,
 }
 
 impl Philox64 {
@@ -29,6 +35,8 @@ impl Philox64 {
         Self {
             c: wrap![1, 0],
             k: wrap![seedgen.nextu(), seedgen.nextu()],
+            buf: wrap![0; 2],
+            pos: 2.into(),
         }
     }
 
@@ -70,9 +78,13 @@ impl Philox64 {
         v.map(|x| x.value())
     }
 
-    /// Generates the next block of random numbers.
+    /// Generates the next block of 2 random `u64` values in one call.
+    ///
+    /// This is the raw bulk-generation path (used internally to refill the
+    /// scalar [`Rng64::nextu`] buffer, and available directly for
+    /// throughput-sensitive callers that want the whole block at once).
     #[inline]
-    pub fn nextu(&mut self) -> [u64; 2] {
+    pub fn next_raw(&mut self) -> [u64; 2] {
         let out = Self::compute(self.c.map(|x| x.value()), self.k.map(|x| x.value()));
         self.c[0] += 1;
         if self.c[0] == 0 {
@@ -80,28 +92,9 @@ impl Philox64 {
         }
         out
     }
-
-    /// Generates a random `f64` values in the range [0, 1).
-    #[inline]
-    pub fn nextf(&mut self) -> [f64; 2] {
-        self.nextu().map(|x| (x as f64) * FSCALE64)
-    }
-
-    /// Generates a random `i64` values in the range [min, max].
-    #[inline]
-    pub fn randi(&mut self, min: i64, max: i64) -> [i64; 2] {
-        let range = (max as i128 - min as i128 + 1) as u128;
-        self.nextu()
-            .map(|x| ((x as u128 * range) >> 64) as i64 + min)
-    }
-
-    /// Generates a random `f64` values in the range [min, max).
-    #[inline]
-    pub fn randf(&mut self, min: f64, max: f64) -> [f64; 2] {
-        let scale = (max - min) * FSCALE64;
-        self.nextu().map(|x| (x as f64 * scale) + min)
-    }
 }
+
+crate::impl_ring_rng64!(Philox64, 2, next_raw);
 
 #[cfg(test)]
 mod tests {

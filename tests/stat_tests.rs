@@ -72,20 +72,6 @@ fn scatter_path(algo_name: &str) -> String {
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-fn gen_arr2f32<F: FnMut() -> [f32; 2]>(mut f: F) -> impl FnMut() -> f64 {
-    let mut buf = [0f32; 2];
-    let mut i = 2usize;
-    move || {
-        if i >= 2 {
-            buf = f();
-            i = 0;
-        }
-        let v = buf[i] as f64;
-        i += 1;
-        v
-    }
-}
-
 fn gen_arr4f32<F: FnMut() -> [f32; 4]>(mut f: F) -> impl FnMut() -> f64 {
     let mut buf = [0f32; 4];
     let mut i = 4usize;
@@ -139,23 +125,6 @@ fn gen_arr4f64<F: FnMut() -> [f64; 4]>(mut f: F) -> impl FnMut() -> f64 {
             i = 0;
         }
         let v = buf[i];
-        i += 1;
-        v
-    }
-}
-
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-fn gen_arr2u64<F: FnMut() -> [u64; 2]>(mut f: F) -> impl FnMut() -> f64 {
-    const SCALE: f64 = 1.0 / (u64::MAX as f64 + 1.0);
-    let mut buf = [0u64; 2];
-    let mut i = 2usize;
-    move || {
-        if i >= 2 {
-            buf = f();
-            i = 0;
-        }
-        let v = buf[i] as f64 * SCALE;
         i += 1;
         v
     }
@@ -440,12 +409,12 @@ fn build_suite() -> Result<Suite> {
     reg!(s32 chi, monte, Sfmt132049);
     reg!(s32 chi, monte, Sfmt216091);
     reg!(s32 chi, monte, Pcg32);
-    reg!(arr4f32 chi, monte, Philox32x4);
+    reg!(s32 chi, monte, Philox32x4);
     reg!(s32 chi, monte, Xorshift32);
     reg!(s32 chi, monte, Xorshift128);
     reg!(s32 chi, monte, Xorwow);
-    reg!(arr4f32 chi, monte, Threefry32x4);
-    reg!(arr2f32 chi, monte, Threefry32x2);
+    reg!(s32 chi, monte, Threefry32x4);
+    reg!(s32 chi, monte, Threefry32x2);
     reg!(s32 chi, monte, Squares32);
     reg!(s32 chi, monte, Jsf32);
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
@@ -460,11 +429,11 @@ fn build_suite() -> Result<Suite> {
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     reg!(arr16f32 chi, monte, Xoroshiro64Ssx16);
 
-    // rng64  (nextu → u64 scalar, except Philox64 → [u64;2] and Threefish256 → [f64;4])
+    // rng64  (nextu → u64 scalar, except Threefish256 → [f64;4])
     reg!(s64 chi, monte, SplitMix64);
     reg!(s64 chi, monte, Mt1993764);
     reg!(s64 chi, monte, Sfmt1993764);
-    reg!(arr2u64 chi, monte, Philox64);
+    reg!(s64 chi, monte, Philox64);
     reg!(s64 chi, monte, Sfc64);
     reg!(s64 chi, monte, Xorshift64);
     reg!(s64 chi, monte, Cet64);
