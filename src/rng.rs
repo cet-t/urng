@@ -1,7 +1,8 @@
 #[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
-use crate::_internal::{FSCALE32, FSCALE64};
+#[cfg(feature = "simd")]
+use crate::_internal::FSCALE32;
 
 macro_rules! randi_wide {
     (i 32) => {
@@ -16,6 +17,27 @@ macro_rules! randi_wide {
     (u 64) => {
         u128
     };
+}
+
+macro_rules! i2f_bits {
+    (32 bits) => {
+        0x3F800000
+    };
+    (32 bias) => {
+        9
+    };
+    (64 bits) => {
+        0x3FF0000000000000
+    };
+    (64 bias) => {
+        11
+    };
+}
+
+macro_rules! u2f_01 {
+    ($ft:ty, $bits:tt, $x:expr) => {{
+        <$ft>::from_bits(($x >> i2f_bits!($bits bias)) | i2f_bits!($bits bits)) - 1.0
+    }};
 }
 
 macro_rules! impl_rng_trait {
@@ -44,7 +66,7 @@ macro_rules! impl_rng_trait {
                 #[doc = concat!("Generates the next random `f", $bits, "` value in the range [0, 1).")]
                 #[inline(always)]
                 fn nextf(&mut self) -> [<f $bits>] {
-                    self.nextu() as [<f $bits>] * [<FSCALE $bits>]
+                    u2f_01!([<f $bits>], $bits, self.nextu())
                 }
 
                 #[doc = concat!("Generates a random `i", $bits, "` value in the range [min, max].")]
@@ -58,8 +80,8 @@ macro_rules! impl_rng_trait {
                 #[doc = concat!("Generates a random `f", $bits, "` value in the range [min, max).")]
                 #[inline(always)]
                 fn randf(&mut self, min: [<f $bits>], max: [<f $bits>]) -> [<f $bits>] {
-                    let scale = (max - min) * [<FSCALE $bits>];
-                    (self.nextu() as [<f $bits>] * scale) + min
+                    let base = u2f_01!([<f $bits>], $bits, self.nextu());
+                    base * (max - min) + min
                 }
             }
 

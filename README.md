@@ -176,12 +176,12 @@ Hardware-noise-assisted seed generation. Wraps an existing `Rng32`/`Rng64` and m
 
 A statistical test harness for validating RNG quality, generic over any `Rng32`/`Rng64` implementation.
 
-| Struct                          | Module          | Purpose                              |
-| ------------------------------- | --------------- | ------------------------------------ |
-| `ChiSq32` / `ChiSq64`           | `urng::testing` | Chi-squared uniformity test          |
-| `ChiSqSuite32` / `ChiSqSuite64` | `urng::testing` | Run named chi-squared cases together |
-| `McPi32` / `McPi64`             | `urng::testing` | Monte Carlo estimation of π          |
-| `McPiSuite32` / `McPiSuite64`   | `urng::testing` | Run named Monte Carlo cases together |
+| Struct                          | Module          | Purpose                                                                                 |
+| ------------------------------- | --------------- | --------------------------------------------------------------------------------------- |
+| `ChiSq32` / `ChiSq64`           | `urng::testing` | Chi-squared uniformity test                                                             |
+| `ChiSqSuite32` / `ChiSqSuite64` | `urng::testing` | Run named chi-squared cases together                                                    |
+| `McPi32` / `McPi64`             | `urng::testing` | Monte Carlo estimation of π                                                             |
+| `McPiSuite32` / `McPiSuite64`   | `urng::testing` | Run named Monte Carlo cases together                                                    |
 | `Test32` / `Test64`             | `urng::testing` | Blanket trait adding `run_chisq`/`run_mcpi` directly to any `Rng32`/`Rng64` implementor |
 
 ```rust
