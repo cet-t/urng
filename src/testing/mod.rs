@@ -8,8 +8,10 @@ pub mod chisq;
 pub mod mcpi;
 #[cfg(feature = "rand")]
 pub mod rand_adapter;
+pub mod test;
 
 pub use chisq::*;
 pub use mcpi::*;
 #[cfg(feature = "rand")]
 pub use rand_adapter::*;
+pub use test::*;

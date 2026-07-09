@@ -1,5 +1,6 @@
 use wrapn::{Wrap, wrap};
 
+#[allow(unused_imports)]
 use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
 
 // --- Threefry32x4 ---
@@ -8,23 +9,26 @@ const THREEFRY32_C240: u32 = 0x1BD11BDA;
 /// A Threefry4x32 random number generator (Random123 family).
 ///
 /// This is a counter-based RNG using a reduced-round (20 rounds) Threefish cipher
-/// with 32-bit words and 4 output values per block.
+/// with 32-bit words and 4 output values per block. Implements [`Rng32`] directly:
+/// each call to [`Rng32::nextu`] hands out one `u32` from an internal 4-word
+/// buffer, recomputing a fresh block every 4th call.
 ///
 /// # Examples
 ///
 /// ```
 /// use urng::rng32::Threefry32x4;
+/// use urng::rng::Rng32;
 ///
 /// let mut rng = Threefry32x4::new(1);
-/// let _ = rng.nextu();
+/// let _: u32 = rng.nextu();
 /// ```
 #[repr(C, align(64))]
 pub struct Threefry32x4 {
     pub(crate) c: [Wrap<u32>; 4],
     pub(crate) k: [Wrap<u32>; 5],
     pub(crate) tw: [Wrap<u32>; 3],
-    pub(crate) index: Wrap<usize>,
-    pub(crate) buffer: [Wrap<u32>; 4],
+    pub(crate) pos: Wrap<usize>,
+    pub(crate) buf: [Wrap<u32>; 4],
 }
 
 impl Threefry32x4 {
@@ -46,8 +50,8 @@ impl Threefry32x4 {
             c: wrap![0; 4],
             k,
             tw,
-            index: 4.into(),
-            buffer: wrap![0; 4],
+            pos: 4.into(),
+            buf: wrap![0; 4],
         }
     }
 
@@ -130,8 +134,13 @@ impl Threefry32x4 {
         .map(|x| x.value())
     }
 
+    /// Generates the next block of 4 random `u32` values in one call.
+    ///
+    /// This is the raw bulk-generation path (used internally to refill the
+    /// scalar [`Rng32::nextu`] buffer, and available directly for
+    /// throughput-sensitive callers that want the whole block at once).
     #[inline(always)]
-    fn next_block(&mut self) -> [u32; 4] {
+    pub fn next_raw(&mut self) -> [u32; 4] {
         let dst = Self::compute(
             self.c.map(|x| x.value()),
             &self.k.map(|x| x.value()),
@@ -151,41 +160,9 @@ impl Threefry32x4 {
 
         dst
     }
-
-    /// Generates the next 4 random `u32` values.
-    #[inline]
-    pub fn nextu(&mut self) -> [u32; 4] {
-        if self.index >= 4 {
-            self.buffer = self.next_block().map(|x| x.into());
-            self.index = 0.into();
-        }
-        let val = self.buffer;
-        self.index += 4;
-        val.map(|x| x.value())
-    }
-
-    /// Generates the next 4 random `f32` values in the range [0, 1).
-    #[inline]
-    pub fn nextf(&mut self) -> [f32; 4] {
-        self.nextu().map(|x| x as f32 * FSCALE32)
-    }
-
-    /// Generates 4 random `i32` values in the range [min, max].
-    #[inline]
-    pub fn randi(&mut self, min: i32, max: i32) -> [i32; 4] {
-        let range = (max as i64 - min as i64 + 1) as u64;
-        self.nextu()
-            .map(|x| ((x as u64 * range) >> 32) as i32 + min)
-    }
-
-    /// Generates 4 random `f32` values in the range [min, max).
-    #[inline]
-    pub fn randf(&mut self, min: f32, max: f32) -> [f32; 4] {
-        let range = max - min;
-        let scale = range * FSCALE32;
-        self.nextu().map(|x| (x as f32 * scale) + min)
-    }
 }
+
+crate::_internal::impl_ring_rng32!(Threefry32x4, 4, next_raw);
 
 // --- Threefry32x2 ---
 
@@ -198,15 +175,16 @@ impl Threefry32x4 {
 ///
 /// ```
 /// use urng::rng32::Threefry32x2;
+/// use urng::rng::Rng32;
 ///
 /// let mut rng = Threefry32x2::new(1);
-/// let _ = rng.nextu();
+/// let _: u32 = rng.nextu();
 /// ```
 pub struct Threefry32x2 {
     pub(crate) c: [Wrap<u32>; 2],
     pub(crate) k: [Wrap<u32>; 3],
-    pub(crate) buffer: [Wrap<u32>; 2],
-    pub(crate) index: Wrap<usize>,
+    pub(crate) buf: [Wrap<u32>; 2],
+    pub(crate) pos: Wrap<usize>,
 }
 
 impl Threefry32x2 {
@@ -221,8 +199,8 @@ impl Threefry32x2 {
         Self {
             c: wrap![0, 0],
             k: wrap![k0, k1, k0 ^ k1 ^ THREEFRY32_C240],
-            buffer: wrap![0; 2],
-            index: 2.into(),
+            buf: wrap![0; 2],
+            pos: 2.into(),
         }
     }
 
@@ -287,8 +265,13 @@ impl Threefry32x2 {
         [v[0] + ksi5_0, v[1] + ksi5_1].map(|x| x.value())
     }
 
+    /// Generates the next block of 2 random `u32` values in one call.
+    ///
+    /// This is the raw bulk-generation path (used internally to refill the
+    /// scalar [`Rng32::nextu`] buffer, and available directly for
+    /// throughput-sensitive callers that want the whole block at once).
     #[inline(always)]
-    fn next_block(&mut self) -> [u32; 2] {
+    pub fn next_raw(&mut self) -> [u32; 2] {
         let k = self.k.map(|x| x.value());
         let dst = Self::compute(self.c.map(|x| x.value()), &k);
         self.k
@@ -302,40 +285,9 @@ impl Threefry32x2 {
         }
         dst
     }
-
-    /// Generates the next 2 random `u32` values.
-    #[inline]
-    pub fn nextu(&mut self) -> [u32; 2] {
-        if self.index >= 2 {
-            self.buffer = self.next_block().map(|x| x.into());
-            self.index = 0.into();
-        }
-        let val = self.buffer;
-        self.index += 2;
-        val.map(|x| x.value())
-    }
-
-    /// Generates the next 2 random `f32` values in the range [0, 1).
-    #[inline]
-    pub fn nextf(&mut self) -> [f32; 2] {
-        self.nextu().map(|x| x as f32 * FSCALE32)
-    }
-
-    /// Generates 2 random `i32` values in the range [min, max].
-    #[inline]
-    pub fn randi(&mut self, min: i32, max: i32) -> [i32; 2] {
-        let range = (max as i64 - min as i64 + 1) as u64;
-        self.nextu()
-            .map(|x| ((x as u64 * range) >> 32) as i32 + min)
-    }
-
-    /// Generates 2 random `f32` values in the range [min, max).
-    #[inline]
-    pub fn randf(&mut self, min: f32, max: f32) -> [f32; 2] {
-        let scale = (max - min) * FSCALE32;
-        self.nextu().map(|x| x as f32 * scale + min)
-    }
 }
+
+crate::_internal::impl_ring_rng32!(Threefry32x2, 2, next_raw);
 
 #[cfg(test)]
 mod tests {
