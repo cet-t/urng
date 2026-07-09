@@ -3,6 +3,7 @@ use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
+#[cfg(feature = "simd")]
 use crate::_internal::FSCALE32;
 #[allow(unused_imports)]
 use crate::rng::Rng32;

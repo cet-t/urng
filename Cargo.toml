@@ -42,6 +42,10 @@ name = "testing"
 required-features = ["testing", "rand"]
 path = "examples/testing/main.rs"
 
+[[example]]
+name = "scalar_test"
+path = "examples/scalar/test.rs"
+
 
 [features]
 rand = ["dep:rand_core"]
