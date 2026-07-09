@@ -64,47 +64,6 @@ macro_rules! dispatch_simd {
 }
 
 #[macro_export]
-/// Implements [`crate::rng::Rng32`] for a counter-based block generator that owns
-/// `buf: [Wrap<u32>; N]` and `pos: Wrap<usize>` fields, by buffering blocks
-/// produced by an existing `fn $raw(&mut self) -> [u32; N]` method and handing
-/// out one scalar per call (recomputing a fresh block every `N`th call).
-macro_rules! impl_ring_rng32 {
-    ($ty:ty, $n:expr, $raw:ident) => {
-        impl $crate::rng::Rng32 for $ty {
-            #[inline]
-            fn nextu(&mut self) -> u32 {
-                if self.pos >= $n {
-                    self.buf = self.$raw().map(::core::convert::Into::into);
-                    self.pos = 0.into();
-                }
-                let v = self.buf[self.pos.value()];
-                self.pos += 1;
-                v.value()
-            }
-        }
-    };
-}
-
-#[macro_export]
-/// Implements [`crate::rng::Rng64`] for a counter-based block generator; see [`impl_ring_rng32`].
-macro_rules! impl_ring_rng64 {
-    ($ty:ty, $n:expr, $raw:ident) => {
-        impl $crate::rng::Rng64 for $ty {
-            #[inline]
-            fn nextu(&mut self) -> u64 {
-                if self.pos >= $n {
-                    self.buf = self.$raw().map(::core::convert::Into::into);
-                    self.pos = 0.into();
-                }
-                let v = self.buf[self.pos.value()];
-                self.pos += 1;
-                v.value()
-            }
-        }
-    };
-}
-
-#[macro_export]
 macro_rules! safe_test {
     ($name:ident, $ctor:expr $(,)?) => {
         paste::paste! {

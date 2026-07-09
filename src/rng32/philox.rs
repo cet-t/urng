@@ -137,7 +137,7 @@ impl Philox32x4 {
     }
 }
 
-crate::impl_ring_rng32!(Philox32x4, 4, next_raw);
+crate::_internal::impl_ring_rng32!(Philox32x4, 4, next_raw);
 
 // --- Philox32x4-10 x4 ---
 

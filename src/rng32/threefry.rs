@@ -162,7 +162,7 @@ impl Threefry32x4 {
     }
 }
 
-crate::impl_ring_rng32!(Threefry32x4, 4, next_raw);
+crate::_internal::impl_ring_rng32!(Threefry32x4, 4, next_raw);
 
 // --- Threefry32x2 ---
 
@@ -287,7 +287,7 @@ impl Threefry32x2 {
     }
 }
 
-crate::impl_ring_rng32!(Threefry32x2, 2, next_raw);
+crate::_internal::impl_ring_rng32!(Threefry32x2, 2, next_raw);
 
 #[cfg(test)]
 mod tests {

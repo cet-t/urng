@@ -6,6 +6,51 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub const FSCALE64: f64 = 1.0 / (u64::MAX as f64 + 1.0);
 pub const FSCALE32: f32 = 1.0 / (u32::MAX as f32 + 1.0);
 
+/// Implements [`crate::rng::Rng32`] for a counter-based block generator that owns
+/// `buf: [Wrap<u32>; N]` and `pos: Wrap<usize>` fields, by buffering blocks
+/// produced by an existing `fn $raw(&mut self) -> [u32; N]` method and handing
+/// out one scalar per call (recomputing a fresh block every `N`th call).
+///
+/// Crate-internal only — call as `crate::_internal::impl_ring_rng32!`.
+macro_rules! impl_ring_rng32 {
+    ($ty:ty, $n:expr, $raw:ident) => {
+        impl $crate::rng::Rng32 for $ty {
+            #[inline]
+            fn nextu(&mut self) -> u32 {
+                if self.pos >= $n {
+                    self.buf = self.$raw().map(::core::convert::Into::into);
+                    self.pos = 0.into();
+                }
+                let v = self.buf[self.pos.value()];
+                self.pos += 1;
+                v.value()
+            }
+        }
+    };
+}
+pub(crate) use impl_ring_rng32;
+
+/// Implements [`crate::rng::Rng64`] for a counter-based block generator; see [`impl_ring_rng32`].
+///
+/// Crate-internal only — call as `crate::_internal::impl_ring_rng64!`.
+macro_rules! impl_ring_rng64 {
+    ($ty:ty, $n:expr, $raw:ident) => {
+        impl $crate::rng::Rng64 for $ty {
+            #[inline]
+            fn nextu(&mut self) -> u64 {
+                if self.pos >= $n {
+                    self.buf = self.$raw().map(::core::convert::Into::into);
+                    self.pos = 0.into();
+                }
+                let v = self.buf[self.pos.value()];
+                self.pos += 1;
+                v.value()
+            }
+        }
+    };
+}
+pub(crate) use impl_ring_rng64;
+
 static DEFAULT_SEED_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Derives a time-based 64-bit seed for `Default` impls.

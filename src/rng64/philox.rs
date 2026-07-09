@@ -94,7 +94,7 @@ impl Philox64 {
     }
 }
 
-crate::impl_ring_rng64!(Philox64, 2, next_raw);
+crate::_internal::impl_ring_rng64!(Philox64, 2, next_raw);
 
 #[cfg(test)]
 mod tests {
