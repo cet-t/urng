@@ -76,7 +76,12 @@ pub extern "C" fn philox64_next_u64s(ptr: *mut Philox64, out: *mut u64, count: u
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        philox64_fill(buffer, rng.c.map(|x| x.value()), rng.k.map(|x| x.value()), |x| x);
+        philox64_fill(
+            buffer,
+            rng.c.map(|x| x.value()),
+            rng.k.map(|x| x.value()),
+            |x| x,
+        );
         philox64_advance(rng, count);
     }
 }
@@ -88,7 +93,12 @@ pub extern "C" fn philox64_next_f64s(ptr: *mut Philox64, out: *mut f64, count: u
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        philox64_fill(buffer, rng.c.map(|x| x.value()), rng.k.map(|x| x.value()), |x| x as f64 * SCALE);
+        philox64_fill(
+            buffer,
+            rng.c.map(|x| x.value()),
+            rng.k.map(|x| x.value()),
+            |x| x as f64 * SCALE,
+        );
         philox64_advance(rng, count);
     }
 }
@@ -106,9 +116,12 @@ pub extern "C" fn philox64_rand_i64s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let range = (max as i128 - min as i128 + 1) as u128;
-        philox64_fill(buffer, rng.c.map(|x| x.value()), rng.k.map(|x| x.value()), |x| {
-            ((x as u128 * range) >> 64) as i64 + min
-        });
+        philox64_fill(
+            buffer,
+            rng.c.map(|x| x.value()),
+            rng.k.map(|x| x.value()),
+            |x| ((x as u128 * range) >> 64) as i64 + min,
+        );
         philox64_advance(rng, count);
     }
 }
@@ -127,7 +140,12 @@ pub extern "C" fn philox64_rand_f64s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let mult = (max - min) * SCALE;
-        philox64_fill(buffer, rng.c.map(|x| x.value()), rng.k.map(|x| x.value()), |x| x as f64 * mult + min);
+        philox64_fill(
+            buffer,
+            rng.c.map(|x| x.value()),
+            rng.k.map(|x| x.value()),
+            |x| x as f64 * mult + min,
+        );
         philox64_advance(rng, count);
     }
 }

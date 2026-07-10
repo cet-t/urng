@@ -90,7 +90,9 @@ pub extern "C" fn threefry32x4_next_u32s(ptr: *mut Threefry32x4, out: *mut u32, 
             buffer,
             rng.c.map(|x| x.value()),
             rng.k.map(|x| x.value()),
-            rng.tw.map(|x| x.value()), |x| x);
+            rng.tw.map(|x| x.value()),
+            |x| x,
+        );
         fry4_advance(rng, count);
     }
 }
@@ -107,7 +109,9 @@ pub extern "C" fn threefry32x4_next_f32s(ptr: *mut Threefry32x4, out: *mut f32, 
             buffer,
             rng.c.map(|x| x.value()),
             rng.k.map(|x| x.value()),
-            rng.tw.map(|x| x.value()), |x| x as f32 * SCALE);
+            rng.tw.map(|x| x.value()),
+            |x| x as f32 * SCALE,
+        );
         fry4_advance(rng, count);
     }
 }
@@ -130,9 +134,9 @@ pub extern "C" fn threefry32x4_rand_i32s(
             buffer,
             rng.c.map(|x| x.value()),
             rng.k.map(|x| x.value()),
-            rng.tw.map(|x| x.value()), |x| {
-            ((x as u64 * range) >> 32) as i32 + min
-        });
+            rng.tw.map(|x| x.value()),
+            |x| ((x as u64 * range) >> 32) as i32 + min,
+        );
         fry4_advance(rng, count);
     }
 }
@@ -156,7 +160,9 @@ pub extern "C" fn threefry32x4_rand_f32s(
             buffer,
             rng.c.map(|x| x.value()),
             rng.k.map(|x| x.value()),
-            rng.tw.map(|x| x.value()), |x| x as f32 * mult + min);
+            rng.tw.map(|x| x.value()),
+            |x| x as f32 * mult + min,
+        );
         fry4_advance(rng, count);
     }
 }
@@ -237,7 +243,9 @@ pub extern "C" fn threefry32x2_next_u32s(ptr: *mut Threefry32x2, out: *mut u32, 
         fry2_fill(
             buffer,
             rng.c.map(|x| x.value()),
-            rng.k.map(|x| x.value()), |x| x);
+            rng.k.map(|x| x.value()),
+            |x| x,
+        );
         fry2_advance(rng, count);
     }
 }
@@ -253,7 +261,9 @@ pub extern "C" fn threefry32x2_next_f32s(ptr: *mut Threefry32x2, out: *mut f32, 
         fry2_fill(
             buffer,
             rng.c.map(|x| x.value()),
-            rng.k.map(|x| x.value()), |x| x as f32 * SCALE);
+            rng.k.map(|x| x.value()),
+            |x| x as f32 * SCALE,
+        );
         fry2_advance(rng, count);
     }
 }
@@ -275,9 +285,9 @@ pub extern "C" fn threefry32x2_rand_i32s(
         fry2_fill(
             buffer,
             rng.c.map(|x| x.value()),
-            rng.k.map(|x| x.value()), |x| {
-            ((x as u64 * range) >> 32) as i32 + min
-        });
+            rng.k.map(|x| x.value()),
+            |x| ((x as u64 * range) >> 32) as i32 + min,
+        );
         fry2_advance(rng, count);
     }
 }
