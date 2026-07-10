@@ -1,71 +1,61 @@
-//! Wide SIMD-accelerated random number generators.
+use ::wide::{u32x4, u32x8, u32x16};
 
-use ::wide::{u32x4, u32x8};
+use crate::wide::impl_methods;
 
-macro_rules! sm32xn {
-    ($v:expr, $intrin:expr) => {
+macro_rules! impl_variants {
+    ($size:expr) => {
         paste::paste! {
             #[allow(dead_code)]
             #[repr(C, align(64))]
-            pub struct [<SplitMix32 x $v>] {
-                state: [<u32x $v>],
+            pub struct [<SplitMix32x $size>] {
+                state: [<u32x $size>],
             }
 
             #[allow(dead_code)]
-            impl [<SplitMix32 x $v>] {
-                #[target_feature(enable = $intrin)]
+            impl [<SplitMix32x $size>] {
                 pub fn new(seed: u32) -> Self {
-                    let mut state = [0u32; $v];
+                    let mut state = [0u32; $size];
                     state.iter_mut().fold(seed | 1, |s, x| {
                         *x = s;
                         s.wrapping_add(0x9E3779B9)
                     });
 
                     Self {
-                        state: [<u32x $v>]::from(state),
+                        state: [<u32x $size>]::from(state),
                     }
                 }
 
-                #[target_feature(enable = $intrin)]
-                #[inline]
-                pub(crate) fn compute(state: [<u32x $v>]) -> [<u32x $v>] {
+                #[inline(always)]
+                pub(crate) fn compute(state: [<u32x $size>]) -> [<u32x $size>] {
                     let mut z = state;
-                    z = (z ^ (z >> 16)) * [<u32x $v>]::splat(0x85EBCA6B);
-                    z = (z ^ (z >> 13)) * [<u32x $v>]::splat(0xC2B2AE35);
+                    z = (z ^ (z >> 16)) * [<u32x $size>]::splat(0x85EBCA6B);
+                    z = (z ^ (z >> 13)) * [<u32x $size>]::splat(0xC2B2AE35);
                     z ^ (z >> 16)
                 }
 
-                #[target_feature(enable = $intrin)]
-                #[inline]
-                pub fn nextu(&mut self) -> [u32; $v] {
-                    self.state += [<u32x $v>]::splat(0x9E3779B9);
+                #[inline(always)]
+                pub fn nextu(&mut self) -> [u32; $size] {
+                    self.state += [<u32x $size>]::splat(0x9E3779B9);
                     let z = Self::compute(self.state);
                     bytemuck::cast(z)
                 }
 
-                #[target_feature(enable = $intrin)]
-                #[inline]
-                pub fn nextf(&mut self) -> [f32; $v] {
-                    self.nextu()
-                        .map(|x| f32::from_bits((x >> 9) | 0x3F800000) - 1.0)
-                }
+                impl_methods!($size, 32);
             }
         }
     };
+    ($($size:expr),+ $(,)*) => {
+        $(impl_variants!($size);)+
+    };
 }
 
-sm32xn!(4, "avx2");
-sm32xn!(8, "avx512f");
+impl_variants!(4, 8, 16);
 
 #[cfg(test)]
 mod tests {
-    #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
     use super::*;
-    #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
-    use crate::unsafe_test;
 
-    #[cfg(target_feature = "avx2")]
-    unsafe_test!(SplitMix32x4);
-    #[cfg(target_feature = "avx512f")]
-    unsafe_test!(SplitMix32x8);
+    crate::safe_test!(SplitMix32x4);
+    crate::safe_test!(SplitMix32x8);
+    crate::safe_test!(SplitMix32x16);
 }

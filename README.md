@@ -29,7 +29,7 @@ urng = { version = "0.8.0", features = ["rand"] }
 
 ### Optional `simd` Feature
 
-Enable the `simd` feature to build the AVX2/AVX-512 SIMD generators (the `x4`/`x8`/`x16`/`x2`-suffixed structs and the `*Simd` runtime dispatchers, e.g. `Sfc32x4`, `Sfc32x8`, `Sfc32x16`, `Pcg32Simd`). Without it, only the scalar generators are compiled.
+Enable the `simd` feature to build the AVX2/AVX-512 generators in `urng::rng32`/`urng::rng64` and the `*Simd` runtime dispatchers (e.g. `Sfc32x8`, `Pcg32x8`, `Pcg32Simd`). Without it, only the scalar generators are compiled.
 
 ```toml
 [dependencies]
@@ -37,6 +37,15 @@ urng = { version = "0.8.0", features = ["simd"] }
 ```
 
 > When combined with the `cabi` feature, the SIMD generators' C-ABI exports (e.g. `sfc32x8_new`) are also only available with `simd` enabled.
+
+### Optional `wide` Feature
+
+Enable the `wide` feature to build portable lane-parallel generators under `urng::wide`. These expose safe bulk APIs returning fixed-size arrays such as `[u32; 4]`, `[u32; 8]`, and `[u32; 16]`, without requiring callers to use architecture-specific intrinsics.
+
+```toml
+[dependencies]
+urng = { version = "0.8.0", features = ["wide"] }
+```
 
 ### Optional `testing` Feature
 
@@ -56,8 +65,9 @@ When enabled, all scalar generators (`Mt19937`, `Sfmt*`, `Pcg32`, `Sfc32`, `Spli
 
 ## Supported Generators
 
-Generators are divided into two categories: standard generators and AVX-accelerated SIMD generators.
+Generators are divided into standard generators, portable wide generators, and AVX-accelerated SIMD generators.
 Standard generators implement either the `Rng32` or `Rng64` trait (or return fixed-size arrays for counter-based variants).
+Portable wide generators require the `wide` feature and expose safe fixed-array bulk APIs.
 AVX generators expose a bulk-generation API and are listed separately; they require the `simd` feature (see [above](#optional-simd-feature)).
 
 ### 32-bit Generators (`urng::rng32`)
@@ -112,6 +122,35 @@ AVX generators expose a bulk-generation API and are listed separately; they requ
 | `Lcg64`          | LCG                 | $m$              |
 | `Threefish256`   | Threefish-256       | -                |
 | `Biski64`        | Biski64             | $2^{64}$         |
+
+### Portable Wide Generators (`urng::wide`)
+
+> Requires the `wide` feature.
+
+These generators use the portable `wide` crate and expose safe `nextu`, `nextf`, `randi`, and `randf` methods returning fixed-size arrays.
+
+| Struct family     | Algorithm       | Output variants |
+| ----------------- | --------------- | --------------- |
+| `SplitMix32x*`    | SplitMix32      | 4×/8×/16×`u32`  |
+| `Jsf32x*`         | JSF32           | 4×/8×/16×`u32`  |
+| `Pcg32x*`         | PCG-XSH-RR      | 4×/8×/16×`u32`  |
+| `Sfc32x*`         | SFC32           | 4×/8×/16×`u32`  |
+| `Xoroshiro64Ssx*` | xoroshiro64\*\* | 4×/8×/16×`u32`  |
+| `Xorshift32x*`    | Xorshift32      | 4×/8×/16×`u32`  |
+| `Xorshift128x*`   | Xorshift128     | 4×/8×/16×`u32`  |
+| `Xorwowx*`        | XORWOW          | 4×/8×/16×`u32`  |
+| `Xoshiro128Ppx*`  | xoshiro128++    | 4×/8×/16×`u32`  |
+| `Xoshiro128Ssx*`  | xoshiro128\*\*  | 4×/8×/16×`u32`  |
+
+Example:
+
+```rust
+use urng::wide::Xoshiro128Ppx16;
+
+let mut rng = Xoshiro128Ppx16::new(1);
+let values: [u32; 16] = rng.nextu();
+let floats: [f32; 16] = rng.nextf();
+```
 
 ### SIMD Generators (AVX)
 

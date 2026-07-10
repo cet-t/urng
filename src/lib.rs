@@ -58,9 +58,9 @@ pub use crate::cabi64::*;
 
 pub(crate) mod _internal;
 
-/// Wide SIMD-accelerated random number generators (e.g., `Sfmt19937x8`).
+/// Wide SIMD-accelerated random number generators (e.g., `Sfc32x8`).
 #[cfg(feature = "wide")]
-pub(crate) mod wide;
+pub mod wide;
 
 /// Weighted random selection traits (`Sampler32`, `Sampler64`).
 #[cfg(feature = "sampler")]
