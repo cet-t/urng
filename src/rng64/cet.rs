@@ -1,4 +1,4 @@
-﻿#[cfg(all(feature = "simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
@@ -309,8 +309,16 @@ mod tests {
     crate::safe_test!(Cet64);
     crate::safe_test!(Cet256);
 
-    #[cfg(all(feature = "simd", target_feature = "avx512f", target_feature = "avx512dq"))]
+    #[cfg(all(
+        feature = "simd",
+        target_feature = "avx512f",
+        target_feature = "avx512dq"
+    ))]
     crate::unsafe_test!(Cet64x8);
-    #[cfg(all(feature = "simd", target_feature = "avx512f", target_feature = "avx512dq"))]
+    #[cfg(all(
+        feature = "simd",
+        target_feature = "avx512f",
+        target_feature = "avx512dq"
+    ))]
     crate::unsafe_test!(Cet256x2);
 }

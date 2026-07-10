@@ -99,19 +99,31 @@ mod tests {
     /// harness with no special-casing.
     #[test]
     fn block_generators_work_with_test_harness() {
-        use crate::{Philox32x4, Threefry32x2, Threefry32x4};
         use crate::rng64::Philox64;
+        use crate::{Philox32x4, Threefry32x2, Threefry32x4};
 
         let mut rng = Philox32x4::new(0);
-        assert_eq!(rng.run_chisq("Philox32x4").unwrap().verdict, ChiSqVerdict::Pass);
+        assert_eq!(
+            rng.run_chisq("Philox32x4").unwrap().verdict,
+            ChiSqVerdict::Pass
+        );
 
         let mut rng = Threefry32x4::new(0);
-        assert_eq!(rng.run_chisq("Threefry32x4").unwrap().verdict, ChiSqVerdict::Pass);
+        assert_eq!(
+            rng.run_chisq("Threefry32x4").unwrap().verdict,
+            ChiSqVerdict::Pass
+        );
 
         let mut rng = Threefry32x2::new(0);
-        assert_eq!(rng.run_chisq("Threefry32x2").unwrap().verdict, ChiSqVerdict::Pass);
+        assert_eq!(
+            rng.run_chisq("Threefry32x2").unwrap().verdict,
+            ChiSqVerdict::Pass
+        );
 
         let mut rng = Philox64::new(0);
-        assert_eq!(rng.run_chisq("Philox64").unwrap().verdict, ChiSqVerdict::Pass);
+        assert_eq!(
+            rng.run_chisq("Philox64").unwrap().verdict,
+            ChiSqVerdict::Pass
+        );
     }
 }

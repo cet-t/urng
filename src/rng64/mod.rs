@@ -45,9 +45,9 @@ pub use threefish::Threefish256;
 pub use twisted_gfsr::TwistedGFSR;
 pub use xoroshiro::{Xoroshiro128Pp, Xoroshiro128Ss};
 pub use xorshift::Xorshift64;
-pub use xoshiro::{Xoshiro256Pp, Xoshiro256Ss};
 #[cfg(feature = "simd")]
 pub use xoshiro::Xoshiro256Ssx2;
+pub use xoshiro::{Xoshiro256Pp, Xoshiro256Ss};
 
 crate::impl_default_from_seed64!(
     Biski64,

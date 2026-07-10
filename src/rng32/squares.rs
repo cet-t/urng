@@ -1,4 +1,4 @@
-﻿#[cfg(feature = "simd")]
+#[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
@@ -216,6 +216,10 @@ mod tests {
 
     crate::safe_test!(Squares32);
 
-    #[cfg(all(feature = "simd", target_feature = "avx512f", target_feature = "avx512dq"))]
+    #[cfg(all(
+        feature = "simd",
+        target_feature = "avx512f",
+        target_feature = "avx512dq"
+    ))]
     crate::unsafe_test!(Squares32x8);
 }

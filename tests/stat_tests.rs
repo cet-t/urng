@@ -7,10 +7,10 @@ use std::sync::OnceLock;
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 use urng::rng::Rng32V512;
 use urng::rng::{Rng32, Rng64};
-#[cfg(all(feature = "simd", target_feature = "avx2"))]
-use urng::rng32::Sfc32x8;
 #[cfg(feature = "simd")]
 use urng::rng32::Sfc32x4;
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+use urng::rng32::Sfc32x8;
 use urng::rng32::{
     Jsf32, Mt19937, Pcg32, Philox32x4, Sfc32, Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253, Sfmt11213,
     Sfmt19937, Sfmt44497, Sfmt86243, Sfmt132049, Sfmt216091, SplitMix32, Squares32, Threefry32x2,

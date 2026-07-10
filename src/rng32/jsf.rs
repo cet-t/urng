@@ -45,7 +45,7 @@ impl Rng32 for Jsf32 {
         self.b = self.c + self.d;
         self.c = self.d + e;
         self.d = e + self.a;
-        *self.d.raw()
+        self.d.value()
     }
 }
 
@@ -169,7 +169,10 @@ impl Rng32V512 for Jsf32x16 {
 mod tests {
     use super::*;
     use crate::safe_test;
-    #[cfg(all(feature = "simd", any(target_feature = "avx2", target_feature = "avx512f")))]
+    #[cfg(all(
+        feature = "simd",
+        any(target_feature = "avx2", target_feature = "avx512f")
+    ))]
     use crate::unsafe_test;
 
     safe_test!(Jsf32);

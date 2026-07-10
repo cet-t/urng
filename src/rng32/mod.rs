@@ -86,16 +86,6 @@ crate::impl_default_from_seed32!(
 );
 
 crate::impl_default_from_seed64!(
-    Pcg32,
-    Sfmt19937,
-    Sfmt607,
-    Sfmt1279,
-    Sfmt2281,
-    Sfmt4253,
-    Sfmt11213,
-    Sfmt44497,
-    Sfmt86243,
-    Sfmt132049,
-    Sfmt216091,
-    Squares32,
+    Pcg32, Sfmt19937, Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253, Sfmt11213, Sfmt44497, Sfmt86243,
+    Sfmt132049, Sfmt216091, Squares32,
 );
