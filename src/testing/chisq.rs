@@ -5,14 +5,22 @@ use crate::testing::_internal::{unit_f64_from_u32, unit_f64_from_u64};
 use std::collections::HashSet;
 use thiserror::Error;
 
+/// Configuration for a chi-squared randomness test.
+///
+/// Controls how many samples are drawn, how the `[0, 1)` range is bucketed, and
+/// how large a deviation (in normalized z-score units) is still considered passing.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ChiSqConfig {
+    /// Number of random samples drawn per test run.
     pub samples: usize,
+    /// Number of equal-width histogram bins over `[0, 1)`.
     pub bins: usize,
+    /// Maximum absolute z-score (`|z|`) permitted for a passing result.
     pub z_limit: f64,
 }
 
 impl Default for ChiSqConfig {
+    /// Returns the default configuration: 1,000,000 samples, 256 bins, z-limit 3.0.
     fn default() -> Self {
         Self {
             samples: 1_000_000,
@@ -23,6 +31,7 @@ impl Default for ChiSqConfig {
 }
 
 impl ChiSqConfig {
+    /// Validates the configuration, returning a [`ChiSqError`] describing the first problem found.
     fn validate(&self) -> Result<(), ChiSqError> {
         if self.samples == 0 {
             return Err(ChiSqError::InvalidSamples {
@@ -47,44 +56,64 @@ impl ChiSqConfig {
     }
 }
 
+/// Outcome of a single chi-squared test run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChiSqVerdict {
+    /// The observed z-score was within the configured limit.
     Pass,
+    /// The observed z-score exceeded the configured limit.
     Fail,
 }
 
+/// Full result of a single chi-squared test run.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChiSqResult {
+    /// Name of the test case.
     pub name: String,
+    /// Number of samples drawn.
     pub samples: usize,
+    /// Number of histogram bins.
     pub bins: usize,
+    /// Computed chi-squared statistic.
     pub chi2: f64,
+    /// Degrees of freedom (`bins - 1`).
     pub df: f64,
+    /// Normalized z-score: `(chi2 - df) / sqrt(2 * df)`.
     pub z_score: f64,
+    /// z-score threshold used for the verdict.
     pub z_limit: f64,
+    /// Final pass/fail verdict.
     pub verdict: ChiSqVerdict,
 }
 
+/// Errors that can occur while configuring or running a chi-squared test.
 #[derive(Debug, Error)]
 pub enum ChiSqError {
+    /// Zero samples were requested.
     #[error("samples must be greater than zero: samples={samples}")]
     InvalidSamples { samples: usize },
 
+    /// Fewer than two bins were requested.
     #[error("bins must be at least 2: bins={bins}")]
     InvalidBins { bins: usize },
 
+    /// Fewer samples than bins were requested (the test would be meaningless).
     #[error("samples must be >= bins: samples={samples}, bins={bins}")]
     SamplesLessThanBins { samples: usize, bins: usize },
 
+    /// A non-positive or non-finite z-limit was supplied.
     #[error("z_limit must be finite and > 0: z_limit={z_limit}")]
     InvalidZLimit { z_limit: f64 },
 
+    /// A test case name was empty or whitespace-only.
     #[error("test name must not be empty")]
     EmptyCaseName,
 
+    /// Two cases in the same suite shared a name.
     #[error("duplicate test name in suite: {name}")]
     DuplicateCaseName { name: String },
 
+    /// The generator produced a non-finite (`NaN`/`inf`) value.
     #[error(
         "rng produced non-finite value: case={case}, sample_index={sample_index}, value={value}"
     )]
@@ -94,6 +123,7 @@ pub enum ChiSqError {
         value: f64,
     },
 
+    /// The generator produced a value outside `[0, 1)`.
     #[error(
         "rng produced out-of-range value [0,1): case={case}, sample_index={sample_index}, value={value}"
     )]
@@ -104,11 +134,13 @@ pub enum ChiSqError {
     },
 }
 
+/// A single named test case: a name plus a closure that produces `[0, 1)` floats.
 struct ChiSqCase<'a> {
     name: String,
     sampler: Box<dyn FnMut() -> f64 + 'a>,
 }
 
+/// Validates a test-case name, rejecting empty or whitespace-only names.
 fn validate_case_name(name: String) -> Result<String, ChiSqError> {
     if name.trim().is_empty() {
         return Err(ChiSqError::EmptyCaseName);
@@ -116,6 +148,7 @@ fn validate_case_name(name: String) -> Result<String, ChiSqError> {
     Ok(name)
 }
 
+/// Checks that a sample is finite and lies in `[0, 1)`, returning a descriptive error otherwise.
 fn validate_sample(case: &str, sample_index: usize, x: f64) -> Result<(), ChiSqError> {
     if !x.is_finite() {
         return Err(ChiSqError::NonFiniteSample {
@@ -134,6 +167,11 @@ fn validate_sample(case: &str, sample_index: usize, x: f64) -> Result<(), ChiSqE
     Ok(())
 }
 
+/// Runs a chi-squared uniformity test for the given named sampler and configuration.
+///
+/// Draws `config.samples` values, bins them into `config.bins` equal-width buckets over
+/// `[0, 1)`, computes the chi-squared statistic and its normalized z-score, and returns a
+/// [`ChiSqResult`] carrying the [`ChiSqVerdict`].
 fn run_chisq(
     name: String,
     sampler: &mut dyn FnMut() -> f64,
@@ -181,6 +219,10 @@ fn run_chisq(
 macro_rules! impl_chisq_for_rng {
     ($bits:expr) => {
         paste::paste! {
+            #[doc = concat!("Chi-squared uniformity tester for `Rng", $bits, "` generators.")]
+            #[doc = ""]
+            #[doc = "Wraps a mutable reference to a generator and runs a chi-squared test over the"]
+            #[doc = "uniform `[0, 1)` floats derived from its `nextu` output."]
             pub struct [<ChiSq $bits>]<'a, R: [<Rng $bits>] + 'a> {
                 rng: &'a mut R,
                 config: ChiSqConfig,

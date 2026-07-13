@@ -1,15 +1,24 @@
+//! Monte Carlo π-estimation test harness for RNGs.
+
 use crate::rng::{Rng32, Rng64};
 use crate::testing::_internal::{unit_f64_from_u32, unit_f64_from_u64};
 use std::{collections::HashSet, f64};
 use thiserror::Error;
 
+/// Configuration for a Monte Carlo π-estimation test.
+///
+/// Controls how many random point pairs are sampled and how large a relative
+/// error from π is still considered a passing result.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct McPiConfig {
+    /// Number of random `(x, y)` point pairs drawn per test run.
     pub pairs: usize,
+    /// Maximum allowed relative error (in percent) from the true value of π.
     pub max_error_pct: f64,
 }
 
 impl Default for McPiConfig {
+    /// Returns the default configuration: 1,000,000 point pairs, max error 0.1%.
     fn default() -> Self {
         Self {
             pairs: 1_000_000,
@@ -19,6 +28,7 @@ impl Default for McPiConfig {
 }
 
 impl McPiConfig {
+    /// Validates the configuration, returning a [`McPiError`] describing the first problem found.
     fn validate(&self) -> Result<(), McPiError> {
         if self.pairs == 0 {
             return Err(McPiError::InvalidPairs { pairs: self.pairs });
@@ -32,38 +42,56 @@ impl McPiConfig {
     }
 }
 
+/// Outcome of a single Monte Carlo π-estimation test run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum McPiVerdict {
+    /// The estimated π was within `max_error_pct` of the true value.
     Pass,
+    /// The estimated π deviated too far from the true value.
     Fail,
 }
 
+/// Full result of a single Monte Carlo π-estimation test run.
 #[derive(Debug, Clone, PartialEq)]
 pub struct McPiResult {
+    /// Name of the test case.
     pub name: String,
+    /// Number of point pairs sampled.
     pub pairs: usize,
+    /// Number of points that fell inside the unit quarter-circle.
     pub inside_circle: u64,
+    /// Estimated value of π (`4 * inside / pairs`).
     pub pi_estimate: f64,
+    /// Absolute error `|estimate - π|`.
     pub absolute_error: f64,
+    /// Relative error as a percentage of π.
     pub error_pct: f64,
+    /// Relative-error threshold used for the verdict.
     pub max_error_pct: f64,
+    /// Final pass/fail verdict.
     pub verdict: McPiVerdict,
 }
 
+/// Errors that can occur while configuring or running a Monte Carlo π test.
 #[derive(Debug, Error)]
 pub enum McPiError {
+    /// Zero point pairs were requested.
     #[error("pairs must be greater than zero: pairs={pairs}")]
     InvalidPairs { pairs: usize },
 
+    /// A non-positive or non-finite `max_error_pct` was supplied.
     #[error("max_error_pct must be finite and > 0: max_error_pct={max_error_pct}")]
     InvalidMaxErrorPct { max_error_pct: f64 },
 
+    /// A test case name was empty or whitespace-only.
     #[error("test name must not be empty")]
     EmptyCaseName,
 
+    /// Two cases in the same suite shared a name.
     #[error("duplicate test name in suite: {name}")]
     DuplicateCaseName { name: String },
 
+    /// The generator produced a non-finite (`NaN`/`inf`) value.
     #[error(
         "rng produced non-finite value: case={case}, sample_index={sample_index}, axis={axis}, value={value}"
     )]
@@ -74,6 +102,7 @@ pub enum McPiError {
         value: f64,
     },
 
+    /// The generator produced a value outside `[0, 1)`.
     #[error(
         "rng produced out-of-range value [0,1): case={case}, sample_index={sample_index}, axis={axis}, value={value}"
     )]
@@ -85,11 +114,13 @@ pub enum McPiError {
     },
 }
 
+/// A single named test case: a name plus a closure that produces `[0, 1)` floats.
 struct McPiCase<'a> {
     name: String,
     sampler: Box<dyn FnMut() -> f64 + 'a>,
 }
 
+/// Validates a test-case name, rejecting empty or whitespace-only names.
 fn validate_case_name(name: String) -> Result<String, McPiError> {
     if name.trim().is_empty() {
         return Err(McPiError::EmptyCaseName);
@@ -97,6 +128,7 @@ fn validate_case_name(name: String) -> Result<String, McPiError> {
     Ok(name)
 }
 
+/// Checks that a sample is finite and lies in `[0, 1)`, returning a descriptive error otherwise.
 fn validate_sample(
     case: &str,
     sample_index: usize,
@@ -122,6 +154,11 @@ fn validate_sample(
     Ok(())
 }
 
+/// Runs a Monte Carlo π-estimation test for the given named sampler and configuration.
+///
+/// Samples `config.pairs` points uniformly in `[0, 1)²`, counts how many fall inside the
+/// unit quarter-circle, estimates π as `4 * inside / pairs`, and returns a [`McPiResult`]
+/// carrying the [`McPiVerdict`].
 fn run_mcpi(
     name: String,
     sampler: &mut dyn FnMut() -> f64,
@@ -165,12 +202,16 @@ macro_rules! impl_mcpi_for_rng {
     ($bits:expr) => {
         paste::paste!{
             #[doc = concat!("Monte Carlo estimation of π using ", $bits, "-bit RNGs.")]
+            #[doc = ""]
+            #[doc = "Wraps a mutable reference to a generator and counts how many of its `[0, 1)`"]
+            #[doc = "point pairs fall inside the unit quarter-circle to estimate π."]
             pub struct [<McPi $bits>]<'a, R: [<Rng $bits>] + 'a> {
                 rng: &'a mut R,
                 config: McPiConfig,
             }
 
             impl<'a, R: [<Rng $bits>] + 'a> [<McPi $bits>]<'a, R> {
+                #[doc = concat!("Creates a tester for `", stringify!([<Rng $bits>]), "` using the default configuration.")]
                 pub fn from_urng(rng: &'a mut R) -> Self {
                     Self {
                         rng,
@@ -179,25 +220,30 @@ macro_rules! impl_mcpi_for_rng {
                 }
 
                 #[deprecated(note = "use `from_urng` instead")]
+                #[doc = "Deprecated alias for [`from_urng`](Self::from_urng)."]
                 pub fn new(rng: &'a mut R) -> Self {
                     Self::from_urng(rng)
                 }
 
+                #[doc = "Creates a tester with an explicit, validated configuration."]
                 pub fn with_config(rng: &'a mut R, config: McPiConfig) -> Result<Self, McPiError> {
                     config.validate()?;
                     Ok(Self { rng, config })
                 }
 
+                #[doc = "Returns the current configuration."]
                 pub fn config(&self) -> McPiConfig {
                     self.config
                 }
 
+                #[doc = "Replaces the configuration after validating it."]
                 pub fn set_config(&mut self, config: McPiConfig) -> Result<(), McPiError> {
                     config.validate()?;
                     self.config = config;
                     Ok(())
                 }
 
+                #[doc = "Runs the Monte Carlo test, returning a [`McPiResult`] (or the first validation error)."]
                 pub fn run(&mut self, name: impl Into<String>) -> Result<McPiResult, McPiError> {
                     let name = validate_case_name(name.into())?;
                     let mut sampler = || [<unit_f64_from_u $bits>](self.rng.nextu());
@@ -212,6 +258,7 @@ macro_rules! impl_mcpi_for_rng {
                     Self::from_urng(crate::testing::rand_adapter::RandAdapter::from_mut(rng))
                 }
 
+                #[doc = "Creates a tester with an explicit configuration from any `rand_core::Rng`."]
                 pub fn with_config_from_rand(
                     rng: &'a mut R,
                     config: McPiConfig,
@@ -220,6 +267,7 @@ macro_rules! impl_mcpi_for_rng {
                 }
             }
 
+            #[doc = concat!("A suite that runs multiple Monte Carlo π test cases and collects their [`McPiResult`]s.")]
             pub struct [<McPiSuite $bits>]<'a> {
                 config: McPiConfig,
                 cases: Vec<McPiCase<'a>>,
@@ -235,10 +283,12 @@ macro_rules! impl_mcpi_for_rng {
             }
 
             impl<'a> [<McPiSuite $bits>]<'a> {
+                #[doc = "Creates an empty suite with the default configuration."]
                 pub fn new() -> Self {
                     Self::default()
                 }
 
+                #[doc = "Creates an empty suite with an explicit, validated configuration."]
                 pub fn with_config(config: McPiConfig) -> Result<Self, McPiError> {
                     config.validate()?;
                     Ok(Self {
@@ -247,28 +297,34 @@ macro_rules! impl_mcpi_for_rng {
                     })
                 }
 
+                #[doc = "Returns the current configuration."]
                 pub fn config(&self) -> McPiConfig {
                     self.config
                 }
 
+                #[doc = "Replaces the configuration after validating it."]
                 pub fn set_config(&mut self, config: McPiConfig) -> Result<(), McPiError> {
                     config.validate()?;
                     self.config = config;
                     Ok(())
                 }
 
+                #[doc = "Returns the number of registered cases."]
                 pub fn len(&self) -> usize {
                     self.cases.len()
                 }
 
+                #[doc = "Returns `true` if no cases are registered."]
                 pub fn is_empty(&self) -> bool {
                     self.cases.is_empty()
                 }
 
+                #[doc = "Removes all registered cases."]
                 pub fn clear(&mut self) {
                     self.cases.clear();
                 }
 
+                #[doc = concat!("Registers a `", stringify!([<Rng $bits>]), "` generator as a named test case.")]
                 pub fn add_rng<R: [<Rng $bits>] + 'a>(
                     &mut self,
                     name: impl Into<String>,
@@ -282,6 +338,7 @@ macro_rules! impl_mcpi_for_rng {
                     Ok(self)
                 }
 
+                #[doc = "Registers an arbitrary `[0, 1)` sampler closure as a named test case."]
                 pub fn add_sampler<F>(
                     &mut self,
                     name: impl Into<String>,
@@ -298,6 +355,7 @@ macro_rules! impl_mcpi_for_rng {
                     Ok(self)
                 }
 
+                #[doc = "Runs every case, returning a [`McPiResult`] per case (or the first error)."]
                 pub fn run(&mut self) -> Result<Vec<McPiResult>, McPiError> {
                     let mut seen = HashSet::with_capacity(self.cases.len());
                     let mut out = Vec::with_capacity(self.cases.len());
