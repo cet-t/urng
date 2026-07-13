@@ -126,10 +126,10 @@ impl Threefry32x4 {
         let ksi5_3 = k[3].wrapping_add(5);
 
         [
-            v[0] + ksi5_0 ^ c[0],
-            v[1] + ksi5_1 ^ c[1],
-            v[2] + ksi5_2 ^ c[2],
-            v[3] + ksi5_3 ^ c[3],
+            (v[0] + ksi5_0) ^ c[0],
+            (v[1] + ksi5_1) ^ c[1],
+            (v[2] + ksi5_2) ^ c[2],
+            (v[3] + ksi5_3) ^ c[3],
         ]
         .map(|x| x.value())
     }
@@ -224,7 +224,7 @@ impl Threefry32x2 {
 
         macro_rules! inject_key {
             ($s:expr) => {
-                v[0] = v[0] + k[$s % 3];
+                v[0] += k[$s % 3];
                 v[1] = v[1] + k[($s + 1) % 3] + $s as u32;
             };
         }

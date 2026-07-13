@@ -178,7 +178,7 @@ impl Rng64 for Xoroshiro128Ss {
     fn nextu(&mut self) -> u64 {
         let result = (self.s[0] * 5).rotate_left(7) * 9;
 
-        self.s[1] = self.s[1] ^ self.s[0];
+        self.s[1] ^= self.s[0];
         self.s[0] = self.s[1] ^ self.s[0].rotate_left(24) ^ (self.s[1] << 16);
         self.s[1] = self.s[1].rotate_left(37);
 
