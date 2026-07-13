@@ -5,6 +5,20 @@ use ::wide::{u32x4, u32x8, u32x16};
 macro_rules! impl_variants {
     ($name:ident, $scrambler:tt, $size:expr) => {
         ::paste::paste! {
+            #[doc = concat!(stringify!($name), " (xoshiro128) producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
+            #[doc = ""]
+            #[doc = "Portable-SIMD counterpart of the scalar xoshiro128 generators in `crate::rng32`."]
+            #[doc = "A 128-bit state (four 32-bit words) per lane; each `nextu` call returns an array of"]
+            #[doc = "`u32`, one per lane."]
+            #[doc = ""]
+            #[doc = "# Example"]
+            #[doc = "```"]
+            #[doc = concat!("use urng::wide::", stringify!($name), "x", stringify!($size), ";")]
+            #[doc = ""]
+            #[doc = concat!("let mut rng = ", stringify!($name), "x", stringify!($size), "::new(1);")]
+            #[doc = concat!("let v = rng.nextu();")]
+            #[doc = concat!("assert_eq!(v.len(), ", stringify!($size), ");")]
+            #[doc = "```"]
             #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<$name x $size>] {
@@ -16,6 +30,7 @@ macro_rules! impl_variants {
 
             #[allow(dead_code)]
             impl [<$name x $size>] {
+                #[doc = "Creates a new generator, seeding the four state words of every lane from `seed`."]
                 pub fn new(seed: u32) -> Self {
                     let mut seedgen = SplitMix32::new(seed);
                     Self {
@@ -26,6 +41,9 @@ macro_rules! impl_variants {
                     }
                 }
 
+                #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
+                #[doc = ""]
+                #[doc = "Applies the xoshiro128 state update and the selected (`++` or `**`) scrambler."]
                 #[inline(always)]
                 pub fn nextu(&mut self) -> [u32; $size] {
                     let res = impl_variants!(@scramble $scrambler, self.s0, self.s1, self.s3);

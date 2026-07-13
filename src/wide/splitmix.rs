@@ -5,6 +5,20 @@ use crate::wide::impl_methods;
 macro_rules! impl_variants {
     ($size:expr) => {
         paste::paste! {
+            #[doc = concat!("SplitMix32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
+            #[doc = ""]
+            #[doc = "Portable-SIMD counterpart of [`crate::rng32::SplitMix32`]. A fast finalizer-based"]
+            #[doc = "generator, commonly used to seed the other `wide` generators. Each `nextu` call"]
+            #[doc = "returns an array of `u32`, one per lane."]
+            #[doc = ""]
+            #[doc = "# Example"]
+            #[doc = "```"]
+            #[doc = concat!("use urng::wide::SplitMix32x", stringify!($size), ";")]
+            #[doc = ""]
+            #[doc = concat!("let mut rng = SplitMix32x", stringify!($size), "::new(1);")]
+            #[doc = concat!("let v = rng.nextu();")]
+            #[doc = concat!("assert_eq!(v.len(), ", stringify!($size), ");")]
+            #[doc = "```"]
             #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<SplitMix32x $size>] {
@@ -13,6 +27,7 @@ macro_rules! impl_variants {
 
             #[allow(dead_code)]
             impl [<SplitMix32x $size>] {
+                #[doc = "Creates a new generator, seeding every lane from `seed | 1` and advancing by the golden ratio."]
                 pub fn new(seed: u32) -> Self {
                     let mut state = [0u32; $size];
                     state.iter_mut().fold(seed | 1, |s, x| {
@@ -33,6 +48,9 @@ macro_rules! impl_variants {
                     z ^ (z >> 16)
                 }
 
+                #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
+                #[doc = ""]
+                #[doc = "Advances the shared counter by `0x9E3779B9` and applies the two-multiply finalizer."]
                 #[inline(always)]
                 pub fn nextu(&mut self) -> [u32; $size] {
                     self.state += [<u32x $size>]::splat(0x9E3779B9);

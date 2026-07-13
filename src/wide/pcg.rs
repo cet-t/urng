@@ -5,6 +5,19 @@ use ::wide::{u64x4, u64x8};
 macro_rules! impl_pcg32_variants {
     ($size:expr, $lanes:expr) => {
         ::paste::paste! {
+            #[doc = concat!("PCG32 (Permuted Congruential Generator) producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
+            #[doc = ""]
+            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Pcg32`]. Uses the PCG-XSH-RR output"]
+            #[doc = "function over wide `u64` state; each `nextu` call returns an array of `u32`."]
+            #[doc = ""]
+            #[doc = "# Example"]
+            #[doc = "```"]
+            #[doc = concat!("use urng::wide::Pcg32x", stringify!($size), ";")]
+            #[doc = ""]
+            #[doc = concat!("let mut rng = Pcg32x", stringify!($size), "::new(0);")]
+            #[doc = concat!("let v = rng.nextu();")]
+            #[doc = concat!("assert_eq!(v.len(), ", stringify!($size), ");")]
+            #[doc = "```"]
             #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<Pcg32x $size>] {
@@ -14,6 +27,7 @@ macro_rules! impl_pcg32_variants {
 
             #[allow(dead_code)]
             impl [<Pcg32x $size>] {
+                #[doc = "Creates a new generator, seeding every lane's state and increment from `seed`."]
                 pub fn new(seed: u64) -> Self {
                     let mut seedgen = SplitMix64::new(seed | 1);
                     Self {
@@ -22,6 +36,7 @@ macro_rules! impl_pcg32_variants {
                     }
                 }
 
+                #[doc = "Advances one PCG32 stream (`state = state * MULT + inc`) and applies the XSH-RR output function."]
                 #[inline(always)]
                 fn step(state: &mut [<u64x $lanes>], inc: [<u64x $lanes>]) -> [u32; $lanes] {
                     let oldstate = *state;
@@ -32,6 +47,7 @@ macro_rules! impl_pcg32_variants {
                     std::array::from_fn(|i| (xorshifted[i] as u32).rotate_right(rot[i] as u32))
                 }
 
+                #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[inline(always)]
                 pub fn nextu(&mut self) -> [u32; $size] {
                     bytemuck::cast(Self::step(&mut self.state, self.inc))
@@ -46,6 +62,19 @@ macro_rules! impl_pcg32_variants {
 impl_pcg32_variants!(4, 4);
 impl_pcg32_variants!(8, 8);
 
+/// PCG32 producing 16 values per call by combining two [`Pcg32x8`] streams.
+///
+/// Portable-SIMD counterpart of [`crate::rng32::Pcg32`]. Each `nextu` call returns
+/// a `[u32; 16]` by drawing 8 values from each underlying `Pcg32x8` lane-group.
+///
+/// # Example
+/// ```
+/// use urng::wide::Pcg32x16;
+///
+/// let mut rng = Pcg32x16::new(0);
+/// let v = rng.nextu();
+/// assert_eq!(v.len(), 16);
+/// ```
 #[allow(dead_code)]
 #[repr(C, align(64))]
 pub struct Pcg32x16 {
@@ -55,6 +84,7 @@ pub struct Pcg32x16 {
 
 #[allow(dead_code)]
 impl Pcg32x16 {
+    /// Creates a new generator, seeding the lower and upper `Pcg32x8` lane-groups from `seed`.
     pub fn new(seed: u64) -> Self {
         Self {
             lo: Pcg32x8::new(seed),
@@ -62,6 +92,7 @@ impl Pcg32x16 {
         }
     }
 
+    #[doc = "Generates the next 16 `u32` values by combining both `Pcg32x8` lane-groups."]
     #[inline(always)]
     pub fn nextu(&mut self) -> [u32; 16] {
         let lo = self.lo.nextu();

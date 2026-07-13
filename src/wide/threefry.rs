@@ -7,6 +7,20 @@ const THREEFRY32_C240: u32 = 0x1BD11BDA;
 macro_rules! impl_threefry32x2_variants {
     ($size:expr) => {
         ::paste::paste! {
+            #[doc = concat!("Threefry 2x32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
+            #[doc = ""]
+            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Threefry32x2`]. A counter-based generator"]
+            #[doc = "using a reduced-round (20-round) Threefish cipher with 2 output words per block; each"]
+            #[doc = "`nextu` call returns an array of `u32`, one per lane."]
+            #[doc = ""]
+            #[doc = "# Example"]
+            #[doc = "```"]
+            #[doc = concat!("use urng::wide::Threefry32x2x", stringify!($size), ";")]
+            #[doc = ""]
+            #[doc = concat!("let mut rng = Threefry32x2x", stringify!($size), "::new(1);")]
+            #[doc = concat!("let v = rng.nextu();")]
+            #[doc = concat!("assert_eq!(v.len(), ", stringify!($size), ");")]
+            #[doc = "```"]
             #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<Threefry32x2x $size>] {
@@ -22,6 +36,7 @@ macro_rules! impl_threefry32x2_variants {
 
             #[allow(dead_code)]
             impl [<Threefry32x2x $size>] {
+                #[doc = "Creates a new generator, deriving the 2-word key schedule and counter from `seed`."]
                 pub fn new(seed: u32) -> Self {
                     let mut seedgen = SplitMix32::new(seed);
                     let k0 = [<u32x $size>]::from([0u32; $size].map(|_| seedgen.nextu()));
@@ -38,6 +53,7 @@ macro_rules! impl_threefry32x2_variants {
                     }
                 }
 
+                #[doc = "Pure 20-round Threefish encryption of the current counter, returning the two output words."]
                 #[inline(always)]
                 fn compute(&self) -> ([<u32x $size>], [<u32x $size>]) {
                     let mut v0 = self.c0;
@@ -74,6 +90,7 @@ macro_rules! impl_threefry32x2_variants {
                     )
                 }
 
+                #[doc = "Recomputes a fresh block of 2 values and advances the counter when the buffer is exhausted."]
                 #[inline(always)]
                 fn refill(&mut self) {
                     let (buf0, buf1) = self.compute();
@@ -83,6 +100,7 @@ macro_rules! impl_threefry32x2_variants {
                     self.pos = 0;
                 }
 
+                #[doc = "Generates the next block of `u32` values, one per SIMD lane, refilling as needed."]
                 #[inline(always)]
                 pub fn nextu(&mut self) -> [u32; $size] {
                     if self.pos >= 2 {
@@ -105,6 +123,20 @@ macro_rules! impl_threefry32x2_variants {
 macro_rules! impl_threefry32x4_variants {
     ($size:expr) => {
         ::paste::paste! {
+            #[doc = concat!("Threefry 4x32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
+            #[doc = ""]
+            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Threefry32x4`]. A counter-based generator"]
+            #[doc = "using a reduced-round (20-round) Threefish cipher with 4 output words per block; each"]
+            #[doc = "`nextu` call returns an array of `u32`, one per lane."]
+            #[doc = ""]
+            #[doc = "# Example"]
+            #[doc = "```"]
+            #[doc = concat!("use urng::wide::Threefry32x4x", stringify!($size), ";")]
+            #[doc = ""]
+            #[doc = concat!("let mut rng = Threefry32x4x", stringify!($size), "::new(1);")]
+            #[doc = concat!("let v = rng.nextu();")]
+            #[doc = concat!("assert_eq!(v.len(), ", stringify!($size), ");")]
+            #[doc = "```"]
             #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<Threefry32x4x $size>] {
@@ -129,6 +161,7 @@ macro_rules! impl_threefry32x4_variants {
 
             #[allow(dead_code)]
             impl [<Threefry32x4x $size>] {
+                #[doc = "Creates a new generator, deriving the 4-word key schedule, tweak and counter from `seed`."]
                 pub fn new(seed: u32) -> Self {
                     let mut seedgen = SplitMix32::new(seed);
                     let k0 = [<u32x $size>]::from([0u32; $size].map(|_| seedgen.nextu()));
@@ -158,6 +191,7 @@ macro_rules! impl_threefry32x4_variants {
                     }
                 }
 
+                #[doc = "Pure 20-round Threefish encryption of the current counter, returning the four output words."]
                 #[inline(always)]
                 fn compute(&self) -> ([<u32x $size>], [<u32x $size>], [<u32x $size>], [<u32x $size>]) {
                     let mut v0 = self.c0;
@@ -205,6 +239,7 @@ macro_rules! impl_threefry32x4_variants {
                     )
                 }
 
+                #[doc = "Recomputes a fresh block of 4 values and advances the counter when the buffer is exhausted."]
                 #[inline(always)]
                 fn refill(&mut self) {
                     let (buf0, buf1, buf2, buf3) = self.compute();
@@ -216,6 +251,7 @@ macro_rules! impl_threefry32x4_variants {
                     self.pos = 0;
                 }
 
+                #[doc = "Generates the next block of `u32` values, one per SIMD lane, refilling as needed."]
                 #[inline(always)]
                 pub fn nextu(&mut self) -> [u32; $size] {
                     if self.pos >= 4 {

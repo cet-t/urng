@@ -5,6 +5,19 @@ use ::wide::{u32x4, u32x8, u32x16};
 macro_rules! impl_xorshift32_variants {
     ($size:expr) => {
         ::paste::paste! {
+            #[doc = concat!("Xorshift32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
+            #[doc = ""]
+            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Xorshift32`]. A shift-register generator;"]
+            #[doc = "each `nextu` call returns an array of `u32`, one per lane."]
+            #[doc = ""]
+            #[doc = "# Example"]
+            #[doc = "```"]
+            #[doc = concat!("use urng::wide::Xorshift32x", stringify!($size), ";")]
+            #[doc = ""]
+            #[doc = concat!("let mut rng = Xorshift32x", stringify!($size), "::new(1);")]
+            #[doc = concat!("let v = rng.nextu();")]
+            #[doc = concat!("assert_eq!(v.len(), ", stringify!($size), ");")]
+            #[doc = "```"]
             #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<Xorshift32x $size>] {
@@ -13,6 +26,7 @@ macro_rules! impl_xorshift32_variants {
 
             #[allow(dead_code)]
             impl [<Xorshift32x $size>] {
+                #[doc = "Creates a new generator, seeding the single shift-register word of every lane from `seed`."]
                 pub fn new(seed: u32) -> Self {
                     let mut seedgen = SplitMix32::new(seed);
                     Self {
@@ -20,6 +34,9 @@ macro_rules! impl_xorshift32_variants {
                     }
                 }
 
+                #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
+                #[doc = ""]
+                #[doc = "Applies the Xorshift32 scramble: `x ^= x << 13; x ^= x >> 17; x ^= x << 5`."]
                 #[inline(always)]
                 pub fn nextu(&mut self) -> [u32; $size] {
                     let x = self.a;
@@ -41,6 +58,19 @@ macro_rules! impl_xorshift32_variants {
 macro_rules! impl_xorshift128_variants {
     ($size:expr) => {
         ::paste::paste! {
+            #[doc = concat!("Xorshift128 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
+            #[doc = ""]
+            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Xorshift128`]. A 128-bit internal state;"]
+            #[doc = "each `nextu` call returns an array of `u32`, one per lane."]
+            #[doc = ""]
+            #[doc = "# Example"]
+            #[doc = "```"]
+            #[doc = concat!("use urng::wide::Xorshift128x", stringify!($size), ";")]
+            #[doc = ""]
+            #[doc = concat!("let mut rng = Xorshift128x", stringify!($size), "::new(1);")]
+            #[doc = concat!("let v = rng.nextu();")]
+            #[doc = concat!("assert_eq!(v.len(), ", stringify!($size), ");")]
+            #[doc = "```"]
             #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<Xorshift128x $size>] {
@@ -52,6 +82,7 @@ macro_rules! impl_xorshift128_variants {
 
             #[allow(dead_code)]
             impl [<Xorshift128x $size>] {
+                #[doc = "Creates a new generator, seeding the four state words of every lane from `seed`."]
                 pub fn new(seed: u32) -> Self {
                     let mut seedgen = SplitMix32::new(seed);
                     Self {
@@ -62,6 +93,9 @@ macro_rules! impl_xorshift128_variants {
                     }
                 }
 
+                #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
+                #[doc = ""]
+                #[doc = "Applies the Xorshift128 scramble over the 128-bit state."]
                 #[inline(always)]
                 pub fn nextu(&mut self) -> [u32; $size] {
                     let mut t = self.x3;
@@ -87,6 +121,19 @@ macro_rules! impl_xorshift128_variants {
 macro_rules! impl_xorwow_variants {
     ($size:expr) => {
         ::paste::paste! {
+            #[doc = concat!("Xorwow producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
+            #[doc = ""]
+            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Xorwow`]. Combines a Xorshift state with a"]
+            #[doc = "Weyl (linear) counter; each `nextu` call returns an array of `u32`, one per lane."]
+            #[doc = ""]
+            #[doc = "# Example"]
+            #[doc = "```"]
+            #[doc = concat!("use urng::wide::Xorwowx", stringify!($size), ";")]
+            #[doc = ""]
+            #[doc = concat!("let mut rng = Xorwowx", stringify!($size), "::new(1);")]
+            #[doc = concat!("let v = rng.nextu();")]
+            #[doc = concat!("assert_eq!(v.len(), ", stringify!($size), ");")]
+            #[doc = "```"]
             #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<Xorwowx $size>] {
@@ -100,6 +147,7 @@ macro_rules! impl_xorwow_variants {
 
             #[allow(dead_code)]
             impl [<Xorwowx $size>] {
+                #[doc = "Creates a new generator, seeding the five state words and the Weyl counter of every lane from `seed`."]
                 pub fn new(seed: u32) -> Self {
                     let mut seedgen = SplitMix32::new(seed);
                     Self {
@@ -112,6 +160,9 @@ macro_rules! impl_xorwow_variants {
                     }
                 }
 
+                #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
+                #[doc = ""]
+                #[doc = "Applies the Xorwow scramble and adds the advancing Weyl counter."]
                 #[inline(always)]
                 pub fn nextu(&mut self) -> [u32; $size] {
                     let mut t = self.x4;

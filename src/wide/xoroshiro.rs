@@ -5,6 +5,19 @@ use ::wide::{u32x4, u32x8, u32x16};
 macro_rules! impl_variants {
     ($size:expr) => {
         ::paste::paste! {
+            #[doc = concat!("Xoroshiro64** producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
+            #[doc = ""]
+            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Xoroshiro64Ss`]. A 64-bit state (two"]
+            #[doc = "32-bit words) per lane; each `nextu` call returns an array of `u32`, one per lane."]
+            #[doc = ""]
+            #[doc = "# Example"]
+            #[doc = "```"]
+            #[doc = concat!("use urng::wide::Xoroshiro64Ssx", stringify!($size), ";")]
+            #[doc = ""]
+            #[doc = concat!("let mut rng = Xoroshiro64Ssx", stringify!($size), "::new(1);")]
+            #[doc = concat!("let v = rng.nextu();")]
+            #[doc = concat!("assert_eq!(v.len(), ", stringify!($size), ");")]
+            #[doc = "```"]
             #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<Xoroshiro64Ssx $size>] {
@@ -14,6 +27,7 @@ macro_rules! impl_variants {
 
             #[allow(dead_code)]
             impl [<Xoroshiro64Ssx $size>] {
+                #[doc = "Creates a new generator, seeding the two state words of every lane from `seed`."]
                 pub fn new(seed: u32) -> Self {
                     let mut seedgen = SplitMix32::new(seed);
                     Self {
@@ -22,6 +36,9 @@ macro_rules! impl_variants {
                     }
                 }
 
+                #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
+                #[doc = ""]
+                #[doc = "Applies the Xoroshiro64** scramble: `rotl(s0 * 0x9E3779BB, 5) * 5`."]
                 #[inline(always)]
                 pub fn nextu(&mut self) -> [u32; $size] {
                     let s0 = self.s0;

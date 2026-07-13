@@ -5,6 +5,19 @@ use ::wide::{u32x4, u32x8, u32x16};
 macro_rules! impl_variants {
     ($size:expr) => {
         ::paste::paste! {
+            #[doc = concat!("SFC32 (Small Fast Counter) producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
+            #[doc = ""]
+            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Sfc32`]. Uses a 128-bit state plus an"]
+            #[doc = "internal counter; each `nextu` call returns an array of `u32`, one per lane."]
+            #[doc = ""]
+            #[doc = "# Example"]
+            #[doc = "```"]
+            #[doc = concat!("use urng::wide::Sfc32x", stringify!($size), ";")]
+            #[doc = ""]
+            #[doc = concat!("let mut rng = Sfc32x", stringify!($size), "::new(1);")]
+            #[doc = concat!("let v = rng.nextu();")]
+            #[doc = concat!("assert_eq!(v.len(), ", stringify!($size), ");")]
+            #[doc = "```"]
             #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<Sfc32x $size>] {
@@ -16,6 +29,7 @@ macro_rules! impl_variants {
 
             #[allow(dead_code)]
             impl [<Sfc32x $size>] {
+                #[doc = "Creates a new generator, seeding `a`, `b`, `c` and `counter` of every lane from `seed`."]
                 pub fn new(seed: u32) -> Self {
                     let mut seedgen = SplitMix32::new(seed);
 
@@ -27,6 +41,7 @@ macro_rules! impl_variants {
                     }
                 }
 
+                #[doc = "Pure SFC32 scramble applied to a single `tmp` word and the per-lane state references."]
                 #[inline(always)]
                 pub(crate) fn compute(
                     tmp: [<u32x $size>],
@@ -43,6 +58,9 @@ macro_rules! impl_variants {
                     tmp
                 }
 
+                #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
+                #[doc = ""]
+                #[doc = "Mixes the state, advances the counter, and returns the previous `a + b + counter` sum."]
                 #[inline(always)]
                 pub fn nextu(&mut self) -> [u32; $size] {
                     let tmp = self.a + self.b + self.counter;

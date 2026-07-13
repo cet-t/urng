@@ -4,6 +4,20 @@ use ::wide::{u32x4, u32x8, u32x16};
 macro_rules! impl_variants {
     ($size:expr) => {
         ::paste::paste! {
+            #[doc = concat!("JSF (Jenkins Small Fast) 32-bit RNG producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
+            #[doc = ""]
+            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Jsf32`]. Each `nextu` call returns an"]
+            #[doc = "array of `u32`; `nextf`, `randi` and `randf` return the same number of `f32`/`i32`"]
+            #[doc = "values in parallel."]
+            #[doc = ""]
+            #[doc = "# Example"]
+            #[doc = "```"]
+            #[doc = concat!("use urng::wide::Jsf32x", stringify!($size), ";")]
+            #[doc = ""]
+            #[doc = concat!("let mut rng = Jsf32x", stringify!($size), "::new(12345);")]
+            #[doc = concat!("let v = rng.nextu();")]
+            #[doc = concat!("assert_eq!(v.len(), ", stringify!($size), ");")]
+            #[doc = "```"]
             #[repr(C, align(64))]
             pub struct [<Jsf32x $size>] {
                 pub(crate) a: [<u32x $size>],
@@ -13,6 +27,7 @@ macro_rules! impl_variants {
             }
 
             impl [<Jsf32x $size>] {
+                #[doc = "Creates a new generator, seeding every SIMD lane from `seed` using a `SplitMix32` stream."]
                 pub fn new(seed: u32) -> Self {
                     let mut seedgen = [<SplitMix32x $size>]::new(seed);
                     Self {
@@ -23,6 +38,9 @@ macro_rules! impl_variants {
                     }
                 }
 
+                #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
+                #[doc = ""]
+                #[doc = "Applies one round of the JSF scramble and returns the rotated `d` word from each lane."]
                 #[inline(always)]
                 pub fn nextu(&mut self) -> [u32; $size] {
                     let e = self.a - wide_rotate_left!(32 self.b, 27);
