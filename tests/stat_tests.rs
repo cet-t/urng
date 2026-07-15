@@ -22,6 +22,10 @@ use urng::rng64::{
     Biski64, Cet64, Cet256, Mt1993764, Philox64, Sfc64, Sfmt1993764, SplitMix64, Threefish256,
     TwistedGFSR, Xorshift64, Xoshiro256Pp, Xoshiro256Ss,
 };
+use urng::testing::{
+    ChiSqConfig, ChiSqResult, ChiSqSuite32, ChiSqVerdict, McPiConfig, McPiResult, McPiSuite32,
+    McPiVerdict,
+};
 
 use crate::stat::{chisq, monte_carlo, scatter};
 
@@ -136,96 +140,96 @@ fn gen_arr4f64<F: FnMut() -> [f64; 4]>(mut f: F) -> impl FnMut() -> f64 {
 macro_rules! push_chi {
     (s32$rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = || r.nextu() as f64 * (1.0 / (u32::MAX as f64 + 1.0));
-        $rs.push(chisq::run(stringify!($algo), &mut f, CHI_N, CHI_BINS));
+        let f = move || r.nextu() as f64 * (1.0 / (u32::MAX as f64 + 1.0));
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (s64$rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = || r.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0));
-        $rs.push(chisq::run(stringify!($algo), &mut f, CHI_N, CHI_BINS));
+        let f = move || r.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0));
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (arr2f32 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = gen_arr2f32(move || r.nextf());
-        $rs.push(chisq::run(stringify!($algo), &mut f, CHI_N, CHI_BINS));
+        let f = gen_arr2f32(move || r.nextf());
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (arr4f32 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = gen_arr4f32(move || r.nextf());
-        $rs.push(chisq::run(stringify!($algo), &mut f, CHI_N, CHI_BINS));
+        let f = gen_arr4f32(move || r.nextf());
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (arr8f32 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = gen_arr8f32(move || r.nextf());
-        $rs.push(chisq::run(stringify!($algo), &mut f, CHI_N, CHI_BINS));
+        let f = gen_arr8f32(move || r.nextf());
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (arr16f32 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = gen_arr16f32(move || r.nextf());
-        $rs.push(chisq::run(stringify!($algo), &mut f, CHI_N, CHI_BINS));
+        let f = gen_arr16f32(move || r.nextf());
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (arr2u64 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = gen_arr2u64(move || r.nextu());
-        $rs.push(chisq::run(stringify!($algo), &mut f, CHI_N, CHI_BINS));
+        let f = gen_arr2u64(move || r.nextu());
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (arr4f64 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = gen_arr4f64(move || r.nextf());
-        $rs.push(chisq::run(stringify!($algo), &mut f, CHI_N, CHI_BINS));
+        let f = gen_arr4f64(move || r.nextf());
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (nf64 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = || r.nextf();
-        $rs.push(chisq::run(stringify!($algo), &mut f, CHI_N, CHI_BINS));
+        let f = move || r.nextf();
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
 }
 
 macro_rules! push_monte {
     (s32$rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = || r.nextu() as f64 * (1.0 / (u32::MAX as f64 + 1.0));
-        $rs.push(monte_carlo::run(stringify!($algo), &mut f, MONTE_CARLO_N));
+        let f = move || r.nextu() as f64 * (1.0 / (u32::MAX as f64 + 1.0));
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (s64$rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = || r.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0));
-        $rs.push(monte_carlo::run(stringify!($algo), &mut f, MONTE_CARLO_N));
+        let f = move || r.nextu() as f64 * (1.0 / (u64::MAX as f64 + 1.0));
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (arr2f32 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = gen_arr2f32(move || r.nextf());
-        $rs.push(monte_carlo::run(stringify!($algo), &mut f, MONTE_CARLO_N));
+        let f = gen_arr2f32(move || r.nextf());
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (arr4f32 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = gen_arr4f32(move || r.nextf());
-        $rs.push(monte_carlo::run(stringify!($algo), &mut f, MONTE_CARLO_N));
+        let f = gen_arr4f32(move || r.nextf());
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (arr8f32 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = gen_arr8f32(move || r.nextf());
-        $rs.push(monte_carlo::run(stringify!($algo), &mut f, MONTE_CARLO_N));
+        let f = gen_arr8f32(move || r.nextf());
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (arr16f32 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = gen_arr16f32(move || r.nextf());
-        $rs.push(monte_carlo::run(stringify!($algo), &mut f, MONTE_CARLO_N));
+        let f = gen_arr16f32(move || r.nextf());
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (arr2u64 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = gen_arr2u64(move || r.nextu());
-        $rs.push(monte_carlo::run(stringify!($algo), &mut f, MONTE_CARLO_N));
+        let f = gen_arr2u64(move || r.nextu());
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (arr4f64 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = gen_arr4f64(move || r.nextf());
-        $rs.push(monte_carlo::run(stringify!($algo), &mut f, MONTE_CARLO_N));
+        let f = gen_arr4f64(move || r.nextf());
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
     (nf64 $rs:expr, $algo:ident, $rng:expr) => {{
         let mut r = $rng;
-        let mut f = || r.nextf();
-        $rs.push(monte_carlo::run(stringify!($algo), &mut f, MONTE_CARLO_N));
+        let f = move || r.nextf();
+        $rs.add_sampler(stringify!($algo), f)?;
     }};
 }
 
@@ -382,8 +386,8 @@ macro_rules! reg {
 // ── suite ─────────────────────────────────────────────────────────────────────
 
 struct Suite {
-    chi: Vec<chisq::TestResult>,
-    monte: Vec<monte_carlo::TestResult>,
+    chi: Vec<ChiSqResult>,
+    monte: Vec<McPiResult>,
 }
 
 #[allow(deprecated)]
@@ -391,8 +395,15 @@ fn build_suite() -> Result<Suite> {
     ensure_logs_dir()?;
     println!("\n=== Lag-1 Scatter Plots ===");
 
-    let mut chi = Vec::new();
-    let mut monte = Vec::new();
+    let mut chi = ChiSqSuite32::with_config(ChiSqConfig {
+        samples: CHI_N,
+        bins: CHI_BINS,
+        z_limit: 3.0,
+    })?;
+    let mut monte = McPiSuite32::with_config(McPiConfig {
+        pairs: MONTE_CARLO_N,
+        max_error_pct: 0.1,
+    })?;
 
     // rng32  (nextu → u32)
     // Note: Lcg32/Lcg64 excluded — plain u32/u64 multiply overflows for large modulus.
@@ -444,6 +455,9 @@ fn build_suite() -> Result<Suite> {
     reg!(arr4f64 chi, monte, Threefish256);
     reg!(s64 chi, monte, Biski64);
 
+    let chi = chi.run()?;
+    let monte = monte.run()?;
+
     chisq::log(&chi, &logs_path("chi_square.log"))?;
     monte_carlo::log(&monte, &logs_path("monte_carlo.log"))?;
 
@@ -462,7 +476,7 @@ fn chi_square() {
     let failed: Vec<_> = suite()
         .chi
         .iter()
-        .filter(|r| !r.passed)
+        .filter(|r| r.verdict != ChiSqVerdict::Pass)
         .map(|r| r.name.as_str())
         .collect();
     assert!(failed.is_empty(), "chi-square FAILED: {:?}", failed);
@@ -473,7 +487,7 @@ fn monte_carlo_pi() {
     let failed: Vec<_> = suite()
         .monte
         .iter()
-        .filter(|r| !r.passed)
+        .filter(|r| r.verdict != McPiVerdict::Pass)
         .map(|r| r.name.as_str())
         .collect();
     assert!(failed.is_empty(), "monte_carlo_pi FAILED: {:?}", failed);
