@@ -128,8 +128,8 @@ const RUNS: usize = 3;
 /// L3-resident mode: 16 MB working set (fits in L3, below the library's
 /// 24 MB NT threshold so adaptive fills use cached stores) looped to the
 /// same 100M total outputs.
-const N_L3_32: usize = 4_000_000;
-const N_L3_64: usize = 2_000_000;
+const N_L3_32: usize = 4_000_000; // << 1;
+const N_L3_64: usize = N_L3_32 >> 1;
 const L3_LOOPS_32: usize = N / N_L3_32;
 const L3_LOOPS_64: usize = N / N_L3_64;
 
