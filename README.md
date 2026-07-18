@@ -47,22 +47,6 @@ Enable the `wide` feature to build portable lane-parallel generators under `urng
 urng = { version = "0.9.0", features = ["wide"] }
 ```
 
-### Optional `testing` Feature
-
-Enable the `testing` feature for a statistical test harness (chi-squared uniformity test and Monte Carlo π estimation) usable against any `Rng32`/`Rng64` generator, or against `rand`-ecosystem RNGs when combined with the `rand` feature. See [Testing](#testing) below.
-
-```toml
-[dependencies]
-urng = { version = "0.9.0", features = ["testing"] }
-```
-
-When enabled, all scalar generators (`Mt19937`, `Sfmt*`, `Pcg32`, `Sfc32`, `SplitMix32`, `Squares32`, `Xoroshiro64Ss`, `Xorshift32`, `Xorshift128`, `Xorwow`, `Xoshiro128Pp`, `Xoshiro128Ss`) implement:
-
-- [`rand_core::SeedableRng`][SeedableRng] — seed from `[u8; 4]`
-- [`rand_core::TryRng`][TryRng] — fallible byte-fill API via [`try_fill_bytes`][try_fill_bytes]
-
-`Philox32x4` (returns `[u32; 4]` per call) implements `TryRng` with a specialized `try_fill_bytes` that packs multiple `u32` outputs per call.
-
 ## Supported Generators
 
 Generators are divided into standard generators, portable wide generators, and AVX-accelerated SIMD generators.
@@ -211,40 +195,36 @@ Hardware-noise-assisted seed generation. Wraps an existing `Rng32`/`Rng64` and m
 
 ## Testing
 
-> Requires the `testing` feature.
+Statistical validation of RNG quality is handled by the external [`cribler`](https://crates.io/crates/cribler) crate, a batteries-included randomness-test toolkit. `cribler` ships every engine (chi-squared, Monte Carlo π, serial correlation, runs, Kolmogorov–Smirnov, birthday spacing, a NIST SP 800-22 subset, and a paranoid battery aggregator) and offers zero-feature integration: any generator plugs in via a plain `FnMut() -> f64` / `FnMut() -> u64` sampler closure.
 
-A statistical test harness for validating RNG quality, generic over any `Rng32`/`Rng64` implementation.
+Enable the `urng` feature on `cribler` for pre-built typed convenience that works directly against `urng`'s `Rng32`/`Rng64` generators:
 
-| Struct                          | Module          | Purpose                                                                                 |
-| ------------------------------- | --------------- | --------------------------------------------------------------------------------------- |
-| `ChiSq32` / `ChiSq64`           | `urng::testing` | Chi-squared uniformity test                                                             |
-| `ChiSqSuite32` / `ChiSqSuite64` | `urng::testing` | Run named chi-squared cases together                                                    |
-| `McPi32` / `McPi64`             | `urng::testing` | Monte Carlo estimation of π                                                             |
-| `McPiSuite32` / `McPiSuite64`   | `urng::testing` | Run named Monte Carlo cases together                                                    |
-| `Test32` / `Test64`             | `urng::testing` | Blanket trait adding `run_chisq`/`run_mcpi` directly to any `Rng32`/`Rng64` implementor |
-
-```rust
-use urng::*;
-use urng::testing::{ChiSq32, ChiSqVerdict};
-
-let mut rng = Sfc32::new(0);
-let mut chisq = ChiSq32::from_urng(&mut rng);
-let result = chisq.run("Sfc32").unwrap();
-assert_eq!(result.verdict, ChiSqVerdict::Pass);
+```toml
+[dependencies]
+urng = "0.9.0"
+cribler = { version = "0.3", features = ["urng"] }
 ```
 
-`Test32`/`Test64` skip the explicit harness construction for the common case — call `run_chisq`/`run_mcpi` straight on the generator:
+The suites construct each named case from a seed, so no generator instance needs to be passed in:
 
 ```rust
+use cribler::ChiSqSuite;
 use urng::*;
-use urng::testing::{ChiSqVerdict, Test32};
 
-let mut rng = Sfc32::new(0);
-let result = rng.run_chisq("Sfc32").unwrap();
-assert_eq!(result.verdict, ChiSqVerdict::Pass);
+let results = Suite::new(1)
+    .from_urng32::<urng::Xorshift32>()?
+    .from_urng32::<urng::Pcg32>()?
+    .from_urng32::<urng::SplitMix32>()?
+    .from_rand::<rand_sfc::Sfc32>()?
+    .from_custom(Tiny64(1))?
+    .run()?;
+
+for r in &results {
+    println!("{}", serde_json::to_string_pretty(&r)?);
+}
 ```
 
-With the `rand` feature also enabled, `from_rand`/`with_config_from_rand` accept any `rand_core::Rng` implementation directly (via the internal `RandAdapter`), so external generators can be validated with the same harness without manually wrapping them.
+`from_urng32::<R>()` / `from_urng64::<R>()` register a `urng::Rng32` / `urng::Rng64` `R`, built from the suite's seed. The `rand` feature provides `from_rand::<R>()` for `rand_core::Rng` types, and `from_custom(source)` accepts anything else via a `WordSource` adapter.
 
 ## Usage Examples
 

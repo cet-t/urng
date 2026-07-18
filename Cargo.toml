@@ -38,11 +38,6 @@ required-features = ["cabi", "simd"]
 path = "examples/cabi/test.rs"
 
 [[example]]
-name = "testing"
-required-features = ["testing", "rand"]
-path = "examples/testing/main.rs"
-
-[[example]]
 name = "scalar_test"
 path = "examples/scalar/test.rs"
 
@@ -62,7 +57,6 @@ wide = ["dep:wide"]
 simd = []
 sampler = []
 seedgen = []
-testing = ["dep:thiserror", "dep:rand_core"]
 
 [lints.clippy]
 not_unsafe_ptr_arg_deref = "allow"
