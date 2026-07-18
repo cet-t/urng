@@ -30,6 +30,11 @@
 pub mod rng;
 pub use crate::rng::*;
 
+#[cfg(feature = "simd")]
+pub mod rngv;
+#[cfg(feature = "simd")]
+pub use crate::rngv::*;
+
 /// Consolidated 32-bit random number generators.
 pub mod rng32;
 #[allow(ambiguous_glob_reexports)]
@@ -55,6 +60,11 @@ pub(crate) mod rand64;
 pub mod cabi64;
 #[cfg(feature = "cabi")]
 pub use crate::cabi64::*;
+
+pub mod shuffle;
+pub use crate::shuffle::*;
+
+pub mod choice;
 
 pub(crate) mod _internal;
 

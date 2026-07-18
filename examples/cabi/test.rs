@@ -230,7 +230,7 @@ fn print_group(results: &[(&str, f64)], elem_bytes: usize, ceiling_gbps: f64) {
             "GS/s".bright_black(),
             format!("{:5.1}", gbps).bright_white(),
             "GB/s".bright_black(),
-            format!("{:3.0}%", pct).bright_magenta(),
+            format!("{:4.0}%", pct).bright_magenta(),
             "ceil".bright_black(),
             bar_colored,
         );

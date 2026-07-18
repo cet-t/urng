@@ -51,6 +51,10 @@ name = "wide-test"
 required-features = ["wide"]
 path = "examples/wide/test.rs"
 
+[[example]]
+name = "iter-test"
+path = "examples/iter/test.rs"
+
 [features]
 rand = ["dep:rand_core"]
 cabi = ["dep:rayon"]

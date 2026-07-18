@@ -1,4 +1,4 @@
-use crate::rng::Rng32;
+use crate::Rng32;
 use crate::rng32::Jsf32;
 use std::slice::from_raw_parts_mut;
 
@@ -93,7 +93,7 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use crate::_internal::chunk_seed32;
-    use crate::rng::Rng32V512;
+    use crate::Rng32V512;
     use crate::rng32::jsf::{JSF32X16, Jsf32x16};
     use rayon::prelude::*;
     #[cfg(target_arch = "x86_64")]
