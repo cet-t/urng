@@ -188,6 +188,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "cribler"
+version = "0.1.0"
+dependencies = [
+ "cribler_core",
+]
+
+[[package]]
+name = "cribler_core"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "crossbeam-deque"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -849,6 +863,7 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "colored",
+ "cribler",
  "csbindgen",
  "paste",
  "plotters",
@@ -856,7 +871,6 @@ dependencies = [
  "rand_core",
  "rand_sfc",
  "rayon",
- "thiserror",
  "thousands",
  "wide",
  "wrapn",

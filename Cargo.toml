@@ -58,7 +58,7 @@ wide = ["dep:wide"]
 simd = []
 sampler = []
 seedgen = []
-testing = ["dep:thiserror", "dep:rand_core"]
+testing = ["dep:cribler", "dep:rand_core"]
 
 [lints.clippy]
 not_unsafe_ptr_arg_deref = "allow"
@@ -71,5 +71,5 @@ bytemuck = { version = "1", features = ["derive"] }
 paste = "1"
 rayon = { version = "1.10", optional = true }
 rand_core = { version = "0.10", optional = true }
-thiserror = { version = "2", optional = true }
+cribler = { path = "../cribler", version = "0.1.0", optional = true }
 wrapn = "0.6.2"

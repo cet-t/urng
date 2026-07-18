@@ -8,8 +8,11 @@
 //! * **Birthday spacing test**: [`birthday`] module (Marsaglia's DIEHARD test) for detecting short periods and lattice structure.
 //! * **NIST SP 800-22 suite**: [`nist`] module, a bit-level subset (Frequency, Block Frequency, Runs, Longest Run of Ones, Cusum).
 //! * **Paranoid meta-test**: [`paranoid`] module for elevating any single test into a battery-level test per NIST SP 800-22 §4.2.
+//!
+//! The test math, `Config`/`Result`/`Error`/`Verdict` types, and closure-based
+//! engines all live in the [`cribler`] crate; this module supplies thin
+//! `Rng32`/`Rng64`-typed wrappers over it.
 
-pub(crate) mod _internal;
 pub mod birthday;
 pub mod chisq;
 pub mod ks;
