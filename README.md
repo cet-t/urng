@@ -13,7 +13,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-urng = "0.9.0"
+urng = "0.10.0"
 ```
 
 ### Optional `rand` Feature
@@ -22,7 +22,7 @@ Enable the `rand` feature to implement [`rand_core::SeedableRng`] and [`rand_cor
 
 ```toml
 [dependencies]
-urng = { version = "0.9.0", features = ["rand"] }
+urng = { version = "0.10.0", features = ["rand"] }
 ```
 
 > Requires `rand_core = "0.10"`. The `rand` crate itself is only needed as a dev-dependency for tests; consumers only need `urng` with the `rand` feature.
@@ -33,7 +33,7 @@ Enable the `simd` feature to build the AVX2/AVX-512 generators in `urng::rng32`/
 
 ```toml
 [dependencies]
-urng = { version = "0.9.0", features = ["simd"] }
+urng = { version = "0.10.0", features = ["simd"] }
 ```
 
 > When combined with the `cabi` feature, the SIMD generators' C-ABI exports (e.g. `sfc32x8_new`) are also only available with `simd` enabled.
@@ -44,7 +44,7 @@ Enable the `wide` feature to build portable lane-parallel generators under `urng
 
 ```toml
 [dependencies]
-urng = { version = "0.9.0", features = ["wide"] }
+urng = { version = "0.10.0", features = ["wide"] }
 ```
 
 ## Supported Generators
@@ -201,7 +201,7 @@ Enable the `urng` feature on `cribler` for pre-built typed convenience that work
 
 ```toml
 [dependencies]
-urng = "0.9.0"
+urng = "0.10.0"
 cribler = { version = "0.3", features = ["urng"] }
 ```
 
