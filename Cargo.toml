@@ -26,6 +26,13 @@ thousands = "0.2.0"
 plotters = "0.3"
 anyhow = "1"
 rand_sfc = "0.2.0"
+# Dev-only: internal statistical regression tests use cribler's `urng`-typed
+# wrappers. Not a published dependency edge — cribler optionally depends on
+# urng (feature "urng"), so urng must never depend on cribler in
+# [dependencies] (that would be a real cyclic package dependency). Cargo
+# permits this because dev-dependencies are excluded from the graph that
+# other crates see when they depend on urng.
+cribler = { version = "0.1.0", features = ["urng"] }
 
 [[example]]
 name = "main"
@@ -36,11 +43,6 @@ path = "examples/cabi/main.rs"
 name = "test"
 required-features = ["cabi", "simd"]
 path = "examples/cabi/test.rs"
-
-[[example]]
-name = "testing"
-required-features = ["testing", "rand"]
-path = "examples/testing/main.rs"
 
 [[example]]
 name = "scalar_test"
@@ -58,7 +60,6 @@ wide = ["dep:wide"]
 simd = []
 sampler = []
 seedgen = []
-testing = ["dep:cribler", "dep:rand_core"]
 
 [lints.clippy]
 not_unsafe_ptr_arg_deref = "allow"
@@ -71,5 +72,4 @@ bytemuck = { version = "1", features = ["derive"] }
 paste = "1"
 rayon = { version = "1.10", optional = true }
 rand_core = { version = "0.10", optional = true }
-cribler = { path = "../cribler", version = "0.1.0", optional = true }
 wrapn = "0.6.2"

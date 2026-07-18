@@ -2,6 +2,10 @@
 mod stat;
 
 use anyhow::Result;
+use cribler::{
+    ChiSqConfig, ChiSqResult, ChiSqSuite32, ChiSqVerdict, McPiConfig, McPiResult, McPiSuite32,
+    McPiVerdict,
+};
 use std::fs;
 use std::sync::OnceLock;
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
@@ -21,10 +25,6 @@ use urng::rng32::{Jsf32x16, Sfc32x16, Xoroshiro64Ssx16};
 use urng::rng64::{
     Biski64, Cet64, Cet256, Mt1993764, Philox64, Sfc64, Sfmt1993764, SplitMix64, Threefish256,
     TwistedGFSR, Xorshift64, Xoshiro256Pp, Xoshiro256Ss,
-};
-use urng::testing::{
-    ChiSqConfig, ChiSqResult, ChiSqSuite32, ChiSqVerdict, McPiConfig, McPiResult, McPiSuite32,
-    McPiVerdict,
 };
 
 use crate::stat::{chisq, monte_carlo, scatter};

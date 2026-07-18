@@ -79,8 +79,5 @@ pub mod seedgen;
 #[cfg(feature = "seedgen")]
 pub use crate::seedgen::*;
 
-#[cfg(feature = "testing")]
-pub mod testing;
-
 #[macro_use]
 pub mod macros;

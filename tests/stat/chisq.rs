@@ -1,6 +1,6 @@
 use anyhow::Result;
+use cribler::{ChiSqResult, ChiSqVerdict};
 use std::io::Write;
-use urng::testing::{ChiSqResult, ChiSqVerdict};
 
 /// Print results to stdout and write to a log file.
 pub fn log(results: &[ChiSqResult], path: &str) -> Result<()> {

@@ -1,6 +1,6 @@
 use anyhow::Result;
+use cribler::{McPiResult, McPiVerdict};
 use std::io::Write;
-use urng::testing::{McPiResult, McPiVerdict};
 
 /// Print results to stdout and write to a log file.
 pub fn log(results: &[McPiResult], path: &str) -> Result<()> {
