@@ -4,7 +4,7 @@ use ::wide::{u64x4, u64x8};
 
 macro_rules! impl_pcg32_variants {
     ($size:expr, $lanes:expr) => {
-        ::paste::paste! {
+        ::pastey::paste! {
             #[doc = concat!("PCG32 (Permuted Congruential Generator) producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
             #[doc = "Portable-SIMD counterpart of [`crate::rng32::Pcg32`]. Uses the PCG-XSH-RR output"]

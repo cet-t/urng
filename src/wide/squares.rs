@@ -4,7 +4,7 @@ use ::wide::{u64x4, u64x8};
 
 macro_rules! impl_squares32_variants {
     ($size:expr, $lanes:expr) => {
-        ::paste::paste! {
+        ::pastey::paste! {
             #[doc = concat!("Squares32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
             #[doc = "Portable-SIMD counterpart of [`crate::rng32::Squares32`]. A counter-based generator that"]

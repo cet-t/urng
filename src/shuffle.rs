@@ -38,7 +38,7 @@ impl<'a, T> Iterator for ShuffledIter<'a, T> {
 #[macro_export]
 macro_rules! impl_shuffle {
     ($bits:expr) => {
-        ::paste::paste! {
+        ::pastey::paste! {
             /// Shuffles a slice in-place or returns a shuffled iterator.
             pub trait [<Shuffle $bits>]: [<Rng $bits>] {
                 #[inline(always)]

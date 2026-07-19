@@ -3,7 +3,7 @@ use ::wide::{u32x4, u32x8, u32x16};
 
 macro_rules! impl_variants {
     ($size:expr) => {
-        ::paste::paste! {
+        ::pastey::paste! {
             #[doc = concat!("JSF (Jenkins Small Fast) 32-bit RNG producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
             #[doc = "Portable-SIMD counterpart of [`crate::rng32::Jsf32`]. Each `nextu` call returns an"]

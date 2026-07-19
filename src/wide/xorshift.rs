@@ -4,7 +4,7 @@ use ::wide::{u32x4, u32x8, u32x16};
 
 macro_rules! impl_xorshift32_variants {
     ($size:expr) => {
-        ::paste::paste! {
+        ::pastey::paste! {
             #[doc = concat!("Xorshift32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
             #[doc = "Portable-SIMD counterpart of [`crate::rng32::Xorshift32`]. A shift-register generator;"]
@@ -57,7 +57,7 @@ macro_rules! impl_xorshift32_variants {
 
 macro_rules! impl_xorshift128_variants {
     ($size:expr) => {
-        ::paste::paste! {
+        ::pastey::paste! {
             #[doc = concat!("Xorshift128 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
             #[doc = "Portable-SIMD counterpart of [`crate::rng32::Xorshift128`]. A 128-bit internal state;"]
@@ -120,7 +120,7 @@ macro_rules! impl_xorshift128_variants {
 
 macro_rules! impl_xorwow_variants {
     ($size:expr) => {
-        ::paste::paste! {
+        ::pastey::paste! {
             #[doc = concat!("Xorwow producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
             #[doc = "Portable-SIMD counterpart of [`crate::rng32::Xorwow`]. Combines a Xorshift state with a"]

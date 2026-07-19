@@ -1,7 +1,7 @@
 #[macro_export]
 macro_rules! impl_choice {
     ($bits:expr) => {
-        ::paste::paste! {
+        ::pastey::paste! {
             pub trait [<Choice $bits>]: [<Rng $bits>] {
                 /// Returns a random element from a slice.
                 #[inline(always)]

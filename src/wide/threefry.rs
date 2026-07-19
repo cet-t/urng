@@ -6,7 +6,7 @@ const THREEFRY32_C240: u32 = 0x1BD11BDA;
 
 macro_rules! impl_threefry32x2_variants {
     ($size:expr) => {
-        ::paste::paste! {
+        ::pastey::paste! {
             #[doc = concat!("Threefry 2x32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
             #[doc = "Portable-SIMD counterpart of [`crate::rng32::Threefry32x2`]. A counter-based generator"]
@@ -122,7 +122,7 @@ macro_rules! impl_threefry32x2_variants {
 
 macro_rules! impl_threefry32x4_variants {
     ($size:expr) => {
-        ::paste::paste! {
+        ::pastey::paste! {
             #[doc = concat!("Threefry 4x32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
             #[doc = "Portable-SIMD counterpart of [`crate::rng32::Threefry32x4`]. A counter-based generator"]

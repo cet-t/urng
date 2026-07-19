@@ -4,7 +4,7 @@ use crate::wide::impl_methods;
 
 macro_rules! impl_variants {
     ($size:expr) => {
-        paste::paste! {
+        pastey::paste! {
             #[doc = concat!("SplitMix32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
             #[doc = "Portable-SIMD counterpart of [`crate::rng32::SplitMix32`]. A fast finalizer-based"]

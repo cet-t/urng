@@ -4,7 +4,7 @@ use ::wide::{u32x4, u32x8, u32x16};
 
 macro_rules! impl_variants {
     ($name:ident, $scrambler:tt, $size:expr) => {
-        ::paste::paste! {
+        ::pastey::paste! {
             #[doc = concat!(stringify!($name), " (xoshiro128) producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
             #[doc = "Portable-SIMD counterpart of the scalar xoshiro128 generators in `crate::rng32`."]

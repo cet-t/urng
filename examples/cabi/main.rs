@@ -99,7 +99,7 @@ const G: f64 = 1_000_000_000f64;
 #[allow(unused_macros)]
 macro_rules! bench32 {
     ($name:ident) => {
-        paste::paste! {
+        pastey::paste! {
             let name = stringify!($name);
             let mut buffer = vec![0u32; N];
             let ptr = [<$name _new>](0);
@@ -125,7 +125,7 @@ macro_rules! bench32 {
 #[allow(unused_macros)]
 macro_rules! bench64 {
     ($name:ident) => {
-        paste::paste! {
+        pastey::paste! {
             let name = stringify!($name);
             let mut buffer = vec![0u64; N];
             let ptr = [<$name _new>](0);

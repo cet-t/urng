@@ -369,7 +369,7 @@ macro_rules! define_sfmt_variant {
         parity3 = $parity3:expr,
         parity4 = $parity4:expr $(,)?
     ) => {
-        paste::paste! {
+        pastey::paste! {
             /// A SIMD oriented Fast Mersenne Twister (SFMT) random number generator (32-bit version).
             ///
             /// # Examples

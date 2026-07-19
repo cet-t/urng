@@ -239,7 +239,7 @@ fn print_group(results: &[(&str, f64)], elem_bytes: usize, ceiling_gbps: f64) {
 
 macro_rules! bench32 {
     ($buf:ident, $results:ident, $name:ident) => {
-        paste::paste! {
+        pastey::paste! {
             let ptr = [<$name _new>](0);
             let gs = measure(&mut $buf, |p, n| [<$name _next_u32s>](ptr, p, n));
             [<$name _free>](ptr);
@@ -253,7 +253,7 @@ macro_rules! bench32 {
 
 macro_rules! bench64 {
     ($buf:ident, $results:ident, $name:ident) => {
-        paste::paste! {
+        pastey::paste! {
             let ptr = [<$name _new>](0);
             let gs = measure64(&mut $buf, |p, n| [<$name _next_u64s>](ptr, p, n));
             [<$name _free>](ptr);
@@ -267,7 +267,7 @@ macro_rules! bench64 {
 
 macro_rules! bench32_l3 {
     ($buf:ident, $results:ident, $($name:ident),+ $(,)?) => {
-        $(paste::paste! {
+        $(pastey::paste! {
             let ptr = [<$name _new>](0);
             let gs = measure_l3(&mut $buf, N_L3_32, L3_LOOPS_32, |p, n| [<$name _next_u32s>](ptr, p, n));
             [<$name _free>](ptr);
@@ -278,7 +278,7 @@ macro_rules! bench32_l3 {
 
 macro_rules! bench64_l3 {
     ($buf:ident, $results:ident, $($name:ident),+ $(,)?) => {
-        $(paste::paste! {
+        $(pastey::paste! {
             let ptr = [<$name _new>](0);
             let gs = measure_l3(&mut $buf, N_L3_64, L3_LOOPS_64, |p, n| [<$name _next_u64s>](ptr, p, n));
             [<$name _free>](ptr);

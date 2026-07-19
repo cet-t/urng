@@ -36,7 +36,7 @@ macro_rules! u2f_01 {
 
 macro_rules! impl_rng_trait {
     ($bits:expr) => {
-        paste::paste! {
+        pastey::paste! {
             #[doc = concat!("A trait for ", $bits, "-bit random number generators.")]
             ///
             /// # Examples

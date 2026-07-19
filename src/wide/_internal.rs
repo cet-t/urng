@@ -22,7 +22,7 @@ macro_rules! i2f_bits {
 /// but return arrays of `$size` values produced in parallel.
 macro_rules! impl_methods {
     ($size:expr, $bits:tt) => {
-        ::paste::paste! {
+        ::pastey::paste! {
             #[doc = "Generates random `f32` values uniformly distributed in `[0, 1)`."]
             #[doc = ""]
             #[doc = "The raw integer output is biased into the exponent and mantissa bits of an"]

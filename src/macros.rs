@@ -66,7 +66,7 @@ macro_rules! dispatch_simd {
 #[macro_export]
 macro_rules! safe_test {
     ($name:ident, $ctor:expr $(,)?) => {
-        paste::paste! {
+        pastey::paste! {
             #[test]
             fn [<test_ $name:snake>]() {
                 let mut rng1 = $ctor;
@@ -77,7 +77,7 @@ macro_rules! safe_test {
         }
     };
     ($name:ident) => {
-        paste::paste! {
+        pastey::paste! {
             #[test]
             fn [<test_ $name:snake>]() {
                 let mut rng1 = $name::new(0);
@@ -92,7 +92,7 @@ macro_rules! safe_test {
 #[macro_export]
 macro_rules! unsafe_test {
     ($name:ident, $ctor:expr $(,)?) => {
-        paste::paste! {
+        pastey::paste! {
             #[test]
             fn [<test_ $name:snake>]() {
                 unsafe {
@@ -105,7 +105,7 @@ macro_rules! unsafe_test {
         }
     };
     ($name:ident) => {
-        paste::paste! {
+        pastey::paste! {
             #[test]
             fn [<test_ $name:snake>]() {
                 unsafe {
