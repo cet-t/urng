@@ -1,5 +1,5 @@
 use colored::Colorize;
-use std::time::Instant;
+use criterion::measurement::{Measurement, WallTime};
 use thousands::Separable;
 #[rustfmt::skip]
 #[allow(unused_imports)]
@@ -109,12 +109,14 @@ unsafe fn nt_memset_chunk(chunk: &mut [u32]) {
 /// Measure the NT-store write ceiling in GB/s on a warmed buffer.
 fn measure_write_ceiling(buf: &mut [u32]) -> f64 {
     use rayon::prelude::*;
+    let meter = WallTime;
     let mut best = 0.0f64;
     for _ in 0..RUNS {
-        let start = Instant::now();
+        let start = meter.start();
         buf.par_chunks_mut(0x20000)
             .for_each(|c| unsafe { nt_memset_chunk(c) });
-        let gbps = (buf.len() * 4) as f64 / start.elapsed().as_secs_f64() / G;
+        let elapsed = meter.end(start);
+        let gbps = (buf.len() * 4) as f64 / (meter.to_f64(&elapsed) / 1e9) / G;
         if gbps > best {
             best = gbps;
         }
@@ -160,11 +162,13 @@ fn measure<F>(buf: &mut [u32], mut f: F) -> f64
 where
     F: FnMut(*mut u32, usize),
 {
+    let meter = WallTime;
     let mut best = 0.0f64;
     for _ in 0..RUNS {
-        let start = Instant::now();
+        let start = meter.start();
         f(buf.as_mut_ptr(), N);
-        let t = N as f64 / start.elapsed().as_secs_f64() / G;
+        let elapsed = meter.end(start);
+        let t = N as f64 / (meter.to_f64(&elapsed) / 1e9) / G;
         if t > best {
             best = t;
         }
@@ -176,11 +180,13 @@ fn measure64<F>(buf: &mut [u64], mut f: F) -> f64
 where
     F: FnMut(*mut u64, usize),
 {
+    let meter = WallTime;
     let mut best = 0.0f64;
     for _ in 0..RUNS {
-        let start = Instant::now();
+        let start = meter.start();
         f(buf.as_mut_ptr(), N);
-        let t = N as f64 / start.elapsed().as_secs_f64() / G;
+        let elapsed = meter.end(start);
+        let t = N as f64 / (meter.to_f64(&elapsed) / 1e9) / G;
         if t > best {
             best = t;
         }
@@ -194,13 +200,15 @@ fn measure_l3<T, F>(buf: &mut [T], n: usize, loops: usize, mut f: F) -> f64
 where
     F: FnMut(*mut T, usize),
 {
+    let meter = WallTime;
     let mut best = 0.0f64;
     for _ in 0..RUNS {
-        let start = Instant::now();
+        let start = meter.start();
         for _ in 0..loops {
             f(buf.as_mut_ptr(), n);
         }
-        let t = (n * loops) as f64 / start.elapsed().as_secs_f64() / G;
+        let elapsed = meter.end(start);
+        let t = (n * loops) as f64 / (meter.to_f64(&elapsed) / 1e9) / G;
         if t > best {
             best = t;
         }

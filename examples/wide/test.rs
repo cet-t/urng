@@ -1,5 +1,5 @@
 use colored::Colorize;
-use std::time::Instant;
+use criterion::measurement::{Measurement, WallTime};
 use thousands::Separable;
 
 use urng::wide::{
@@ -70,9 +70,10 @@ fn print_group(results: &[(&str, f64)], elem_bytes: usize, ceiling_gbps: f64) {
 /// chunks (one `nextu` call each), best of RUNS runs.
 fn measure_wide<F: FnMut(*mut u32)>(buf: &mut [u32], size: usize, mut f: F) -> f64 {
     let n = buf.len();
+    let meter = WallTime;
     let mut best = 0.0f64;
     for _ in 0..RUNS {
-        let start = Instant::now();
+        let start = meter.start();
         let mut p = buf.as_mut_ptr();
         let mut written = 0;
         while written < n {
@@ -80,7 +81,8 @@ fn measure_wide<F: FnMut(*mut u32)>(buf: &mut [u32], size: usize, mut f: F) -> f
             p = p.wrapping_add(size);
             written += size;
         }
-        let t = n as f64 / start.elapsed().as_secs_f64() / G;
+        let elapsed = meter.end(start);
+        let t = n as f64 / (meter.to_f64(&elapsed) / 1e9) / G;
         if t > best {
             best = t;
         }
@@ -145,9 +147,10 @@ fn measure_write_ceiling(buf: &mut [u32]) -> f64 {
     let n_threads = std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(1);
+    let meter = WallTime;
     let mut best = 0.0f64;
     for _ in 0..RUNS {
-        let start = Instant::now();
+        let start = meter.start();
         #[cfg(target_arch = "x86_64")]
         if std::is_x86_feature_detected!("avx2") {
             let chunk = (buf.len() / n_threads.max(1)).max(1);
@@ -177,7 +180,8 @@ fn measure_write_ceiling(buf: &mut [u32]) -> f64 {
         }
         #[cfg(not(target_arch = "x86_64"))]
         buf.iter_mut().for_each(|x| *x = 0x9E37_79B9);
-        let gbps = (buf.len() * 4) as f64 / start.elapsed().as_secs_f64() / G;
+        let elapsed = meter.end(start);
+        let gbps = (buf.len() * 4) as f64 / (meter.to_f64(&elapsed) / 1e9) / G;
         if gbps > best {
             best = gbps;
         }

@@ -1,6 +1,6 @@
 use colored::Colorize;
+use criterion::measurement::{Measurement, WallTime};
 use std::hint::black_box;
-use std::time::Instant;
 use thousands::Separable;
 use urng::*;
 
@@ -57,13 +57,15 @@ fn print_group(results: &[(&str, f64)]) {
 /// Measures scalar `Rng32::nextu()` throughput over `RUNS` iterations.
 /// Each value is passed through `black_box` so the loop can't be optimized away.
 fn measure32<R: Rng32>(rng: &mut R) -> f64 {
+    let meter = WallTime;
     let mut best = 0.0f64;
     for _ in 0..RUNS {
-        let start = Instant::now();
+        let start = meter.start();
         for _ in 0..N {
             black_box(rng.nextu());
         }
-        let t = N as f64 / start.elapsed().as_secs_f64() / G;
+        let elapsed = meter.end(start);
+        let t = N as f64 / (meter.to_f64(&elapsed) / 1e9) / G;
         if t > best {
             best = t;
         }
@@ -73,13 +75,15 @@ fn measure32<R: Rng32>(rng: &mut R) -> f64 {
 
 /// Measures scalar `Rng64::nextu()` throughput over `RUNS` iterations.
 fn measure64<R: Rng64>(rng: &mut R) -> f64 {
+    let meter = WallTime;
     let mut best = 0.0f64;
     for _ in 0..RUNS {
-        let start = Instant::now();
+        let start = meter.start();
         for _ in 0..N {
             black_box(rng.nextu());
         }
-        let t = N as f64 / start.elapsed().as_secs_f64() / G;
+        let elapsed = meter.end(start);
+        let t = N as f64 / (meter.to_f64(&elapsed) / 1e9) / G;
         if t > best {
             best = t;
         }

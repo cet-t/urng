@@ -25,21 +25,17 @@ rand = { version = "0.10", default-features = false }
 colored = "3.1.1"
 thousands = "0.2.0"
 plotters = "0.3"
+criterion = { version = "0.8.2", features = ["csv_output", "plotters"] }
 anyhow = "1"
 rand_sfc = "0.2.0"
 
 [[example]]
-name = "main"
-required-features = ["cabi", "simd"]
-path = "examples/cabi/main.rs"
-
-[[example]]
-name = "test"
+name = "vector-test"
 required-features = ["cabi", "simd"]
 path = "examples/cabi/test.rs"
 
 [[example]]
-name = "scalar_test"
+name = "scalar-test"
 path = "examples/scalar/test.rs"
 
 [[example]]
