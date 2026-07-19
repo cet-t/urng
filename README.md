@@ -7,52 +7,12 @@
 A collection of efficient pseudo-random number generators (PRNGs) implemented in pure Rust.
 This crate provides a wide variety of algorithms, ranging from standard Mersenne Twister to modern high-performance generators like Xoshiro and Philox.
 
-## Installation
-
-Add this to your `Cargo.toml`:
-
-```toml
-[dependencies]
-urng = "0.10.1"
-```
-
-### Optional `rand` Feature
-
-Enable the `rand` feature to implement [`rand_core::SeedableRng`] and [`rand_core::TryRng`] for all standard generators. This allows interoperability with the `rand` ecosystem (e.g. `rand::Rng`, `rand::SeedableRng`).
-
-```toml
-[dependencies]
-urng = { version = "0.10.1", features = ["rand"] }
-```
-
-> Requires `rand_core = "0.10"`. The `rand` crate itself is only needed as a dev-dependency for tests; consumers only need `urng` with the `rand` feature.
-
-### Optional `simd` Feature
-
-Enable the `simd` feature to build the AVX2/AVX-512 generators in `urng::rng32`/`urng::rng64` and the `*Simd` runtime dispatchers (e.g. `Sfc32x8`, `Pcg32x8`, `Pcg32Simd`). Without it, only the scalar generators are compiled.
-
-```toml
-[dependencies]
-urng = { version = "0.10.1", features = ["simd"] }
-```
-
-> When combined with the `cabi` feature, the SIMD generators' C-ABI exports (e.g. `sfc32x8_new`) are also only available with `simd` enabled.
-
-### Optional `wide` Feature
-
-Enable the `wide` feature to build portable lane-parallel generators under `urng::wide`. These expose safe bulk APIs returning fixed-size arrays such as `[u32; 4]`, `[u32; 8]`, and `[u32; 16]`, without requiring callers to use architecture-specific intrinsics.
-
-```toml
-[dependencies]
-urng = { version = "0.10.1", features = ["wide"] }
-```
-
 ## Supported Generators
 
 Generators are divided into standard generators, portable wide generators, and AVX-accelerated SIMD generators.
 Standard generators implement either the `Rng32` or `Rng64` trait (or return fixed-size arrays for counter-based variants).
 Portable wide generators require the `wide` feature and expose safe fixed-array bulk APIs.
-AVX generators expose a bulk-generation API and are listed separately; they require the `simd` feature (see [above](#optional-simd-feature)).
+AVX generators expose a bulk-generation API and are listed separately; they require the `simd` feature.
 
 ### 32-bit Generators (`urng::rng32`)
 
@@ -201,7 +161,7 @@ Enable the `urng` feature on `cribler` for pre-built typed convenience that work
 
 ```toml
 [dependencies]
-urng = "0.10.1"
+urng = "0.10.2"
 cribler = { version = "0.3", features = ["urng"] }
 ```
 

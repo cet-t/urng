@@ -1,12 +1,13 @@
 [package]
 name = "urng"
-version = "0.10.1"
+version = "0.10.2"
 edition = "2024"
 license = "MIT"
 rust-version = "1.92"
 authors = ["cet"]
 description = "Universal Random Number Generator"
 repository = "https://github.com/cet-t/urng"
+keywords = ["random", "rng"]
 
 [profile.release]
 opt-level = 3
