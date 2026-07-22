@@ -3,6 +3,7 @@ use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
+use crate::_internal::impl_seed;
 use crate::rng::Rng64;
 use crate::rng64::SplitMix64;
 
@@ -38,6 +39,8 @@ impl Sfc64 {
         }
     }
 }
+
+impl_seed!(Sfc64, 64);
 
 impl Rng64 for Sfc64 {
     #[inline(always)]

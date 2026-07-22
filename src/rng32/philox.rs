@@ -7,7 +7,7 @@ use wrapn::{Wrap, wrap};
 use crate::_internal::FSCALE32;
 #[allow(unused_imports)]
 use crate::rng::Rng32;
-use crate::rng32::SplitMix32;
+use crate::{_internal::impl_seed, rng32::SplitMix32};
 
 // --- Philox32 ---
 
@@ -137,6 +137,8 @@ impl Philox32x4 {
         out
     }
 }
+
+impl_seed!(Philox32x4, 32);
 
 crate::_internal::impl_ring_rng32!(Philox32x4, 4, next_raw);
 

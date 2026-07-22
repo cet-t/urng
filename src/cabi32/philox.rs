@@ -546,8 +546,8 @@ mod simd {
 
         let mut c_array = [0u128; 4];
         unsafe { _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, c) };
-        for i in 0..4 {
-            c_array[i] = c_array[i].wrapping_add(offset);
+        for item in &mut c_array {
+            *item = item.wrapping_add(offset);
         }
         let mut c = unsafe { _mm512_loadu_si512(c_array.as_ptr() as *const _) };
 
@@ -701,8 +701,8 @@ mod simd {
             philox10_single!(x, key_local, m, w);
             let mut tmp = [0u32; PHILOX32x16];
             unsafe { _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, x) };
-            for j in 0..tail {
-                unsafe { *p.add(j) = tmp[j] };
+            for (j, item) in tmp.iter().enumerate().take(tail) {
+                unsafe { *p.add(j) = *item };
             }
         }
     }
@@ -722,8 +722,8 @@ mod simd {
         let offset = chunk_idx as u128 * PHILOX32x4x4_CHUNK_RATIO;
         let mut c_array = [0u128; 4];
         unsafe { _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, c0) };
-        for i in 0..4 {
-            c_array[i] = c_array[i].wrapping_add(offset);
+        for item in &mut c_array {
+            *item = item.wrapping_add(offset);
         }
         let mut c = unsafe { _mm512_loadu_si512(c_array.as_ptr() as *const _) };
 
@@ -767,6 +767,7 @@ mod simd {
         }
     }
     #[cfg(target_arch = "x86_64")]
+    #[allow(clippy::too_many_arguments)]
     #[target_feature(enable = "avx512f")]
     unsafe fn philox32x4x4_rand_i32s_chunk(
         chunk_idx: usize,
@@ -784,8 +785,8 @@ mod simd {
         let offset = (chunk_idx as u128) << PHILOX32x4x4_SHIFT;
         let mut c_array = [0u128; 4];
         unsafe { _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, c) };
-        for i in 0..4 {
-            c_array[i] = c_array[i].wrapping_add(offset);
+        for item in &mut c_array {
+            *item = item.wrapping_add(offset);
         }
         let mut c = unsafe { _mm512_loadu_si512(c_array.as_ptr() as *const _) };
 
@@ -870,8 +871,8 @@ mod simd {
         let offset = chunk_idx as u128 * PHILOX32x4x4_CHUNK_RATIO;
         let mut c_array = [0u128; 4];
         unsafe { _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, c) };
-        for i in 0..4 {
-            c_array[i] = c_array[i].wrapping_add(offset);
+        for item in &mut c_array {
+            *item = item.wrapping_add(offset);
         }
         let mut c = unsafe { _mm512_loadu_si512(c_array.as_ptr() as *const _) };
 
@@ -943,8 +944,8 @@ mod simd {
                 let x = philox32x4x4_compute_vec(c, k, m, w);
                 let mut tmp = [0u32; PHILOX32x16];
                 _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, x);
-                for i in 0..head_elems {
-                    *out.add(i) = tmp[i];
+                for (i, item) in tmp.iter().enumerate().take(head_elems) {
+                    *out.add(i) = *item;
                 }
             }
 
@@ -957,8 +958,8 @@ mod simd {
                 let c_body = if head_elems > 0 {
                     let mut c_arr = [0u128; 4];
                     _mm512_storeu_si512(c_arr.as_mut_ptr() as *mut _, c);
-                    for i in 0..4 {
-                        c_arr[i] = c_arr[i].wrapping_add(1);
+                    for item in &mut c_arr {
+                        *item = item.wrapping_add(1);
                     }
                     _mm512_loadu_si512(c_arr.as_ptr() as *const _)
                 } else {
@@ -976,8 +977,8 @@ mod simd {
             let num_blocks = ((count + PHILOX32x16 - 1) >> PHILOX32x16_SHIFT) as u128;
             let mut c_array = [0u128; 4];
             _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, rng.c);
-            for i in 0..4 {
-                c_array[i] = c_array[i].wrapping_add(num_blocks);
+            for item in &mut c_array {
+                *item = item.wrapping_add(num_blocks);
             }
             rng.c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
         }
@@ -1007,8 +1008,8 @@ mod simd {
             let num_blocks = ((count + PHILOX32x16 - 1) >> PHILOX32x16_SHIFT) as u128;
             let mut c_array = [0u128; 4];
             _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, rng.c);
-            for i in 0..4 {
-                c_array[i] = c_array[i].wrapping_add(num_blocks);
+            for item in &mut c_array {
+                *item = item.wrapping_add(num_blocks);
             }
             rng.c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
         }
@@ -1050,8 +1051,8 @@ mod simd {
             let num_blocks = ((count + PHILOX32x16 - 1) >> PHILOX32x16_SHIFT) as u128;
             let mut c_array = [0u128; 4];
             _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, rng.c);
-            for i in 0..4 {
-                c_array[i] = c_array[i].wrapping_add(num_blocks);
+            for item in &mut c_array {
+                *item = item.wrapping_add(num_blocks);
             }
             rng.c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
         }
@@ -1094,8 +1095,8 @@ mod simd {
             let num_blocks = ((count + PHILOX32x16 - 1) >> PHILOX32x16_SHIFT) as u128;
             let mut c_array = [0u128; 4];
             _mm512_storeu_si512(c_array.as_mut_ptr() as *mut _, rng.c);
-            for i in 0..4 {
-                c_array[i] = c_array[i].wrapping_add(num_blocks);
+            for item in &mut c_array {
+                *item = item.wrapping_add(num_blocks);
             }
             rng.c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
         }

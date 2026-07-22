@@ -5,7 +5,7 @@ use wrapn::Wrap;
 
 #[cfg(feature = "simd")]
 use crate::_internal::FSCALE32;
-use crate::{rng::Rng32, rng32::SplitMix32};
+use crate::{_internal::impl_seed, rng::Rng32, rng32::SplitMix32};
 
 /// A SFC32 pseudo-random number generator.
 ///
@@ -45,6 +45,8 @@ impl Sfc32 {
         }
     }
 }
+
+impl_seed!(Sfc32, 32);
 
 impl Rng32 for Sfc32 {
     #[inline(always)]

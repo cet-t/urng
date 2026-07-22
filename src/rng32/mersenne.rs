@@ -4,9 +4,9 @@ use bytemuck::cast_slice;
 use wrapn::{Wrap, wrap};
 
 use crate::{
+    _internal::{impl_seed, sm64_from_seed32},
     rng::{Rng32, Rng64},
     rng32::SplitMix32,
-    rng64::SplitMix64,
 };
 
 #[allow(non_camel_case_types)]
@@ -43,6 +43,7 @@ fn rshift128(a: u32x4, bytes: u32) -> u32x4 {
 }
 
 #[inline(always)]
+#[allow(clippy::too_many_arguments)]
 fn sfmt_recursion(
     a: u32x4,
     b: u32x4,
@@ -157,6 +158,8 @@ impl Mt19937 {
     }
 }
 
+impl_seed!(Mt19937, 32);
+
 impl Rng32 for Mt19937 {
     #[inline]
     fn nextu(&mut self) -> u32 {
@@ -208,8 +211,8 @@ const SFMT_PARITY4: u32 = 0x13c9e684;
 
 impl Sfmt19937 {
     /// Creates a new `Sfmt19937` instance seeded with the given value.
-    pub fn new(seed: u64) -> Self {
-        let mut seedgen = SplitMix64::new(seed);
+    pub fn new(seed: u32) -> Self {
+        let mut seedgen = sm64_from_seed32!(seed);
 
         // Initialize state using u32 array for simplicity
         let mut raw_state = [0u32; SFMT_N * 4];
@@ -336,6 +339,8 @@ impl Sfmt19937 {
     }
 }
 
+impl_seed!(Sfmt19937, 32);
+
 impl Rng32 for Sfmt19937 {
     #[inline]
     fn nextu(&mut self) -> u32 {
@@ -394,8 +399,8 @@ macro_rules! define_sfmt_variant {
             }
 
             impl [<Sfmt $mexp>] {
-                pub fn new(seed: u64) -> Self {
-                    let mut seedgen = SplitMix64::new(seed);
+                pub fn new(seed: u32) -> Self {
+                    let mut seedgen = sm64_from_seed32!(seed);
                     let mut raw_state = [0u32; $n * 4];
                     for i in 0..($n * 2) {
                         let s = seedgen.nextu();
@@ -522,6 +527,8 @@ macro_rules! define_sfmt_variant {
                     }
                 }
             }
+
+            impl_seed!([<Sfmt $mexp>], 32);
 
             impl Rng32 for [<Sfmt $mexp>] {
                 #[inline]

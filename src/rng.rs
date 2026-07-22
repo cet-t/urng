@@ -37,6 +37,10 @@ macro_rules! u2f_01 {
 macro_rules! impl_rng_trait {
     ($bits:expr) => {
         pastey::paste! {
+            pub trait [<Seed $bits>] {
+                fn from_seed(seed: [<u $bits>]) -> Self;
+            }
+
             #[doc = concat!("A trait for ", $bits, "-bit random number generators.")]
             ///
             /// # Examples

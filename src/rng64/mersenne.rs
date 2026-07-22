@@ -3,6 +3,7 @@
 use bytemuck;
 use wrapn::{Wrap, wrap};
 
+use crate::_internal::impl_seed;
 use crate::rng::Rng64;
 use crate::rng64::SplitMix64;
 
@@ -40,6 +41,7 @@ fn rshift128(a: u32x4, bytes: u32) -> u32x4 {
 }
 
 #[inline(always)]
+#[allow(clippy::too_many_arguments)]
 fn sfmt_recursion(
     a: u32x4,
     b: u32x4,
@@ -149,6 +151,8 @@ impl Mt1993764 {
         self.mti = 0.into();
     }
 }
+
+impl_seed!(Mt1993764, 64);
 
 impl Rng64 for Mt1993764 {
     #[inline]
@@ -327,6 +331,8 @@ impl Sfmt1993764 {
         }
     }
 }
+
+impl_seed!(Sfmt1993764, 64);
 
 impl Rng64 for Sfmt1993764 {
     #[inline]

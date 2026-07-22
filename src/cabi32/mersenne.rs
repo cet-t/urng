@@ -85,7 +85,7 @@ pub extern "C" fn mt19937_rand_f32s(
 /// The caller is responsible for freeing the memory using `sfmt19937_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn sfmt19937_new(seed: u64) -> *mut Sfmt19937 {
-    Box::into_raw(Box::new(Sfmt19937::new(seed)))
+    Box::into_raw(Box::new(Sfmt19937::new(seed as u32)))
 }
 
 /// Frees the memory of a `Sfmt19937` instance.
@@ -110,7 +110,7 @@ pub extern "C" fn sfmt19937_next_u32s(ptr: *mut Sfmt19937, out: *mut u32, count:
         crate::_internal::par_fill_reseed32(
             buffer,
             rng.nextu(),
-            |s| Sfmt19937::new(s as u64),
+            Sfmt19937::new,
             |r| r.nextu(),
         );
     }
@@ -125,7 +125,7 @@ pub extern "C" fn sfmt19937_next_f32s(ptr: *mut Sfmt19937, out: *mut f32, count:
         crate::_internal::par_fill_reseed32(
             buffer,
             rng.nextu(),
-            |s| Sfmt19937::new(s as u64),
+            Sfmt19937::new,
             |r| r.nextf(),
         );
     }
@@ -146,7 +146,7 @@ pub extern "C" fn sfmt19937_rand_i32s(
         crate::_internal::par_fill_reseed32(
             buffer,
             rng.nextu(),
-            |s| Sfmt19937::new(s as u64),
+            Sfmt19937::new,
             |r| r.randi(min, max),
         );
     }
@@ -167,7 +167,7 @@ pub extern "C" fn sfmt19937_rand_f32s(
         crate::_internal::par_fill_reseed32(
             buffer,
             rng.nextu(),
-            |s| Sfmt19937::new(s as u64),
+            Sfmt19937::new,
             |r| r.randf(min, max),
         );
     }
@@ -185,7 +185,7 @@ macro_rules! impl_sfmt_cabi {
     ) => {
         #[unsafe(no_mangle)]
         pub extern "C" fn $new_fn(seed: u64) -> *mut $ty {
-            Box::into_raw(Box::new(<$ty>::new(seed)))
+            Box::into_raw(Box::new(<$ty>::new(seed as u32)))
         }
 
         #[unsafe(no_mangle)]
@@ -208,7 +208,7 @@ macro_rules! impl_sfmt_cabi {
                 crate::_internal::par_fill_reseed32(
                     buffer,
                     rng.nextu(),
-                    |s| <$ty>::new(s as u64),
+                    <$ty>::new,
                     |r| r.nextu(),
                 );
             }
@@ -222,7 +222,7 @@ macro_rules! impl_sfmt_cabi {
                 crate::_internal::par_fill_reseed32(
                     buffer,
                     rng.nextu(),
-                    |s| <$ty>::new(s as u64),
+                    <$ty>::new,
                     |r| r.nextf(),
                 );
             }
@@ -242,7 +242,7 @@ macro_rules! impl_sfmt_cabi {
                 crate::_internal::par_fill_reseed32(
                     buffer,
                     rng.nextu(),
-                    |s| <$ty>::new(s as u64),
+                    <$ty>::new,
                     |r| r.randi(min, max),
                 );
             }
@@ -262,7 +262,7 @@ macro_rules! impl_sfmt_cabi {
                 crate::_internal::par_fill_reseed32(
                     buffer,
                     rng.nextu(),
-                    |s| <$ty>::new(s as u64),
+                    <$ty>::new,
                     |r| r.randf(min, max),
                 );
             }

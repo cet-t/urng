@@ -3,7 +3,7 @@ use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
-use crate::{rng::Rng64, rng64::SplitMix64};
+use crate::{_internal::impl_seed, rng::Rng64, rng64::SplitMix64};
 
 /// A [Biski64](https://github.com/danielcota/biski64) random number generator.
 ///
@@ -34,6 +34,8 @@ impl Biski64 {
         }
     }
 }
+
+impl_seed!(Biski64, 64);
 
 impl Rng64 for Biski64 {
     #[inline(always)]

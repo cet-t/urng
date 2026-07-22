@@ -1,6 +1,6 @@
 ﻿use wrapn::Wrap;
 
-use crate::{SplitMix64, rng::Rng64};
+use crate::{_internal::impl_seed, SplitMix64, rng::Rng64};
 
 // --- TwistedGFSR ---
 
@@ -51,6 +51,8 @@ impl TwistedGFSR {
         self.index = 0.into();
     }
 }
+
+impl_seed!(TwistedGFSR, 64);
 
 impl Rng64 for TwistedGFSR {
     #[inline]

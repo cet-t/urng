@@ -6,7 +6,7 @@ use std::slice::from_raw_parts_mut;
 /// The caller is responsible for freeing the memory using `pcg32_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn pcg32_new(seed: u64) -> *mut Pcg32 {
-    Box::into_raw(Box::new(Pcg32::new(seed)))
+    Box::into_raw(Box::new(Pcg32::new(seed as u32)))
 }
 
 /// Frees the memory of a `Pcg32` instance.
@@ -28,7 +28,7 @@ pub extern "C" fn pcg32_next_u32s(ptr: *mut Pcg32, out: *mut u32, count: usize) 
         crate::_internal::par_fill_reseed32(
             buffer,
             rng.nextu(),
-            |s| Pcg32::new(s as u64),
+            Pcg32::new,
             |r| r.nextu(),
         );
     }
@@ -43,7 +43,7 @@ pub extern "C" fn pcg32_next_f32s(ptr: *mut Pcg32, out: *mut f32, count: usize) 
         crate::_internal::par_fill_reseed32(
             buffer,
             rng.nextu(),
-            |s| Pcg32::new(s as u64),
+            Pcg32::new,
             |r| r.nextf(),
         );
     }
@@ -64,7 +64,7 @@ pub extern "C" fn pcg32_rand_i32s(
         crate::_internal::par_fill_reseed32(
             buffer,
             rng.nextu(),
-            |s| Pcg32::new(s as u64),
+            Pcg32::new,
             |r| r.randi(min, max),
         );
     }
@@ -85,7 +85,7 @@ pub extern "C" fn pcg32_rand_f32s(
         crate::_internal::par_fill_reseed32(
             buffer,
             rng.nextu(),
-            |s| Pcg32::new(s as u64),
+            Pcg32::new,
             |r| r.randf(min, max),
         );
     }
@@ -246,6 +246,7 @@ mod simd {
 
     #[cfg(target_arch = "x86_64")]
     #[allow(unsafe_op_in_unsafe_fn)]
+    #[allow(clippy::too_many_arguments)]
     #[target_feature(enable = "avx512f")]
     unsafe fn pcg32x8_rand_i32s_chunk(
         chunk: &mut [i32],
@@ -283,6 +284,7 @@ mod simd {
 
     #[cfg(target_arch = "x86_64")]
     #[allow(unsafe_op_in_unsafe_fn)]
+    #[allow(clippy::too_many_arguments)]
     #[target_feature(enable = "avx512f")]
     unsafe fn pcg32x8_rand_f32s_chunk(
         chunk: &mut [f32],

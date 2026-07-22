@@ -3,7 +3,7 @@ use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
-use crate::rng::Rng32;
+use crate::{_internal::impl_seed, rng::Rng32};
 
 /// A SplitMix32 pseudo-random number generator.
 ///
@@ -34,6 +34,8 @@ impl SplitMix32 {
         }
     }
 }
+
+impl_seed!(SplitMix32, 32);
 
 impl Rng32 for SplitMix32 {
     #[inline]

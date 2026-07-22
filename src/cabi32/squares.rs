@@ -89,6 +89,7 @@ mod simd_chunks {
     }
 
     #[cfg(target_arch = "x86_64")]
+    #[allow(clippy::too_many_arguments)]
     #[target_feature(enable = "avx512f,avx512dq")]
     pub(super) unsafe fn squares32x8_next_f32s_chunk(
         chunk_idx: usize,
@@ -159,6 +160,7 @@ mod simd_chunks {
     }
 
     #[cfg(target_arch = "x86_64")]
+    #[allow(clippy::too_many_arguments)]
     #[target_feature(enable = "avx512f,avx512dq")]
     pub(super) unsafe fn squares32x8_rand_i32s_chunk(
         chunk_idx: usize,
@@ -249,6 +251,7 @@ mod simd_chunks {
     }
 
     #[cfg(target_arch = "x86_64")]
+    #[allow(clippy::too_many_arguments)]
     #[target_feature(enable = "avx512f,avx512dq")]
     pub(super) unsafe fn squares32x8_rand_f32s_chunk(
         chunk_idx: usize,
@@ -325,7 +328,7 @@ mod simd_chunks {
 /// The caller is responsible for freeing the memory using `squares32_free`.
 #[unsafe(no_mangle)]
 pub extern "C" fn squares32_new(seed: u32) -> *mut Squares32 {
-    Box::into_raw(Box::new(Squares32::new(seed as u64)))
+    Box::into_raw(Box::new(Squares32::new(seed)))
 }
 
 /// Frees the memory of a `Squares32` instance.
@@ -598,8 +601,8 @@ mod simd {
                 });
 
             let num_generated = count as u64;
-            for i in 0..SQUARES32x8 {
-                c_arr[i] = c_arr[i].wrapping_add(num_generated);
+            for item in c_arr.iter_mut().take(SQUARES32x8) {
+                *item = item.wrapping_add(num_generated);
             }
             rng.c = _mm512_loadu_si512(c_arr.as_ptr() as *const _);
         }
@@ -643,8 +646,8 @@ mod simd {
                 });
 
             let num_generated = count as u64;
-            for i in 0..SQUARES32x8 {
-                c_arr[i] = c_arr[i].wrapping_add(num_generated);
+            for item in c_arr.iter_mut().take(SQUARES32x8) {
+                *item = item.wrapping_add(num_generated);
             }
             rng.c = _mm512_loadu_si512(c_arr.as_ptr() as *const _);
         }
@@ -697,8 +700,8 @@ mod simd {
                 });
 
             let num_generated = count as u64;
-            for i in 0..SQUARES32x8 {
-                c_arr[i] = c_arr[i].wrapping_add(num_generated);
+            for item in c_arr.iter_mut().take(SQUARES32x8) {
+                *item = item.wrapping_add(num_generated);
             }
             rng.c = _mm512_loadu_si512(c_arr.as_ptr() as *const _);
         }
@@ -751,8 +754,8 @@ mod simd {
                 });
 
             let num_generated = count as u64;
-            for i in 0..SQUARES32x8 {
-                c_arr[i] = c_arr[i].wrapping_add(num_generated);
+            for item in c_arr.iter_mut().take(SQUARES32x8) {
+                *item = item.wrapping_add(num_generated);
             }
             rng.c = _mm512_loadu_si512(c_arr.as_ptr() as *const _);
         }

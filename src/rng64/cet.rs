@@ -3,6 +3,7 @@ use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
+use crate::_internal::impl_seed;
 use crate::rng::Rng64;
 use crate::rng64::SplitMix64;
 
@@ -38,6 +39,8 @@ impl Cet64 {
     }
 }
 
+impl_seed!(Cet64, 64);
+
 impl Rng64 for Cet64 {
     #[inline(always)]
     fn nextu(&mut self) -> u64 {
@@ -72,6 +75,8 @@ impl Cet256 {
         }
     }
 }
+
+impl_seed!(Cet256, 64);
 
 impl Rng64 for Cet256 {
     #[inline(always)]

@@ -1,6 +1,10 @@
 use wrapn::{Wrap, wrap};
 
-use crate::{_internal::FSCALE64, rng::Rng64, rng64::SplitMix64};
+use crate::{
+    _internal::{FSCALE64, impl_seed},
+    rng::Rng64,
+    rng64::SplitMix64,
+};
 
 // --- Threefish256 ---
 
@@ -185,6 +189,8 @@ impl Threefish256 {
         self.nextu().map(|x| (x as f64 * scale) + min)
     }
 }
+
+impl_seed!(Threefish256, 64);
 
 #[cfg(test)]
 mod tests {

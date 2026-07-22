@@ -3,6 +3,7 @@ use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
+use crate::_internal::impl_seed;
 use crate::rng::Rng64;
 use crate::rng64::SplitMix64;
 
@@ -39,6 +40,8 @@ impl Xoshiro256Pp {
         }
     }
 }
+
+impl_seed!(Xoshiro256Pp, 64);
 
 impl Rng64 for Xoshiro256Pp {
     #[inline]
@@ -152,6 +155,8 @@ impl Xoshiro256Ss {
         }
     }
 }
+
+impl_seed!(Xoshiro256Ss, 64);
 
 impl Rng64 for Xoshiro256Ss {
     #[inline]

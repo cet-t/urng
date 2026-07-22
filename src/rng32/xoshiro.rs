@@ -3,7 +3,7 @@ use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
-use crate::{rng::Rng32, rng32::SplitMix32};
+use crate::{_internal::impl_seed, rng::Rng32, rng32::SplitMix32};
 
 // --- Xoshiro128++ ---
 
@@ -42,6 +42,8 @@ impl Xoshiro128Pp {
         }
     }
 }
+
+impl_seed!(Xoshiro128Pp, 32);
 
 impl Rng32 for Xoshiro128Pp {
     #[inline]
@@ -95,6 +97,8 @@ impl Xoshiro128Ss {
         }
     }
 }
+
+impl_seed!(Xoshiro128Ss, 32);
 
 impl Rng32 for Xoshiro128Ss {
     #[inline]

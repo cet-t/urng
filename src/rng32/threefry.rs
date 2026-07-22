@@ -1,5 +1,6 @@
 use wrapn::{Wrap, wrap};
 
+use crate::_internal::impl_seed;
 #[allow(unused_imports)]
 use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
 
@@ -37,8 +38,8 @@ impl Threefry32x4 {
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         let mut k = wrap![0u32; 5];
-        for i in 0..4 {
-            k[i] = seedgen.nextu().into();
+        for item in k.iter_mut().take(4) {
+            *item = seedgen.nextu().into();
         }
         k[4] = k[0] ^ k[1] ^ k[2] ^ k[3] ^ THREEFRY32_C240;
 
@@ -161,6 +162,8 @@ impl Threefry32x4 {
         dst
     }
 }
+
+impl_seed!(Threefry32x4, 32);
 
 crate::_internal::impl_ring_rng32!(Threefry32x4, 4, next_raw);
 

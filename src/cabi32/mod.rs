@@ -1,4 +1,5 @@
 //! C-compatible ABI wrappers for the 32-bit RNGs.
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 /// JSF C ABI exports.
 pub mod jsf;

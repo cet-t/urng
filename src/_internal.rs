@@ -6,6 +6,32 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub const FSCALE64: f64 = 1.0 / (u64::MAX as f64 + 1.0);
 pub const FSCALE32: f32 = 1.0 / (u32::MAX as f32 + 1.0);
 
+macro_rules! sm64_from_seed32 {
+    ($seed:expr) => {{
+        use $crate::Rng32;
+
+        let mut s = $crate::SplitMix32::new($seed);
+        let sg = $crate::SplitMix64::new(((s.nextu() as u64) << 32) | (s.nextu() as u64));
+        sg
+    }};
+}
+
+pub(crate) use sm64_from_seed32;
+
+macro_rules! impl_seed {
+    ($t:ty, $bits:expr) => {
+        ::pastey::paste! {
+            impl $crate::[<Seed $bits>] for self::$t {
+                fn from_seed(seed: [<u $bits>]) -> Self {
+                    Self::new(seed)
+                }
+            }
+        }
+    };
+}
+
+pub(crate) use impl_seed;
+
 /// Implements [`crate::rng::Rng32`] for a counter-based block generator that owns
 /// `buf: [Wrap<u32>; N]` and `pos: Wrap<usize>` fields, by buffering blocks
 /// produced by an existing `fn $raw(&mut self) -> [u32; N]` method and handing

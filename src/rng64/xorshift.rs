@@ -1,5 +1,6 @@
 use wrapn::Wrap;
 
+use crate::_internal::impl_seed;
 use crate::rng::Rng64;
 use crate::rng64::SplitMix64;
 
@@ -32,6 +33,8 @@ impl Xorshift64 {
         }
     }
 }
+
+impl_seed!(Xorshift64, 64);
 
 impl Rng64 for Xorshift64 {
     #[inline]

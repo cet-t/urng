@@ -3,9 +3,9 @@ use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
+use crate::{_internal::impl_seed, Rng32, SplitMix32};
 #[cfg(feature = "simd")]
 use crate::{Rng32V256, Rng32V512};
-use crate::{rng::Rng32, rng32::SplitMix32};
 
 /// JSF (Jenkins Small Fast) 32-bit RNG implementation.
 ///
@@ -36,6 +36,8 @@ impl Jsf32 {
         }
     }
 }
+
+impl_seed!(Jsf32, 32);
 
 impl Rng32 for Jsf32 {
     #[inline(always)]

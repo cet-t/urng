@@ -1,5 +1,6 @@
 use wrapn::{Wrap, wrap};
 
+use crate::_internal::{impl_ring_rng64, impl_seed};
 #[allow(unused_imports)]
 use crate::{_internal::FSCALE64, rng::Rng64, rng64::SplitMix64};
 
@@ -94,7 +95,9 @@ impl Philox64 {
     }
 }
 
-crate::_internal::impl_ring_rng64!(Philox64, 2, next_raw);
+impl_seed!(Philox64, 64);
+
+impl_ring_rng64!(Philox64, 2, next_raw);
 
 #[cfg(test)]
 mod tests {

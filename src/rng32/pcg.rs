@@ -3,8 +3,10 @@ use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
-use crate::rng::Rng64;
-use crate::{rng::Rng32, rng64::SplitMix64};
+use crate::{
+    _internal::{impl_seed, sm64_from_seed32},
+    Rng32, Rng64,
+};
 
 // --- Pcg32 ---
 
@@ -28,14 +30,16 @@ pub struct Pcg32 {
 
 impl Pcg32 {
     /// Creates a new `Pcg32` instance seeded with the given value.
-    pub fn new(seed: u64) -> Self {
-        let mut seedgen = SplitMix64::new(seed | 1);
+    pub fn new(seed: u32) -> Self {
+        let mut seedgen = sm64_from_seed32!(seed);
         Pcg32 {
             state: seedgen.nextu().into(),
             inc: seedgen.nextu().into(),
         }
     }
 }
+
+impl_seed!(Pcg32, 32);
 
 impl Rng32 for Pcg32 {
     #[inline]

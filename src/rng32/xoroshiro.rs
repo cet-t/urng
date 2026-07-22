@@ -5,6 +5,7 @@ use wrapn::{Wrap, wrap};
 
 #[cfg(feature = "simd")]
 use crate::_internal::FSCALE32;
+use crate::_internal::impl_seed;
 use crate::rng::Rng32;
 use crate::rng32::SplitMix32;
 
@@ -21,6 +22,8 @@ impl Xoroshiro64Ss {
         }
     }
 }
+
+impl_seed!(Xoroshiro64Ss, 32);
 
 impl Rng32 for Xoroshiro64Ss {
     #[inline(always)]

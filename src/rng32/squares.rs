@@ -4,8 +4,8 @@ use std::arch::x86_64::*;
 use wrapn::{Wrap, wrap};
 
 use crate::{
+    _internal::{impl_seed, sm64_from_seed32},
     rng::{Rng32, Rng64},
-    rng64::SplitMix64,
 };
 
 // --- Squares32 ---
@@ -28,8 +28,8 @@ pub struct Squares32 {
 impl Squares32 {
     /// Creates a new `Squares32` instance seeded with the given value.
     #[inline]
-    pub fn new(seed: u64) -> Self {
-        let mut seedgen = SplitMix64::new(seed);
+    pub fn new(seed: u32) -> Self {
+        let mut seedgen = sm64_from_seed32!(seed);
         Self {
             c: 0.into(),
             k: seedgen.nextu().into(),
@@ -61,6 +61,8 @@ impl Squares32 {
         Self::compute_yz(y.value(), z.value())
     }
 }
+
+impl_seed!(Squares32, 32);
 
 impl Rng32 for Squares32 {
     #[inline(always)]

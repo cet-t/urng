@@ -1,4 +1,5 @@
 //! C-compatible ABI wrappers for the 64-bit RNGs.
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 /// Biski C ABI exports.
 pub mod biski;

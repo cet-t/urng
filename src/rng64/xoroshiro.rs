@@ -1,6 +1,6 @@
 ﻿use wrapn::{Wrap, wrap};
 
-use crate::{rng::Rng64, rng64::SplitMix64};
+use crate::{_internal::impl_seed, rng::Rng64, rng64::SplitMix64};
 
 /// A xoshiro128++ random number generator.
 ///
@@ -80,6 +80,8 @@ impl Xoroshiro128Pp {
         self.s = s;
     }
 }
+
+impl_seed!(Xoroshiro128Pp, 64);
 
 impl Rng64 for Xoroshiro128Pp {
     #[inline]
@@ -172,6 +174,8 @@ impl Xoroshiro128Ss {
         self.s = s;
     }
 }
+
+impl_seed!(Xoroshiro128Ss, 64);
 
 impl Rng64 for Xoroshiro128Ss {
     #[inline]

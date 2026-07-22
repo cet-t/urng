@@ -1,6 +1,6 @@
 ﻿use wrapn::{Wrap, wrap};
 
-use crate::rng::Rng64;
+use crate::{_internal::impl_seed, rng::Rng64};
 
 /// A SplitMix64 random number generator.
 ///
@@ -34,6 +34,8 @@ impl SplitMix64 {
         z ^ (z >> 31)
     }
 }
+
+impl_seed!(SplitMix64, 64);
 
 impl Rng64 for SplitMix64 {
     #[inline]

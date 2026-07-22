@@ -1,5 +1,6 @@
 ﻿use wrapn::{Wrap, wrap};
 
+use crate::_internal::impl_seed;
 use crate::rng::Rng32;
 use crate::rng32::SplitMix32;
 
@@ -31,6 +32,8 @@ impl Xorshift32 {
         }
     }
 }
+
+impl_seed!(Xorshift32, 32);
 
 impl Rng32 for Xorshift32 {
     #[inline]
@@ -75,6 +78,8 @@ impl Xorshift128 {
         }
     }
 }
+
+impl_seed!(Xorshift128, 32);
 
 impl Rng32 for Xorshift128 {
     #[inline]
@@ -121,6 +126,8 @@ impl Xorwow {
     }
 }
 
+impl_seed!(Xorwow, 32);
+
 impl Rng32 for Xorwow {
     #[inline]
     fn nextu(&mut self) -> u32 {
@@ -146,5 +153,6 @@ mod tests {
     use super::*;
 
     crate::safe_test!(Xorshift32);
+    crate::safe_test!(Xorshift128);
     crate::safe_test!(Xorwow);
 }
