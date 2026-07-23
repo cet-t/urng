@@ -112,7 +112,7 @@ impl Squares32x8 {
     #[target_feature(enable = "avx512f")]
     pub unsafe fn new(seed: u32) -> Self {
         let mut k = [0u64; SQUARES32x8];
-        let mut seedgen = SplitMix64::new(seed as u64 | 1);
+        let mut seedgen = sm64_from_seed32!(seed);
         k.iter_mut().for_each(|v| {
             use crate::rng::Rng64;
 

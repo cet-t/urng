@@ -91,8 +91,8 @@ impl Pcg32x8 {
     ///
     /// Must only be called on a CPU that supports AVX-512F.
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn new(seed: u64) -> Self {
-        let mut seedgen = SplitMix64::new(seed | 1);
+    pub unsafe fn new(seed: u32) -> Self {
+        let mut seedgen = sm64_from_seed32!(seed);
 
         let mut state = [0u64; PCG32X8_LANE];
         state.iter_mut().for_each(|v| *v = seedgen.nextu());
