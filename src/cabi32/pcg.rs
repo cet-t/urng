@@ -5,8 +5,8 @@ use std::slice::from_raw_parts_mut;
 /// Creates a new `Pcg32` instance.
 /// The caller is responsible for freeing the memory using `pcg32_free`.
 #[unsafe(no_mangle)]
-pub extern "C" fn pcg32_new(seed: u64) -> *mut Pcg32 {
-    Box::into_raw(Box::new(Pcg32::new(seed as u32)))
+pub extern "C" fn pcg32_new(seed: u32) -> *mut Pcg32 {
+    Box::into_raw(Box::new(Pcg32::new(seed)))
 }
 
 /// Frees the memory of a `Pcg32` instance.
@@ -25,12 +25,7 @@ pub extern "C" fn pcg32_next_u32s(ptr: *mut Pcg32, out: *mut u32, count: usize) 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(
-            buffer,
-            rng.nextu(),
-            Pcg32::new,
-            |r| r.nextu(),
-        );
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Pcg32::new, |r| r.nextu());
     }
 }
 
@@ -40,12 +35,7 @@ pub extern "C" fn pcg32_next_f32s(ptr: *mut Pcg32, out: *mut f32, count: usize) 
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(
-            buffer,
-            rng.nextu(),
-            Pcg32::new,
-            |r| r.nextf(),
-        );
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Pcg32::new, |r| r.nextf());
     }
 }
 
@@ -61,12 +51,7 @@ pub extern "C" fn pcg32_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(
-            buffer,
-            rng.nextu(),
-            Pcg32::new,
-            |r| r.randi(min, max),
-        );
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Pcg32::new, |r| r.randi(min, max));
     }
 }
 
@@ -82,12 +67,7 @@ pub extern "C" fn pcg32_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        crate::_internal::par_fill_reseed32(
-            buffer,
-            rng.nextu(),
-            Pcg32::new,
-            |r| r.randf(min, max),
-        );
+        crate::_internal::par_fill_reseed32(buffer, rng.nextu(), Pcg32::new, |r| r.randf(min, max));
     }
 }
 
@@ -371,7 +351,7 @@ mod simd {
     /// Creates a new `Pcg32x8` instance.
     /// The caller is responsible for freeing the memory using `pcg32x8_free`.
     #[unsafe(no_mangle)]
-    pub extern "C" fn pcg32x8_new(seed: u64) -> *mut Pcg32x8 {
+    pub extern "C" fn pcg32x8_new(seed: u32) -> *mut Pcg32x8 {
         unsafe { Box::into_raw(Box::new(Pcg32x8::new(seed))) }
     }
 
@@ -560,7 +540,7 @@ mod simd {
     /// Creates a new `Pcg32Simd` instance, dispatching to AVX-512 or scalar implementation.
     /// The caller is responsible for freeing the memory using `pcg32simd_free`.
     #[unsafe(no_mangle)]
-    pub extern "C" fn pcg32simd_new(seed: u64) -> *mut Pcg32Simd {
+    pub extern "C" fn pcg32simd_new(seed: u32) -> *mut Pcg32Simd {
         dispatch_simd!(Pcg32Simd, pcg32_new, pcg32x8_new, seed)
     }
     /// Frees the memory of a `Pcg32Simd` instance.
