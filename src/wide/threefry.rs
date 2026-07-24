@@ -1,5 +1,5 @@
 use crate::wide::impl_methods;
-use crate::{Rng32, SplitMix32};
+use crate::{Rng, SplitMix32};
 use ::wide::{u32x4, u32x8, u32x16};
 
 const THREEFRY32_C240: u32 = 0x1BD11BDA;

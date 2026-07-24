@@ -1,6 +1,6 @@
-﻿use wrapn::{Wrap, wrap};
+use wrapn::{Wrap, wrap};
 
-use crate::{_internal::impl_seed, rng::Rng64};
+use crate::{_internal::impl_seed, rng::Rng};
 
 /// A SplitMix64 random number generator.
 ///
@@ -37,7 +37,8 @@ impl SplitMix64 {
 
 impl_seed!(SplitMix64, 64);
 
-impl Rng64 for SplitMix64 {
+impl Rng for SplitMix64 {
+    type Word = u64;
     #[inline]
     fn nextu(&mut self) -> u64 {
         self.s += 0x9E3779B97F4A7C15;

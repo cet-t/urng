@@ -1,4 +1,4 @@
-use crate::rng::Rng32;
+use crate::rng::Rng;
 use crate::rng32::{Xoshiro128Pp, Xoshiro128Ss};
 use std::slice::from_raw_parts_mut;
 
@@ -301,7 +301,6 @@ mod simd {
         rng: &mut Xoshiro128Ppx16,
         chunk: &mut [f32],
         nt: bool,
-        scale: __m512,
     ) {
         let mut out_ptr = chunk.as_mut_ptr();
         let mut remaining = chunk.len();
@@ -309,14 +308,14 @@ mod simd {
 
         if aligned {
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.nextfv(scale);
+                let v = rng.nextfv();
                 _mm512_stream_ps(out_ptr, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
             }
         } else {
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.nextfv(scale);
+                let v = rng.nextfv();
                 _mm512_storeu_ps(out_ptr, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
@@ -325,7 +324,7 @@ mod simd {
 
         if remaining > 0 {
             let mut tmp = [0f32; XOSHIRO128X16_LANES];
-            let v = rng.nextfv(scale);
+            let v = rng.nextfv();
             _mm512_storeu_ps(tmp.as_mut_ptr(), v);
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }
@@ -456,12 +455,10 @@ mod simd {
                 .enumerate()
                 .for_each(|(chunk_idx, chunk)| {
                     let mut local_rng = Xoshiro128Ppx16::new(chunk_seed32(base_seed, chunk_idx));
-                    let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
                     xoshiro128ppx16_next_f32s_chunk(
                         &mut local_rng,
                         chunk,
                         crate::_internal::prefer_nt_for(count, chunk),
-                        scale,
                     );
                 });
         }
@@ -524,7 +521,7 @@ mod simd {
                 .enumerate()
                 .for_each(|(chunk_idx, chunk)| {
                     let mut local_rng = Xoshiro128Ppx16::new(chunk_seed32(base_seed, chunk_idx));
-                    let v_mult = _mm512_set1_ps((max - min) * (1.0 / (u32::MAX as f32 + 1.0)));
+                    let v_mult = _mm512_set1_ps(max - min);
                     let v_min = _mm512_set1_ps(min);
                     xoshiro128ppx16_rand_f32s_chunk(
                         &mut local_rng,
@@ -624,7 +621,6 @@ mod simd {
         rng: &mut Xoshiro128Ssx16,
         chunk: &mut [f32],
         nt: bool,
-        scale: __m512,
     ) {
         let mut out_ptr = chunk.as_mut_ptr();
         let mut remaining = chunk.len();
@@ -632,14 +628,14 @@ mod simd {
 
         if aligned {
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.nextfv(scale);
+                let v = rng.nextfv();
                 _mm512_stream_ps(out_ptr, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
             }
         } else {
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.nextfv(scale);
+                let v = rng.nextfv();
                 _mm512_storeu_ps(out_ptr, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
@@ -648,7 +644,7 @@ mod simd {
 
         if remaining > 0 {
             let mut tmp = [0f32; XOSHIRO128X16_LANES];
-            let v = rng.nextfv(scale);
+            let v = rng.nextfv();
             _mm512_storeu_ps(tmp.as_mut_ptr(), v);
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }
@@ -779,12 +775,10 @@ mod simd {
                 .enumerate()
                 .for_each(|(chunk_idx, chunk)| {
                     let mut local_rng = Xoshiro128Ssx16::new(chunk_seed32(base_seed, chunk_idx));
-                    let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
                     xoshiro128ssx16_next_f32s_chunk(
                         &mut local_rng,
                         chunk,
                         crate::_internal::prefer_nt_for(count, chunk),
-                        scale,
                     );
                 });
         }
@@ -847,7 +841,7 @@ mod simd {
                 .enumerate()
                 .for_each(|(chunk_idx, chunk)| {
                     let mut local_rng = Xoshiro128Ssx16::new(chunk_seed32(base_seed, chunk_idx));
-                    let v_mult = _mm512_set1_ps((max - min) * (1.0 / (u32::MAX as f32 + 1.0)));
+                    let v_mult = _mm512_set1_ps(max - min);
                     let v_min = _mm512_set1_ps(min);
                     xoshiro128ssx16_rand_f32s_chunk(
                         &mut local_rng,

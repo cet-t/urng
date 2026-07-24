@@ -1,4 +1,5 @@
-#[doc = include_str!("../README.md")]
+#![doc = include_str!("../README.md")]
+
 /// A 32/64-bit random number generator trait.
 pub mod rng;
 pub use crate::rng::*;
@@ -38,6 +39,7 @@ pub mod shuffle;
 pub use crate::shuffle::*;
 
 pub mod choice;
+pub use crate::choice::*;
 
 pub(crate) mod _internal;
 

@@ -1,4 +1,4 @@
-use crate::rng::Rng64;
+use crate::rng::Rng;
 use crate::sampler::Sampler64;
 
 /// Weighted sampler using cumulative sums and binary search (O(log n) sample, O(n) build).
@@ -15,12 +15,12 @@ use crate::sampler::Sampler64;
 /// assert!(sampler.sample() < 4);
 /// ```
 #[derive(Debug)]
-pub struct Bst64<'a, R: Rng64 + 'a> {
+pub struct Bst64<'a, R: Rng<Word = u64> + 'a> {
     rng: &'a mut R,
     cumulative: Vec<f64>,
 }
 
-impl<'a, R: Rng64 + 'a> Bst64<'a, R> {
+impl<'a, R: Rng<Word = u64> + 'a> Bst64<'a, R> {
     /// Creates a new sampler with the given random number generator and weights.
     pub fn new(rng: &'a mut R, weights: &[f64]) -> Self {
         Self {
@@ -40,7 +40,7 @@ impl<'a, R: Rng64 + 'a> Bst64<'a, R> {
     }
 }
 
-impl<'a, R: Rng64 + 'a> Sampler64<'a, R> for Bst64<'a, R> {
+impl<'a, R: Rng<Word = u64> + 'a> Sampler64<'a, R> for Bst64<'a, R> {
     fn weights(&mut self, weights: &[f64]) {
         self.cumulative = Self::build_cumulative(weights);
     }

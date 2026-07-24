@@ -1,7 +1,7 @@
-﻿use wrapn::{Wrap, wrap};
+use wrapn::{Wrap, wrap};
 
 use crate::_internal::impl_seed;
-use crate::rng::Rng32;
+use crate::rng::Rng;
 use crate::rng32::SplitMix32;
 
 // --- Xorshift32 ---
@@ -35,7 +35,8 @@ impl Xorshift32 {
 
 impl_seed!(Xorshift32, 32);
 
-impl Rng32 for Xorshift32 {
+impl Rng for Xorshift32 {
+    type Word = u32;
     #[inline]
     fn nextu(&mut self) -> u32 {
         let x = self.a;
@@ -81,7 +82,8 @@ impl Xorshift128 {
 
 impl_seed!(Xorshift128, 32);
 
-impl Rng32 for Xorshift128 {
+impl Rng for Xorshift128 {
+    type Word = u32;
     #[inline]
     fn nextu(&mut self) -> u32 {
         let mut t = self.x[3];
@@ -128,7 +130,8 @@ impl Xorwow {
 
 impl_seed!(Xorwow, 32);
 
-impl Rng32 for Xorwow {
+impl Rng for Xorwow {
+    type Word = u32;
     #[inline]
     fn nextu(&mut self) -> u32 {
         let mut t = self.x[4];

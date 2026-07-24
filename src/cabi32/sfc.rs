@@ -1,6 +1,6 @@
 use std::slice::from_raw_parts_mut;
 
-use crate::{rng::Rng32, rng32::Sfc32};
+use crate::{rng::Rng, rng32::Sfc32};
 
 // --- Sfc32 ---
 
@@ -75,7 +75,7 @@ mod simd {
     use std::{ptr, slice::from_raw_parts_mut};
 
     use crate::{
-        _internal::{FSCALE32, chunk_seed32},
+        _internal::chunk_seed32,
         rng32::sfc::{SFC32X4, SFC32X8, SFC32X16, Sfc32x4, Sfc32x8, Sfc32x16},
     };
 
@@ -112,18 +112,13 @@ mod simd {
     #[cfg(target_arch = "x86_64")]
     #[allow(unsafe_op_in_unsafe_fn)]
     #[inline(always)]
-    unsafe fn sfc32x4_next_f32s_chunk(
-        rng: &mut Sfc32x4,
-        chunk: &mut [f32],
-        nt: bool,
-        scale: __m128,
-    ) {
+    unsafe fn sfc32x4_next_f32s_chunk(rng: &mut Sfc32x4, chunk: &mut [f32], nt: bool) {
         crate::_internal::fill_chunk_auto(chunk, nt, || {
             bytemuck::cast::<_, [f32; SFC32X4 * 4]>([
-                rng.nextfv(scale),
-                rng.nextfv(scale),
-                rng.nextfv(scale),
-                rng.nextfv(scale),
+                rng.nextfv(),
+                rng.nextfv(),
+                rng.nextfv(),
+                rng.nextfv(),
             ])
         });
     }
@@ -199,7 +194,6 @@ mod simd {
         unsafe {
             let rng = &mut *ptr;
             let base_seed = rng.nextu()[0];
-            let scale = _mm_set1_ps(FSCALE32);
             let buffer = from_raw_parts_mut(out, count);
             buffer
                 .par_chunks_mut(SFC32X4_PAR_CHUNK)
@@ -210,7 +204,6 @@ mod simd {
                         &mut local_rng,
                         chunk,
                         crate::_internal::prefer_nt_for(count, chunk),
-                        scale,
                     );
                 });
         }
@@ -263,7 +256,7 @@ mod simd {
         unsafe {
             let rng = &mut *ptr;
             let base_seed = rng.nextu()[0];
-            let v_mult = _mm_set1_ps((max - min) * FSCALE32);
+            let v_mult = _mm_set1_ps(max - min);
             let v_min = _mm_set1_ps(min);
             let buffer = from_raw_parts_mut(out, count);
             buffer
@@ -351,41 +344,36 @@ mod simd {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     #[allow(unsafe_op_in_unsafe_fn)]
-    unsafe fn sfc32x8_next_f32s_chunk(
-        rng: &mut Sfc32x8,
-        chunk: &mut [f32],
-        nt: bool,
-        scale: __m256,
-    ) {
+    unsafe fn sfc32x8_next_f32s_chunk(rng: &mut Sfc32x8, chunk: &mut [f32], nt: bool) {
         let mut out_ptr = chunk.as_mut_ptr();
         let mut remaining = chunk.len();
         let aligned = nt && (out_ptr as usize & 63) == 0;
 
         if aligned {
             while remaining >= SFC32X8_UNROLL {
-                _mm256_stream_ps(out_ptr, rng.nextfv(scale));
-                _mm256_stream_ps(out_ptr.add(SFC32X8), rng.nextfv(scale));
-                _mm256_stream_ps(out_ptr.add(SFC32X8 * 2), rng.nextfv(scale));
-                _mm256_stream_ps(out_ptr.add(SFC32X8 * 3), rng.nextfv(scale));
+                _mm256_stream_ps(out_ptr, rng.nextfv());
+                _mm256_stream_ps(out_ptr.add(SFC32X8), rng.nextfv());
+                _mm256_stream_ps(out_ptr.add(SFC32X8 * 2), rng.nextfv());
+                _mm256_stream_ps(out_ptr.add(SFC32X8 * 3), rng.nextfv());
                 out_ptr = out_ptr.add(SFC32X8_UNROLL);
                 remaining -= SFC32X8_UNROLL;
             }
             while remaining >= SFC32X8 {
-                _mm256_stream_ps(out_ptr, rng.nextfv(scale));
+                _mm256_stream_ps(out_ptr, rng.nextfv());
                 out_ptr = out_ptr.add(SFC32X8);
                 remaining -= SFC32X8;
             }
         } else {
             while remaining >= SFC32X8_UNROLL {
-                _mm256_storeu_ps(out_ptr, rng.nextfv(scale));
-                _mm256_storeu_ps(out_ptr.add(SFC32X8), rng.nextfv(scale));
-                _mm256_storeu_ps(out_ptr.add(SFC32X8 * 2), rng.nextfv(scale));
-                _mm256_storeu_ps(out_ptr.add(SFC32X8 * 3), rng.nextfv(scale));
+                _mm256_storeu_ps(out_ptr, rng.nextfv());
+                _mm256_storeu_ps(out_ptr.add(SFC32X8), rng.nextfv());
+                _mm256_storeu_ps(out_ptr.add(SFC32X8 * 2), rng.nextfv());
+                _mm256_storeu_ps(out_ptr.add(SFC32X8 * 3), rng.nextfv());
                 out_ptr = out_ptr.add(SFC32X8_UNROLL);
                 remaining -= SFC32X8_UNROLL;
             }
             while remaining >= SFC32X8 {
-                _mm256_storeu_ps(out_ptr, rng.nextfv(scale));
+                _mm256_storeu_ps(out_ptr, rng.nextfv());
                 out_ptr = out_ptr.add(SFC32X8);
                 remaining -= SFC32X8;
             }
@@ -393,7 +381,7 @@ mod simd {
 
         if remaining > 0 {
             let mut tmp = [0f32; SFC32X8];
-            _mm256_storeu_ps(tmp.as_mut_ptr(), rng.nextfv(scale));
+            _mm256_storeu_ps(tmp.as_mut_ptr(), rng.nextfv());
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }
     }
@@ -549,8 +537,6 @@ mod simd {
             _mm256_storeu_si256(tmp.as_mut_ptr() as *mut _, rng.nextuv());
             let base_seed = tmp[0];
 
-            let scale = _mm256_set1_ps(FSCALE32);
-
             let buffer = from_raw_parts_mut(out, count);
             buffer
                 .par_chunks_mut(SFC32X8_PAR_CHUNK)
@@ -561,7 +547,6 @@ mod simd {
                         &mut local_rng,
                         chunk,
                         crate::_internal::prefer_nt_for(count, chunk),
-                        scale,
                     );
                 });
         }
@@ -621,7 +606,7 @@ mod simd {
             _mm256_storeu_si256(tmp.as_mut_ptr() as *mut _, rng.nextuv());
             let base_seed = tmp[0];
 
-            let v_mult = _mm256_set1_ps((max - min) * FSCALE32);
+            let v_mult = _mm256_set1_ps(max - min);
             let v_min = _mm256_set1_ps(min);
 
             let buffer = from_raw_parts_mut(out, count);
@@ -719,22 +704,17 @@ mod simd {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx512f")]
     #[allow(unsafe_op_in_unsafe_fn)]
-    unsafe fn sfc32x16_next_f32s_chunk(
-        rng: &mut Sfc32x16,
-        chunk: &mut [f32],
-        nt: bool,
-        scale: __m512,
-    ) {
+    unsafe fn sfc32x16_next_f32s_chunk(rng: &mut Sfc32x16, chunk: &mut [f32], nt: bool) {
         let mut out_ptr = chunk.as_mut_ptr();
         let mut remaining = chunk.len();
         let aligned = nt && (out_ptr as usize & 63) == 0;
 
         if aligned {
             while remaining >= SFC32X16_UNROLL {
-                let v0 = rng.nextfv(scale);
-                let v1 = rng.nextfv(scale);
-                let v2 = rng.nextfv(scale);
-                let v3 = rng.nextfv(scale);
+                let v0 = rng.nextfv();
+                let v1 = rng.nextfv();
+                let v2 = rng.nextfv();
+                let v3 = rng.nextfv();
                 _mm512_stream_ps(out_ptr, v0);
                 _mm512_stream_ps(out_ptr.add(SFC32X16), v1);
                 _mm512_stream_ps(out_ptr.add(SFC32X16 * 2), v2);
@@ -743,17 +723,17 @@ mod simd {
                 remaining -= SFC32X16_UNROLL;
             }
             while remaining >= SFC32X16 {
-                let v = rng.nextfv(scale);
+                let v = rng.nextfv();
                 _mm512_stream_ps(out_ptr, v);
                 out_ptr = out_ptr.add(SFC32X16);
                 remaining -= SFC32X16;
             }
         } else {
             while remaining >= SFC32X16_UNROLL {
-                let v0 = rng.nextfv(scale);
-                let v1 = rng.nextfv(scale);
-                let v2 = rng.nextfv(scale);
-                let v3 = rng.nextfv(scale);
+                let v0 = rng.nextfv();
+                let v1 = rng.nextfv();
+                let v2 = rng.nextfv();
+                let v3 = rng.nextfv();
                 _mm512_storeu_ps(out_ptr, v0);
                 _mm512_storeu_ps(out_ptr.add(SFC32X16), v1);
                 _mm512_storeu_ps(out_ptr.add(SFC32X16 * 2), v2);
@@ -762,7 +742,7 @@ mod simd {
                 remaining -= SFC32X16_UNROLL;
             }
             while remaining >= SFC32X16 {
-                let v = rng.nextfv(scale);
+                let v = rng.nextfv();
                 _mm512_storeu_ps(out_ptr, v);
                 out_ptr = out_ptr.add(SFC32X16);
                 remaining -= SFC32X16;
@@ -771,7 +751,7 @@ mod simd {
 
         if remaining > 0 {
             let mut tmp = [0f32; SFC32X16];
-            let v = rng.nextfv(scale);
+            let v = rng.nextfv();
             _mm512_storeu_ps(tmp.as_mut_ptr(), v);
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }
@@ -940,8 +920,6 @@ mod simd {
             _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
             let base_seed = tmp[0];
 
-            let scale = _mm512_set1_ps(FSCALE32);
-
             let buffer = from_raw_parts_mut(out, count);
             buffer
                 .par_chunks_mut(SFC32X16_PAR_CHUNK)
@@ -952,7 +930,6 @@ mod simd {
                         &mut local_rng,
                         chunk,
                         crate::_internal::prefer_nt_for(count, chunk),
-                        scale,
                     );
                 });
         }
@@ -1014,7 +991,7 @@ mod simd {
             _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
             let base_seed = tmp[0];
 
-            let v_mult = _mm512_set1_ps((max - min) * FSCALE32);
+            let v_mult = _mm512_set1_ps(max - min);
             let v_min = _mm512_set1_ps(min);
 
             let buffer = from_raw_parts_mut(out, count);

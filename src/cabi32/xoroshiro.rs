@@ -1,6 +1,6 @@
 use crate::{
     _internal::{fill_chunk_auto, prefer_nt},
-    rng::Rng32,
+    rng::Rng,
     rng32::Xoroshiro64Ss,
 };
 use rayon::prelude::*;
@@ -204,7 +204,6 @@ mod simd {
         rng: &mut Xoroshiro64Ssx8,
         chunk: &mut [f32],
         nt: bool,
-        scale: __m256,
     ) {
         let mut out_ptr = chunk.as_mut_ptr();
         let mut remaining = chunk.len();
@@ -212,36 +211,36 @@ mod simd {
 
         if aligned {
             while remaining >= XOROSHIRO64SSX8_UNROLL {
-                _mm256_stream_ps(out_ptr, rng.nextfv(scale));
-                _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8), rng.nextfv(scale));
-                _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8 * 2), rng.nextfv(scale));
-                _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8 * 3), rng.nextfv(scale));
+                _mm256_stream_ps(out_ptr, rng.nextfv());
+                _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8), rng.nextfv());
+                _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8 * 2), rng.nextfv());
+                _mm256_stream_ps(out_ptr.add(XOROSHIRO64SSX8 * 3), rng.nextfv());
                 out_ptr = out_ptr.add(XOROSHIRO64SSX8_UNROLL);
                 remaining -= XOROSHIRO64SSX8_UNROLL;
             }
             while remaining >= XOROSHIRO64SSX8 {
-                _mm256_stream_ps(out_ptr, rng.nextfv(scale));
+                _mm256_stream_ps(out_ptr, rng.nextfv());
                 out_ptr = out_ptr.add(XOROSHIRO64SSX8);
                 remaining -= XOROSHIRO64SSX8;
             }
         } else {
             while remaining >= XOROSHIRO64SSX8_UNROLL {
-                _mm256_storeu_ps(out_ptr, rng.nextfv(scale));
-                _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8), rng.nextfv(scale));
-                _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8 * 2), rng.nextfv(scale));
-                _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8 * 3), rng.nextfv(scale));
+                _mm256_storeu_ps(out_ptr, rng.nextfv());
+                _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8), rng.nextfv());
+                _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8 * 2), rng.nextfv());
+                _mm256_storeu_ps(out_ptr.add(XOROSHIRO64SSX8 * 3), rng.nextfv());
                 out_ptr = out_ptr.add(XOROSHIRO64SSX8_UNROLL);
                 remaining -= XOROSHIRO64SSX8_UNROLL;
             }
             while remaining >= XOROSHIRO64SSX8 {
-                _mm256_storeu_ps(out_ptr, rng.nextfv(scale));
+                _mm256_storeu_ps(out_ptr, rng.nextfv());
                 out_ptr = out_ptr.add(XOROSHIRO64SSX8);
                 remaining -= XOROSHIRO64SSX8;
             }
         }
         if remaining > 0 {
             let mut tmp = [0f32; XOROSHIRO64SSX8];
-            _mm256_storeu_ps(tmp.as_mut_ptr(), rng.nextfv(scale));
+            _mm256_storeu_ps(tmp.as_mut_ptr(), rng.nextfv());
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }
     }
@@ -403,7 +402,6 @@ mod simd {
         unsafe {
             let rng = &mut *ptr;
             let base_seed: u32 = rng.nextu()[0];
-            let scale = _mm256_set1_ps(crate::_internal::FSCALE32);
             let buffer = from_raw_parts_mut(out, count);
             buffer
                 .par_chunks_mut(XOROSHIRO64SSX8_PAR_CHUNK)
@@ -414,7 +412,6 @@ mod simd {
                         &mut local_rng,
                         chunk,
                         crate::_internal::prefer_nt_for(count, chunk),
-                        scale,
                     );
                 });
         }
@@ -467,7 +464,7 @@ mod simd {
         unsafe {
             let rng = &mut *ptr;
             let base_seed: u32 = rng.nextu()[0];
-            let v_mult = _mm256_set1_ps((max - min) * crate::_internal::FSCALE32);
+            let v_mult = _mm256_set1_ps(max - min);
             let v_min = _mm256_set1_ps(min);
             let buffer = from_raw_parts_mut(out, count);
             buffer
@@ -560,7 +557,6 @@ mod simd {
         rng: &mut Xoroshiro64Ssx16,
         chunk: &mut [f32],
         nt: bool,
-        scale: __m512,
     ) {
         let mut out_ptr = chunk.as_mut_ptr();
         let mut remaining = chunk.len();
@@ -568,36 +564,36 @@ mod simd {
 
         if aligned {
             while remaining >= XOROSHIRO64SSX16_UNROLL {
-                _mm512_stream_ps(out_ptr, rng.nextfv(scale));
-                _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16), rng.nextfv(scale));
-                _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16 * 2), rng.nextfv(scale));
-                _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16 * 3), rng.nextfv(scale));
+                _mm512_stream_ps(out_ptr, rng.nextfv());
+                _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16), rng.nextfv());
+                _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16 * 2), rng.nextfv());
+                _mm512_stream_ps(out_ptr.add(XOROSHIRO64SSX16 * 3), rng.nextfv());
                 out_ptr = out_ptr.add(XOROSHIRO64SSX16_UNROLL);
                 remaining -= XOROSHIRO64SSX16_UNROLL;
             }
             while remaining >= XOROSHIRO64SSX16 {
-                _mm512_stream_ps(out_ptr, rng.nextfv(scale));
+                _mm512_stream_ps(out_ptr, rng.nextfv());
                 out_ptr = out_ptr.add(XOROSHIRO64SSX16);
                 remaining -= XOROSHIRO64SSX16;
             }
         } else {
             while remaining >= XOROSHIRO64SSX16_UNROLL {
-                _mm512_storeu_ps(out_ptr, rng.nextfv(scale));
-                _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16), rng.nextfv(scale));
-                _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16 * 2), rng.nextfv(scale));
-                _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16 * 3), rng.nextfv(scale));
+                _mm512_storeu_ps(out_ptr, rng.nextfv());
+                _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16), rng.nextfv());
+                _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16 * 2), rng.nextfv());
+                _mm512_storeu_ps(out_ptr.add(XOROSHIRO64SSX16 * 3), rng.nextfv());
                 out_ptr = out_ptr.add(XOROSHIRO64SSX16_UNROLL);
                 remaining -= XOROSHIRO64SSX16_UNROLL;
             }
             while remaining >= XOROSHIRO64SSX16 {
-                _mm512_storeu_ps(out_ptr, rng.nextfv(scale));
+                _mm512_storeu_ps(out_ptr, rng.nextfv());
                 out_ptr = out_ptr.add(XOROSHIRO64SSX16);
                 remaining -= XOROSHIRO64SSX16;
             }
         }
         if remaining > 0 {
             let mut tmp = [0f32; XOROSHIRO64SSX16];
-            _mm512_storeu_ps(tmp.as_mut_ptr(), rng.nextfv(scale));
+            _mm512_storeu_ps(tmp.as_mut_ptr(), rng.nextfv());
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }
     }
@@ -759,7 +755,6 @@ mod simd {
         unsafe {
             let rng = &mut *ptr;
             let base_seed: u32 = rng.nextu()[0];
-            let scale = _mm512_set1_ps(crate::_internal::FSCALE32);
             let buffer = from_raw_parts_mut(out, count);
             buffer
                 .par_chunks_mut(XOROSHIRO64SSX16_PAR_CHUNK)
@@ -770,7 +765,6 @@ mod simd {
                         &mut local_rng,
                         chunk,
                         crate::_internal::prefer_nt_for(count, chunk),
-                        scale,
                     );
                 });
         }
@@ -823,7 +817,7 @@ mod simd {
         unsafe {
             let rng = &mut *ptr;
             let base_seed: u32 = rng.nextu()[0];
-            let v_mult = _mm512_set1_ps((max - min) * crate::_internal::FSCALE32);
+            let v_mult = _mm512_set1_ps(max - min);
             let v_min = _mm512_set1_ps(min);
             let buffer = from_raw_parts_mut(out, count);
             buffer

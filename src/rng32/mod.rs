@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 //! Consolidated 32-bit random number generators.
 //!
 //! This module groups the 32-bit RNG implementations and re-exports the main generator types.
@@ -30,7 +31,6 @@ pub mod xoshiro;
 pub use jsf::Jsf32;
 #[cfg(feature = "simd")]
 pub use jsf::{Jsf32x8, Jsf32x16};
-#[allow(deprecated)]
 pub use lcg::Lcg32;
 pub use mersenne::{
     Mt19937, Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253, Sfmt11213, Sfmt19937, Sfmt44497, Sfmt86243,
@@ -95,4 +95,7 @@ crate::impl_default_from_seed32!(
     Sfmt86243,
     Sfmt132049,
     Sfmt216091,
+    Philox32x4,
+    Threefry32x2,
+    Threefry32x4,
 );

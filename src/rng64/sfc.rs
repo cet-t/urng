@@ -1,10 +1,12 @@
-﻿#[cfg(all(feature = "simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
 use crate::_internal::impl_seed;
-use crate::rng::Rng64;
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
+use crate::_internal::{i2f_bits, u2f_01};
+use crate::rng::Rng;
 use crate::rng64::SplitMix64;
 
 // --- Sfc64 ---
@@ -17,7 +19,7 @@ use crate::rng64::SplitMix64;
 /// use urng::*;
 ///
 /// let mut rng = Sfc64::new(1);
-/// let _ = rng.nextu();
+/// let _ = Rng::nextu(&mut rng);
 /// ```
 #[repr(C, align(64))]
 pub struct Sfc64 {
@@ -42,7 +44,8 @@ impl Sfc64 {
 
 impl_seed!(Sfc64, 64);
 
-impl Rng64 for Sfc64 {
+impl Rng for Sfc64 {
+    type Word = u64;
     #[inline(always)]
     fn nextu(&mut self) -> u64 {
         let res = self.a + self.b + self.counter;
@@ -147,9 +150,8 @@ impl Sfc64x8 {
         unsafe {
             let u = self.nextu();
             let mut out = [0f64; 8];
-            let scale = 1.0 / (u64::MAX as f64 + 1.0);
             for i in 0..8 {
-                out[i] = u[i] as f64 * scale;
+                out[i] = u2f_01!(f64, 64, u[i]);
             }
             out
         }
@@ -183,10 +185,9 @@ impl Sfc64x8 {
         unsafe {
             let u = self.nextu();
             let range = max - min;
-            let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
             let mut out = [0f64; 8];
             for i in 0..8 {
-                out[i] = (u[i] as f64 * scale) + min;
+                out[i] = u2f_01!(f64, 64, u[i]) * range + min;
             }
             out
         }

@@ -10,7 +10,7 @@ This crate provides a wide variety of algorithms, ranging from standard Mersenne
 ## Supported Generators
 
 Generators are divided into standard generators, portable wide generators, and AVX-accelerated SIMD generators.
-Standard generators implement either the `Rng32` or `Rng64` trait (or return fixed-size arrays for counter-based variants).
+Standard generators implement the unified `Rng` trait (`Word = u32` or `Word = u64`; SIMD/counter-based variants return fixed-size arrays instead).
 Portable wide generators require the `wide` feature and expose safe fixed-array bulk APIs.
 AVX generators expose a bulk-generation API and are listed separately; they require the `simd` feature.
 
@@ -144,12 +144,12 @@ Weighted random index selection. Two implementations are provided for each bit-w
 
 > Requires the `seedgen` feature.
 
-Hardware-noise-assisted seed generation. Wraps an existing `Rng32`/`Rng64` and mixes in hardware noise (RDSEED/RDRAND on x86/x86_64, timestamp fallback elsewhere) via a Murmur3-style hash.
+Hardware-noise-assisted seed generation. Wraps an existing `Rng` and mixes in hardware noise (RDSEED/RDRAND on x86/x86_64, timestamp fallback elsewhere) via a Murmur3-style hash.
 
-| Struct      | Module          | Input RNG | Output            |
-| ----------- | --------------- | --------- | ----------------- |
-| `SeedGen32` | `urng::seedgen` | `Rng32`   | `(u32, u32)` pair |
-| `SeedGen64` | `urng::seedgen` | `Rng64`   | `(u64, u64)` pair |
+| Struct      | Module          | Input RNG          | Output            |
+| ----------- | --------------- | ------------------ | ----------------- |
+| `SeedGen32` | `urng::seedgen` | `Rng<Word = u32>`  | `(u32, u32)` pair |
+| `SeedGen64` | `urng::seedgen` | `Rng<Word = u64>`  | `(u64, u64)` pair |
 
 `next_seed_pair()` returns `(raw, processed)` — the raw hardware value and the mixed seed.
 
@@ -157,17 +157,17 @@ Hardware-noise-assisted seed generation. Wraps an existing `Rng32`/`Rng64` and m
 
 Statistical validation of RNG quality is handled by the external [`cribler`](https://crates.io/crates/cribler) crate, a batteries-included randomness-test toolkit. `cribler` ships every engine (chi-squared, Monte Carlo π, serial correlation, runs, Kolmogorov–Smirnov, birthday spacing, a NIST SP 800-22 subset, and a paranoid battery aggregator) and offers zero-feature integration: any generator plugs in via a plain `FnMut() -> f64` / `FnMut() -> u64` sampler closure.
 
-Enable the `urng` feature on `cribler` for pre-built typed convenience that works directly against `urng`'s `Rng32`/`Rng64` generators:
+Enable the `urng` feature on `cribler` for pre-built typed convenience that works directly against `urng`'s `Rng` generators:
 
 ```toml
 [dependencies]
-urng = "0.12.1"
+urng = "0.13.0"
 cribler = { version = "0.3", features = ["urng"] }
 ```
 
 The suites construct each named case from a seed, so no generator instance needs to be passed in:
 
-```rust
+```rust,ignore
 use cribler::ChiSqSuite;
 use urng::*;
 
@@ -184,7 +184,7 @@ for r in &results {
 }
 ```
 
-`from_urng32::<R>()` / `from_urng64::<R>()` register a `urng::Rng32` / `urng::Rng64` `R`, built from the suite's seed. The `rand` feature provides `from_rand::<R>()` for `rand_core::Rng` types, and `from_custom(source)` accepts anything else via a `WordSource` adapter.
+`from_urng32::<R>()` / `from_urng64::<R>()` register a `urng::Rng<Word = u32>` / `urng::Rng<Word = u64>` `R`, built from the suite's seed. The `rand` feature provides `from_rand::<R>()` for `rand_core::Rng` types, and `from_custom(source)` accepts anything else via a `WordSource` adapter.
 
 ## Usage Examples
 
@@ -196,7 +196,7 @@ Scalar generators (both 32-bit and 64-bit; SIMD variants are not included) also 
 use urng::*;
 
 let mut rng = Sfc32::default();
-let _ = rng.nextu();
+let _ = Rng::nextu(&mut rng);
 ```
 
 > The deprecated `Lcg32`/`Lcg64` implement `Default` with the fixed parameters `new(8, 13, 5, 24)` instead, since an LCG has no single sensible auto-generated seed.

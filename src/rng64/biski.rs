@@ -3,14 +3,16 @@ use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
-use crate::{_internal::impl_seed, rng::Rng64, rng64::SplitMix64};
+#[cfg(feature = "simd")]
+use crate::_internal::{i2f_bits, u2f_01};
+use crate::{_internal::impl_seed, rng::Rng, rng64::SplitMix64};
 
 /// A [Biski64](https://github.com/danielcota/biski64) random number generator.
 ///
 /// # Examples
 ///
 /// ```
-/// use urng::rng::Rng64;
+/// use urng::rng::Rng;
 /// use urng::rng64::Biski64;
 ///
 /// let mut rng = Biski64::new(1);
@@ -37,7 +39,8 @@ impl Biski64 {
 
 impl_seed!(Biski64, 64);
 
-impl Rng64 for Biski64 {
+impl Rng for Biski64 {
+    type Word = u64;
     #[inline(always)]
     fn nextu(&mut self) -> u64 {
         let output = self.mix + self.loop_mix;
@@ -138,9 +141,8 @@ impl Biski64x8 {
         unsafe {
             let u = self.nextu();
             let mut out = [0f64; 8];
-            let scale = 1.0 / (u64::MAX as f64 + 1.0);
             for i in 0..8 {
-                out[i] = u[i] as f64 * scale;
+                out[i] = u2f_01!(f64, 64, u[i]);
             }
             out
         }
@@ -174,10 +176,9 @@ impl Biski64x8 {
         unsafe {
             let u = self.nextu();
             let range = max - min;
-            let scale = range * (1.0 / (u64::MAX as f64 + 1.0));
             let mut out = [0f64; 8];
             for i in 0..8 {
-                out[i] = (u[i] as f64 * scale) + min;
+                out[i] = u2f_01!(f64, 64, u[i]) * range + min;
             }
             out
         }

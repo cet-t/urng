@@ -1,4 +1,4 @@
-use crate::rng::Rng32;
+use crate::rng::Rng;
 use crate::sampler::Sampler32;
 
 /// Weighted sampler using Walker's Alias Method (O(1) sample, O(n) build).
@@ -21,13 +21,13 @@ use crate::sampler::Sampler32;
 /// assert!(sampler.sample() < 2);
 /// ```
 #[derive(Debug)]
-pub struct Alias32<'a, R: Rng32 + 'a> {
+pub struct Alias32<'a, R: Rng<Word = u32> + 'a> {
     rng: &'a mut R,
     prob: Vec<f32>,
     alias: Vec<usize>,
 }
 
-impl<'a, R: Rng32 + 'a> Alias32<'a, R> {
+impl<'a, R: Rng<Word = u32> + 'a> Alias32<'a, R> {
     /// Creates a new sampler with the given random number generator and weights.
     pub fn new(rng: &'a mut R, weights: &[f32]) -> Self {
         let (prob, alias) = Self::build(weights);
@@ -73,7 +73,7 @@ impl<'a, R: Rng32 + 'a> Alias32<'a, R> {
     }
 }
 
-impl<'a, R: Rng32 + 'a> Sampler32<'a, R> for Alias32<'a, R> {
+impl<'a, R: Rng<Word = u32> + 'a> Sampler32<'a, R> for Alias32<'a, R> {
     fn weights(&mut self, weights: &[f32]) {
         let (prob, alias) = Self::build(weights);
         self.prob = prob;

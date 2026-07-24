@@ -1,10 +1,10 @@
-﻿use std::ptr;
+use std::ptr;
 
 use bytemuck;
 use wrapn::{Wrap, wrap};
 
 use crate::_internal::impl_seed;
-use crate::rng::Rng64;
+use crate::rng::Rng;
 use crate::rng64::SplitMix64;
 
 #[allow(non_camel_case_types)]
@@ -154,7 +154,8 @@ impl Mt1993764 {
 
 impl_seed!(Mt1993764, 64);
 
-impl Rng64 for Mt1993764 {
+impl Rng for Mt1993764 {
+    type Word = u64;
     #[inline]
     fn nextu(&mut self) -> u64 {
         if self.mti >= N {
@@ -334,7 +335,8 @@ impl Sfmt1993764 {
 
 impl_seed!(Sfmt1993764, 64);
 
-impl Rng64 for Sfmt1993764 {
+impl Rng for Sfmt1993764 {
+    type Word = u64;
     #[inline]
     fn nextu(&mut self) -> u64 {
         if self.idx >= SFMT_N * 2 {

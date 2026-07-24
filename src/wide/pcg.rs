@@ -1,5 +1,5 @@
 use crate::wide::impl_methods;
-use crate::{Rng64, SplitMix64};
+use crate::{Rng, SplitMix64};
 use ::wide::{u64x4, u64x8};
 
 macro_rules! impl_pcg32_variants {

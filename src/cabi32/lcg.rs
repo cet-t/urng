@@ -1,4 +1,4 @@
-use crate::rng::Rng32;
+use crate::rng::Rng;
 #[allow(deprecated)]
 use crate::rng32::Lcg32;
 

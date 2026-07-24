@@ -1,5 +1,5 @@
 use crate::wide::impl_methods;
-use crate::{Rng32, SplitMix32};
+use crate::{Rng, SplitMix32};
 use ::wide::{u32x4, u32x8, u32x16};
 
 macro_rules! impl_xorshift32_variants {

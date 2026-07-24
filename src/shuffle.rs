@@ -11,7 +11,7 @@ pub type ShuffleResult<T> = std::result::Result<T, self::SliceShuffleError>;
 
 /// An iterator that yields references to the elements of a slice in a shuffled order.
 ///
-/// Returned by [`Shuffle32::shuffled`] and [`Shuffle64::shuffled`].
+/// Returned by [`Shuffle::shuffled`].
 pub struct ShuffledIter<'a, T> {
     pub(crate) slice: &'a [T],
     pub(crate) indices: Vec<usize>,
@@ -35,46 +35,46 @@ impl<'a, T> Iterator for ShuffledIter<'a, T> {
     }
 }
 
-#[macro_export]
-macro_rules! impl_shuffle {
-    ($bits:expr) => {
-        ::pastey::paste! {
-            /// Shuffles a slice in-place or returns a shuffled iterator.
-            pub trait [<Shuffle $bits>]: [<Rng $bits>] {
-                #[inline(always)]
-                fn shuffle<T>(&mut self, src: &mut [T]) -> $crate::ShuffleResult<()> {
-                    if src.is_empty() {
-                        Err($crate::SliceShuffleError(()))
-                    } else {
-                        let length = src.len() - 1;
-                        (0..length).for_each(|i| {
-                            let j = self.randi(0, length as [<i $bits>]) as usize;
-                            src.swap(i, j);
-                        });
-                        Ok(())
-                    }
-                }
+use crate::rng::{Rng, Word};
 
-                #[inline(always)]
-                fn shuffled<'a, T>(&mut self, src: &'a [T]) -> $crate::ShuffleResult<$crate::ShuffledIter<'a, T>> {
-                    if src.is_empty() {
-                        return Err($crate::SliceShuffleError(()));
-                    }
-                    let length = src.len() - 1;
-                    let mut indices: Vec<usize> = (0..src.len()).collect();
-                    (0..length).for_each(|i| {
-                        let j = self.randi(0, length as [<i $bits>]) as usize;
-                        indices.swap(i, j);
-                    });
-                    Ok($crate::ShuffledIter {
-                        slice: src,
-                        indices,
-                        pos: 0,
-                    })
-                }
-            }
-
-            impl<T: [<Rng $bits>] + ?Sized> [<Shuffle $bits>] for T {}
+/// Shuffles a slice in-place or returns a shuffled iterator, for any [`Rng`].
+pub trait Shuffle: Rng {
+    /// Shuffles `src` in place.
+    #[inline(always)]
+    fn shuffle<T>(&mut self, src: &mut [T]) -> crate::ShuffleResult<()> {
+        if src.is_empty() {
+            Err(crate::SliceShuffleError(()))
+        } else {
+            let len = src.len();
+            (0..len - 1).for_each(|i| {
+                let j = self.nextu().to_index(len);
+                src.swap(i, j);
+            });
+            Ok(())
         }
-    };
+    }
+
+    /// Returns an iterator over `src` in a shuffled order.
+    #[inline(always)]
+    fn shuffled<'a, T>(
+        &mut self,
+        src: &'a [T],
+    ) -> crate::ShuffleResult<crate::ShuffledIter<'a, T>> {
+        if src.is_empty() {
+            return Err(crate::SliceShuffleError(()));
+        }
+        let len = src.len();
+        let mut indices: Vec<usize> = (0..len).collect();
+        (0..len - 1).for_each(|i| {
+            let j = self.nextu().to_index(len);
+            indices.swap(i, j);
+        });
+        Ok(crate::ShuffledIter {
+            slice: src,
+            indices,
+            pos: 0,
+        })
+    }
 }
+
+impl<R: Rng + ?Sized> Shuffle for R {}

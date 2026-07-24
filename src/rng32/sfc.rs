@@ -1,11 +1,11 @@
-﻿#[cfg(feature = "simd")]
+#[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
 #[cfg(feature = "simd")]
-use crate::_internal::FSCALE32;
-use crate::{_internal::impl_seed, rng::Rng32, rng32::SplitMix32};
+use crate::_internal::{i2f_bits, u2f_01};
+use crate::{_internal::impl_seed, rng::Rng, rng32::SplitMix32};
 
 /// A SFC32 pseudo-random number generator.
 ///
@@ -15,7 +15,7 @@ use crate::{_internal::impl_seed, rng::Rng32, rng32::SplitMix32};
 /// use urng::*;
 ///
 /// let mut rng = Sfc32::new(1);
-/// let _ = rng.nextu();
+/// let _ = Rng::nextu(&mut rng);
 /// ```
 ///
 /// A time-seeded instance can also be created via `Default`:
@@ -24,7 +24,7 @@ use crate::{_internal::impl_seed, rng::Rng32, rng32::SplitMix32};
 /// use urng::*;
 ///
 /// let mut rng = Sfc32::default();
-/// let _ = rng.nextu();
+/// let _ = Rng::nextu(&mut rng);
 /// ```
 #[repr(C, align(64))]
 pub struct Sfc32 {
@@ -48,7 +48,8 @@ impl Sfc32 {
 
 impl_seed!(Sfc32, 32);
 
-impl Rng32 for Sfc32 {
+impl Rng for Sfc32 {
+    type Word = u32;
     #[inline(always)]
     fn nextu(&mut self) -> u32 {
         let tmp = self.a + self.b + self.counter;
@@ -122,20 +123,8 @@ impl Sfc32x4 {
     }
 
     #[inline(always)]
-    fn u32x4_to_ps(v: __m128i) -> __m128 {
-        unsafe {
-            let lo = _mm_and_si128(v, _mm_set1_epi32(0xffff));
-            let hi = _mm_srli_epi32(v, 16);
-            _mm_add_ps(
-                _mm_mul_ps(_mm_cvtepi32_ps(hi), _mm_set1_ps(65536.0)),
-                _mm_cvtepi32_ps(lo),
-            )
-        }
-    }
-
-    #[inline(always)]
-    pub(crate) fn nextfv(&mut self, scale: __m128) -> __m128 {
-        unsafe { _mm_mul_ps(Self::u32x4_to_ps(self.nextuv()), scale) }
+    pub(crate) fn nextfv(&mut self) -> __m128 {
+        unsafe { crate::_internal::simd_f01::u32x4(self.nextuv()) }
     }
 
     #[inline(always)]
@@ -154,7 +143,12 @@ impl Sfc32x4 {
 
     #[inline(always)]
     pub(crate) fn randfv(&mut self, v_mult: __m128, v_min: __m128) -> __m128 {
-        unsafe { _mm_add_ps(_mm_mul_ps(Self::u32x4_to_ps(self.nextuv()), v_mult), v_min) }
+        unsafe {
+            _mm_add_ps(
+                _mm_mul_ps(crate::_internal::simd_f01::u32x4(self.nextuv()), v_mult),
+                v_min,
+            )
+        }
     }
 
     #[inline(always)]
@@ -164,7 +158,7 @@ impl Sfc32x4 {
 
     #[inline(always)]
     pub fn nextf(&mut self) -> [f32; SFC32X4] {
-        self.nextu().map(|x| x as f32 * FSCALE32)
+        self.nextu().map(|x| u2f_01!(f32, 32, x))
     }
 }
 
@@ -231,9 +225,8 @@ impl Sfc32x8 {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    pub(crate) unsafe fn nextfv(&mut self, scale: __m256) -> __m256 {
-        let v_f32 = _mm256_cvtepi32_ps(unsafe { self.nextuv() });
-        _mm256_mul_ps(v_f32, scale)
+    pub(crate) unsafe fn nextfv(&mut self) -> __m256 {
+        unsafe { crate::_internal::simd_f01::u32x8(self.nextuv()) }
     }
 
     #[inline]
@@ -250,8 +243,8 @@ impl Sfc32x8 {
     #[inline]
     #[target_feature(enable = "avx2")]
     pub(crate) unsafe fn randfv(&mut self, v_mult: __m256, v_min: __m256) -> __m256 {
-        let v_f32 = _mm256_cvtepi32_ps(unsafe { self.nextuv() });
-        _mm256_add_ps(_mm256_mul_ps(v_f32, v_mult), v_min)
+        let base = unsafe { crate::_internal::simd_f01::u32x8(self.nextuv()) };
+        _mm256_add_ps(_mm256_mul_ps(base, v_mult), v_min)
     }
 
     #[inline(always)]
@@ -261,7 +254,7 @@ impl Sfc32x8 {
 
     #[inline(always)]
     pub fn nextf(&mut self) -> [f32; SFC32X8] {
-        self.nextu().map(|x| x as f32 * FSCALE32)
+        self.nextu().map(|x| u2f_01!(f32, 32, x))
     }
 }
 
@@ -328,10 +321,8 @@ impl Sfc32x16 {
 
     #[inline]
     #[target_feature(enable = "avx512f")]
-    pub(crate) unsafe fn nextfv(&mut self, scale: __m512) -> __m512 {
-        let v_u32 = unsafe { self.nextuv() };
-        let v_f32 = _mm512_cvtepu32_ps(v_u32);
-        _mm512_mul_ps(v_f32, scale)
+    pub(crate) unsafe fn nextfv(&mut self) -> __m512 {
+        unsafe { crate::_internal::simd_f01::u32x16(self.nextuv()) }
     }
 
     #[inline]
@@ -350,9 +341,8 @@ impl Sfc32x16 {
     #[inline]
     #[target_feature(enable = "avx512f")]
     pub(crate) unsafe fn randfv(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
-        let v_u32 = unsafe { self.nextuv() };
-        let v_f32 = _mm512_cvtepu32_ps(v_u32);
-        _mm512_add_ps(_mm512_mul_ps(v_f32, v_mult), v_min)
+        let base = unsafe { crate::_internal::simd_f01::u32x16(self.nextuv()) };
+        _mm512_add_ps(_mm512_mul_ps(base, v_mult), v_min)
     }
 
     #[inline(always)]
@@ -361,7 +351,7 @@ impl Sfc32x16 {
     }
 
     pub fn nextf(&mut self) -> [f32; SFC32X16] {
-        self.nextu().map(|x| x as f32 * FSCALE32)
+        self.nextu().map(|x| u2f_01!(f32, 32, x))
     }
 }
 
@@ -411,9 +401,8 @@ mod tests {
         let (min_f, max_f) = (-2.0f32, 3.0f32);
         let v_range = unsafe { _mm_set1_epi32((max_i as i64 - min_i as i64 + 1) as u32 as i32) };
         let v_min = unsafe { _mm_set1_epi32(min_i) };
-        let v_mult = unsafe { _mm_set1_ps((max_f - min_f) * FSCALE32) };
+        let v_mult = unsafe { _mm_set1_ps(max_f - min_f) };
         let v_minf = unsafe { _mm_set1_ps(min_f) };
-        let scale = unsafe { _mm_set1_ps(FSCALE32) };
 
         let mut vector = Sfc32x4::new(1);
         let mut scalars = scalar_lanes(1);
@@ -434,7 +423,7 @@ mod tests {
         let mut vector = Sfc32x4::new(3);
         let mut scalars = scalar_lanes(3);
         for _ in 0..8 {
-            let got: [f32; SFC32X4] = unsafe { std::mem::transmute(vector.nextfv(scale)) };
+            let got: [f32; SFC32X4] = unsafe { std::mem::transmute(vector.nextfv()) };
             let want: [f32; SFC32X4] = std::array::from_fn(|i| scalars[i].nextf());
             assert_eq!(got, want);
         }

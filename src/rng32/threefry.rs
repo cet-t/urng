@@ -2,7 +2,7 @@ use wrapn::{Wrap, wrap};
 
 use crate::_internal::impl_seed;
 #[allow(unused_imports)]
-use crate::{_internal::FSCALE32, rng::Rng32, rng32::SplitMix32};
+use crate::{_internal::FSCALE32, rng::Rng, rng32::SplitMix32};
 
 // --- Threefry32x4 ---
 
@@ -10,15 +10,15 @@ const THREEFRY32_C240: u32 = 0x1BD11BDA;
 /// A Threefry4x32 random number generator (Random123 family).
 ///
 /// This is a counter-based RNG using a reduced-round (20 rounds) Threefish cipher
-/// with 32-bit words and 4 output values per block. Implements [`Rng32`] directly:
-/// each call to [`Rng32::nextu`] hands out one `u32` from an internal 4-word
+/// with 32-bit words and 4 output values per block. Implements [`Rng`] directly:
+/// each call to [`Rng::nextu`] hands out one `u32` from an internal 4-word
 /// buffer, recomputing a fresh block every 4th call.
 ///
 /// # Examples
 ///
 /// ```
 /// use urng::rng32::Threefry32x4;
-/// use urng::rng::Rng32;
+/// use urng::rng::Rng;
 ///
 /// let mut rng = Threefry32x4::new(1);
 /// let _: u32 = rng.nextu();
@@ -138,7 +138,7 @@ impl Threefry32x4 {
     /// Generates the next block of 4 random `u32` values in one call.
     ///
     /// This is the raw bulk-generation path (used internally to refill the
-    /// scalar [`Rng32::nextu`] buffer, and available directly for
+    /// scalar [`Rng::nextu`] buffer, and available directly for
     /// throughput-sensitive callers that want the whole block at once).
     #[inline(always)]
     pub fn next_raw(&mut self) -> [u32; 4] {
@@ -178,7 +178,7 @@ crate::_internal::impl_ring_rng32!(Threefry32x4, 4, next_raw);
 ///
 /// ```
 /// use urng::rng32::Threefry32x2;
-/// use urng::rng::Rng32;
+/// use urng::rng::Rng;
 ///
 /// let mut rng = Threefry32x2::new(1);
 /// let _: u32 = rng.nextu();
@@ -271,7 +271,7 @@ impl Threefry32x2 {
     /// Generates the next block of 2 random `u32` values in one call.
     ///
     /// This is the raw bulk-generation path (used internally to refill the
-    /// scalar [`Rng32::nextu`] buffer, and available directly for
+    /// scalar [`Rng::nextu`] buffer, and available directly for
     /// throughput-sensitive callers that want the whole block at once).
     #[inline(always)]
     pub fn next_raw(&mut self) -> [u32; 2] {

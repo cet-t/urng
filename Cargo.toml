@@ -1,6 +1,6 @@
 [package]
 name = "urng"
-version = "0.12.1"
+version = "0.13.0"
 edition = "2024"
 license = "MIT"
 rust-version = "1.92"
@@ -46,6 +46,10 @@ path = "examples/wide/test.rs"
 [[example]]
 name = "iter-test"
 path = "examples/iter/test.rs"
+
+[[example]]
+name = "test"
+path = "examples/test/test.rs"
 
 [features]
 rand = ["dep:rand_core"]

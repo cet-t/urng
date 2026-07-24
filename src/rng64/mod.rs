@@ -63,4 +63,5 @@ crate::impl_default_from_seed64!(
     Xorshift64,
     Xoshiro256Pp,
     Xoshiro256Ss,
+    Philox64,
 );

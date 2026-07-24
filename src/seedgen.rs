@@ -18,11 +18,11 @@
 //! assert_eq!(raw <= u32::MAX, true);
 //! ```
 
-use crate::{
-    rng::{Rng32, Rng64},
-    wrap,
-};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use wrapn::wrap;
+
+use crate::rng::Rng;
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::{_rdrand32_step, _rdrand64_step, _rdseed32_step, _rdseed64_step};
@@ -44,7 +44,7 @@ const FALLBACK_MULTIPLIER_64: u64 = 0x2545_f491_4f6c_dd1d;
 
 /// Hardware-noise-assisted 32-bit seed generator.
 ///
-/// Wraps an existing [`Rng32`] and mixes hardware noise (RDSEED/RDRAND on x86/x86_64,
+/// Wraps an existing [`Rng<Word = u32>`] and mixes hardware noise (RDSEED/RDRAND on x86/x86_64,
 /// timestamp fallback elsewhere) into a Murmur3-style hash to produce reproducibly
 /// high-entropy seed values.
 ///
@@ -59,12 +59,12 @@ const FALLBACK_MULTIPLIER_64: u64 = 0x2545_f491_4f6c_dd1d;
 /// let (raw, seed): (u32, u32) = sg.next_seed_pair();
 /// assert_eq!(raw <= u32::MAX, true);
 /// ```
-pub struct SeedGen32<'a, R: Rng32> {
+pub struct SeedGen32<'a, R: Rng<Word = u32>> {
     rng: &'a mut R,
     seed: u32,
 }
 
-impl<'a, R: Rng32> SeedGen32<'a, R> {
+impl<'a, R: Rng<Word = u32>> SeedGen32<'a, R> {
     /// Creates a new `SeedGen32` wrapping `rng` with the given initial `seed`.
     pub fn new(rng: &'a mut R, seed: u32) -> Self {
         Self { rng, seed }
@@ -89,8 +89,8 @@ impl<'a, R: Rng32> SeedGen32<'a, R> {
         value ^= value >> 16;
         value *= SEED_MIX_MULTIPLIER;
         value ^= value >> 13;
-        self.seed = value.0;
-        value.0
+        self.seed = value.value();
+        value.value()
     }
 
     fn noise(&self) -> u32 {
@@ -117,12 +117,12 @@ impl<'a, R: Rng32> SeedGen32<'a, R> {
 /// let (raw, seed): (u64, u64) = sg.next_seed_pair();
 /// assert_eq!(raw <= u64::MAX, true);
 /// ```
-pub struct SeedGen64<'a, R: Rng64> {
+pub struct SeedGen64<'a, R: Rng<Word = u64>> {
     rng: &'a mut R,
     seed: u64,
 }
 
-impl<'a, R: Rng64> SeedGen64<'a, R> {
+impl<'a, R: Rng<Word = u64>> SeedGen64<'a, R> {
     /// Creates a new `SeedGen64` wrapping `rng` with the given initial `seed`.
     pub fn new(rng: &'a mut R, seed: u64) -> Self {
         Self { rng, seed }
@@ -148,8 +148,8 @@ impl<'a, R: Rng64> SeedGen64<'a, R> {
         value ^= value >> 33;
         value += SEED_MIX_MULTIPLIER_64;
         value ^= value >> 29;
-        self.seed = value.0;
-        value.0
+        self.seed = value.value();
+        value.value()
     }
 
     fn noise(&self) -> u64 {

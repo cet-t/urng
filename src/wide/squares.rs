@@ -1,5 +1,5 @@
 use crate::wide::{impl_methods, wide_rotate_left};
-use crate::{Rng64, SplitMix64};
+use crate::{Rng, SplitMix64};
 use ::wide::{u64x4, u64x8};
 
 macro_rules! impl_squares32_variants {

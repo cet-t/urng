@@ -2,21 +2,21 @@ use wrapn::{Wrap, wrap};
 
 use crate::_internal::{impl_ring_rng64, impl_seed};
 #[allow(unused_imports)]
-use crate::{_internal::FSCALE64, rng::Rng64, rng64::SplitMix64};
+use crate::{_internal::FSCALE64, rng::Rng, rng64::SplitMix64};
 
 // --- Philox64 ---
 
 /// A Philox 2x64 random number generator.
 ///
 /// This is a counter-based RNG suitable for parallel applications. Implements
-/// [`Rng64`] directly: each call to [`Rng64::nextu`] hands out one `u64` from
+/// [`Rng`] directly: each call to [`Rng::nextu`] hands out one `u64` from
 /// an internal 2-word buffer, recomputing a fresh block every 2nd call.
 ///
 /// # Examples
 ///
 /// ```
 /// use urng::rng64::Philox64;
-/// use urng::rng::Rng64;
+/// use urng::rng::Rng;
 ///
 /// let mut rng = Philox64::new(1);
 /// let _: u64 = rng.nextu();
@@ -82,7 +82,7 @@ impl Philox64 {
     /// Generates the next block of 2 random `u64` values in one call.
     ///
     /// This is the raw bulk-generation path (used internally to refill the
-    /// scalar [`Rng64::nextu`] buffer, and available directly for
+    /// scalar [`Rng::nextu`] buffer, and available directly for
     /// throughput-sensitive callers that want the whole block at once).
     #[inline]
     pub fn next_raw(&mut self) -> [u64; 2] {

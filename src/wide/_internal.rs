@@ -18,7 +18,7 @@ macro_rules! i2f_bits {
 /// `wide` SIMD generator.
 ///
 /// `$size` is the number of SIMD lanes and `$bits` is the integer width (32 or 64).
-/// The generated functions mirror the scalar [`crate::rng::Rng32`]/`Rng64` helpers
+/// The generated functions mirror the scalar [`crate::rng::Rng`]/`Rng` helpers
 /// but return arrays of `$size` values produced in parallel.
 macro_rules! impl_methods {
     ($size:expr, $bits:tt) => {

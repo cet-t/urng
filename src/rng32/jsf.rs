@@ -3,7 +3,7 @@ use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
-use crate::{_internal::impl_seed, Rng32, SplitMix32};
+use crate::{_internal::impl_seed, Rng, SplitMix32};
 #[cfg(feature = "simd")]
 use crate::{Rng32V256, Rng32V512};
 
@@ -11,7 +11,7 @@ use crate::{Rng32V256, Rng32V512};
 ///
 /// # Example
 /// ```
-/// use urng::rng::Rng32;
+/// use urng::rng::Rng;
 /// use urng::rng32::Jsf32;
 ///
 /// let mut rng = Jsf32::new(12345);
@@ -39,7 +39,8 @@ impl Jsf32 {
 
 impl_seed!(Jsf32, 32);
 
-impl Rng32 for Jsf32 {
+impl Rng for Jsf32 {
+    type Word = u32;
     #[inline(always)]
     fn nextu(&mut self) -> u32 {
         let e = self.a - self.b.rotate_left(27);
@@ -111,7 +112,7 @@ impl Rng32V256 for Jsf32x8 {
 ///
 /// # Example
 /// ```no_run
-/// use urng::rng::{Rng32, Rng32V512};
+/// use urng::Rng32V512;
 /// use urng::rng32::Jsf32x16;
 ///
 /// let mut rng = unsafe { Jsf32x16::new(12345) };

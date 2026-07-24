@@ -1,4 +1,4 @@
-use crate::rng::Rng64;
+use crate::rng::Rng;
 use crate::rng64::{SplitMix64, Xoshiro256Pp, Xoshiro256Ss};
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
@@ -126,7 +126,7 @@ pub use simd::*;
 
 #[cfg(feature = "simd")]
 mod simd {
-    use crate::rng::Rng64;
+    use crate::rng::Rng;
     use crate::rng64::{SplitMix64, Xoshiro256Ssx2};
     use rayon::prelude::*;
     use std::arch::x86_64::*;

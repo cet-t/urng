@@ -1,4 +1,4 @@
-use crate::rng::Rng64;
+use crate::rng::Rng;
 use crate::rng64::{Cet64, Cet256, SplitMix64};
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;

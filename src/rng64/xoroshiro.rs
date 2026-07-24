@@ -1,6 +1,6 @@
-﻿use wrapn::{Wrap, wrap};
+use wrapn::{Wrap, wrap};
 
-use crate::{_internal::impl_seed, rng::Rng64, rng64::SplitMix64};
+use crate::{_internal::impl_seed, rng::Rng, rng64::SplitMix64};
 
 /// A xoshiro128++ random number generator.
 ///
@@ -83,7 +83,8 @@ impl Xoroshiro128Pp {
 
 impl_seed!(Xoroshiro128Pp, 64);
 
-impl Rng64 for Xoroshiro128Pp {
+impl Rng for Xoroshiro128Pp {
+    type Word = u64;
     #[inline]
     fn nextu(&mut self) -> u64 {
         let s = self.s;
@@ -177,7 +178,8 @@ impl Xoroshiro128Ss {
 
 impl_seed!(Xoroshiro128Ss, 64);
 
-impl Rng64 for Xoroshiro128Ss {
+impl Rng for Xoroshiro128Ss {
+    type Word = u64;
     #[inline]
     fn nextu(&mut self) -> u64 {
         let result = (self.s[0] * 5).rotate_left(7) * 9;

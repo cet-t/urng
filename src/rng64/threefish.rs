@@ -1,8 +1,8 @@
 use wrapn::{Wrap, wrap};
 
 use crate::{
-    _internal::{FSCALE64, impl_seed},
-    rng::Rng64,
+    _internal::{i2f_bits, impl_seed, u2f_01},
+    rng::Rng,
     rng64::SplitMix64,
 };
 
@@ -171,7 +171,7 @@ impl Threefish256 {
     /// Generates the next random `f64` values in the range [0, 1).
     #[inline]
     pub fn nextf(&mut self) -> [f64; 4] {
-        self.nextu().map(|x| x as f64 * FSCALE64)
+        self.nextu().map(|x| u2f_01!(f64, 64, x))
     }
 
     /// Generates random `i64` values in the range [min, max].
@@ -185,8 +185,8 @@ impl Threefish256 {
     /// Generates random `f64` values in the range [min, max).
     #[inline]
     pub fn randf(&mut self, min: f64, max: f64) -> [f64; 4] {
-        let scale = (max - min) * FSCALE64;
-        self.nextu().map(|x| (x as f64 * scale) + min)
+        let range = max - min;
+        self.nextu().map(|x| u2f_01!(f64, 64, x) * range + min)
     }
 }
 

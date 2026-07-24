@@ -1,4 +1,4 @@
-use crate::Rng32;
+use crate::Rng;
 use crate::rng32::Jsf32;
 use std::slice::from_raw_parts_mut;
 

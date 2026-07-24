@@ -1,10 +1,10 @@
-﻿#[cfg(all(feature = "simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
 use crate::_internal::impl_seed;
-use crate::rng::Rng64;
+use crate::rng::Rng;
 use crate::rng64::SplitMix64;
 
 /// A xoshiro256++ random number generator.
@@ -43,7 +43,8 @@ impl Xoshiro256Pp {
 
 impl_seed!(Xoshiro256Pp, 64);
 
-impl Rng64 for Xoshiro256Pp {
+impl Rng for Xoshiro256Pp {
+    type Word = u64;
     #[inline]
     fn nextu(&mut self) -> u64 {
         let s = &mut self.s;
@@ -158,7 +159,8 @@ impl Xoshiro256Ss {
 
 impl_seed!(Xoshiro256Ss, 64);
 
-impl Rng64 for Xoshiro256Ss {
+impl Rng for Xoshiro256Ss {
+    type Word = u64;
     #[inline]
     fn nextu(&mut self) -> u64 {
         let s = &mut self.s;

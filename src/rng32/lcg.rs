@@ -1,6 +1,6 @@
 use wrapn::Wrap;
 
-use crate::rng::Rng32;
+use crate::rng::Rng;
 
 // --- Lcg32 ---
 
@@ -12,7 +12,7 @@ use crate::rng::Rng32;
 /// # Examples
 ///
 /// ```
-/// use urng::rng::Rng32;
+/// use urng::rng::Rng;
 /// use urng::rng32::Lcg32;
 ///
 /// let mut rng = Lcg32::new(8, 13, 5, 24);
@@ -52,7 +52,8 @@ impl Default for Lcg32 {
 }
 
 #[allow(deprecated)]
-impl Rng32 for Lcg32 {
+impl Rng for Lcg32 {
+    type Word = u32;
     /// Generates the next random `u32` value.
     #[inline]
     fn nextu(&mut self) -> u32 {

@@ -1,4 +1,4 @@
-use urng::{Choice32, Sfc32, Shuffle32};
+use urng::{Choice, Sfc32, Shuffle};
 
 fn main() -> anyhow::Result<()> {
     let mut vals: Vec<_> = (0..10).collect();

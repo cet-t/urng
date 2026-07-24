@@ -54,9 +54,9 @@ fn print_group(results: &[(&str, f64)]) {
     }
 }
 
-/// Measures scalar `Rng32::nextu()` throughput over `RUNS` iterations.
+/// Measures scalar `Rng::nextu()` (32-bit word) throughput over `RUNS` iterations.
 /// Each value is passed through `black_box` so the loop can't be optimized away.
-fn measure32<R: Rng32>(rng: &mut R) -> f64 {
+fn measure32<R: Rng<Word = u32>>(rng: &mut R) -> f64 {
     let meter = WallTime;
     let mut best = 0.0f64;
     for _ in 0..RUNS {
@@ -73,8 +73,8 @@ fn measure32<R: Rng32>(rng: &mut R) -> f64 {
     best
 }
 
-/// Measures scalar `Rng64::nextu()` throughput over `RUNS` iterations.
-fn measure64<R: Rng64>(rng: &mut R) -> f64 {
+/// Measures scalar `Rng::nextu()` (64-bit word) throughput over `RUNS` iterations.
+fn measure64<R: Rng<Word = u64>>(rng: &mut R) -> f64 {
     let meter = WallTime;
     let mut best = 0.0f64;
     for _ in 0..RUNS {
@@ -115,13 +115,13 @@ macro_rules! bench64 {
 
 fn main() {
     println!(
-        "Benchmarking scalar Rng32/Rng64 implementations (N={}, best of {} runs)",
+        "Benchmarking scalar Rng (u32/u64 word) implementations (N={}, best of {} runs)",
         N.separate_with_commas().bright_cyan().bold(),
         RUNS.to_string().bright_yellow(),
     );
     println!("{}", "─".repeat(72).bright_black());
 
-    // --- 32-bit (Rng32::nextu() -> u32) ---
+    // --- 32-bit (Rng::nextu() -> u32) ---
     // Lcg32 excluded: deprecated, fixed-parameter generator not meant for benchmarking.
     let mut r32 = Vec::new();
     bench32!(r32, Philox32x4, Threefry32x4, Threefry32x2);
@@ -142,7 +142,7 @@ fn main() {
 
     println!("{}", "─".repeat(72).bright_black());
 
-    // --- 64-bit (Rng64::nextu() -> u64) ---
+    // --- 64-bit (Rng::nextu() -> u64) ---
     // Lcg64 excluded: deprecated, fixed-parameter generator not meant for benchmarking.
     let mut r64 = Vec::new();
     bench64!(r64, Philox64);

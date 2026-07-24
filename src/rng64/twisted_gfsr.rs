@@ -1,6 +1,10 @@
-﻿use wrapn::Wrap;
+use wrapn::Wrap;
 
-use crate::{_internal::impl_seed, SplitMix64, rng::Rng64};
+use crate::{
+    _internal::{i2f_bits, impl_seed, u2f_01},
+    SplitMix64,
+    rng::Rng,
+};
 
 // --- TwistedGFSR ---
 
@@ -54,7 +58,8 @@ impl TwistedGFSR {
 
 impl_seed!(TwistedGFSR, 64);
 
-impl Rng64 for TwistedGFSR {
+impl Rng for TwistedGFSR {
+    type Word = u64;
     #[inline]
     fn nextu(&mut self) -> u64 {
         if self.index >= N_GFSR {
@@ -70,7 +75,9 @@ impl Rng64 for TwistedGFSR {
 
     #[inline(always)]
     fn nextf(&mut self) -> f64 {
-        self.nextu() as f64 * (1.0 / (u32::MAX as f64 + 1.0))
+        // TwistedGFSR emits 32-bit-range words in a u64; use the 32-bit
+        // bit-trick (matching the scalar `u2f_01`) widened to f64.
+        u2f_01!(f32, 32, self.nextu() as u32) as f64
     }
 
     #[inline(always)]

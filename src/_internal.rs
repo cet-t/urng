@@ -1,4 +1,4 @@
-﻿#![allow(dead_code)]
+#![allow(dead_code)]
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -6,9 +6,119 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub const FSCALE64: f64 = 1.0 / (u64::MAX as f64 + 1.0);
 pub const FSCALE32: f32 = 1.0 / (u32::MAX as f32 + 1.0);
 
+/// SIMD bit-trick converters mapping an integer lane vector uniformly onto
+/// `[0, 1)`, matching the scalar [`u2f_01`] exactly lane-by-lane (top mantissa
+/// bits via `(x >> bias) | exponent`, then `- 1.0`). Used by every SIMD
+/// generator so its `nextf`/`randf` reproduce the scalar sequence bit-for-bit.
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
+pub(crate) mod simd_f01 {
+    use std::arch::x86_64::*;
+
+    /// 4×`u32` → 4×`f32` in `[0, 1)`.
+    #[inline(always)]
+    pub(crate) unsafe fn u32x4(v: __m128i) -> __m128 {
+        unsafe {
+            let bits = _mm_or_si128(_mm_srli_epi32(v, 9), _mm_set1_epi32(0x3F80_0000));
+            _mm_sub_ps(_mm_castsi128_ps(bits), _mm_set1_ps(1.0))
+        }
+    }
+
+    /// 8×`u32` → 8×`f32` in `[0, 1)`.
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    pub(crate) unsafe fn u32x8(v: __m256i) -> __m256 {
+        let bits = _mm256_or_si256(_mm256_srli_epi32(v, 9), _mm256_set1_epi32(0x3F80_0000));
+        _mm256_sub_ps(_mm256_castsi256_ps(bits), _mm256_set1_ps(1.0))
+    }
+
+    /// 16×`u32` → 16×`f32` in `[0, 1)`.
+    #[inline]
+    #[target_feature(enable = "avx512f")]
+    pub(crate) unsafe fn u32x16(v: __m512i) -> __m512 {
+        let bits = _mm512_or_si512(_mm512_srli_epi32(v, 9), _mm512_set1_epi32(0x3F80_0000));
+        _mm512_sub_ps(_mm512_castsi512_ps(bits), _mm512_set1_ps(1.0))
+    }
+
+    /// 2×`u64` → 2×`f64` in `[0, 1)`.
+    #[inline(always)]
+    pub(crate) unsafe fn u64x2(v: __m128i) -> __m128d {
+        unsafe {
+            let bits = _mm_or_si128(
+                _mm_srli_epi64(v, 11),
+                _mm_set1_epi64x(0x3FF0_0000_0000_0000),
+            );
+            _mm_sub_pd(_mm_castsi128_pd(bits), _mm_set1_pd(1.0))
+        }
+    }
+
+    /// 4×`u64` → 4×`f64` in `[0, 1)`.
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    pub(crate) unsafe fn u64x4(v: __m256i) -> __m256d {
+        let bits = _mm256_or_si256(
+            _mm256_srli_epi64(v, 11),
+            _mm256_set1_epi64x(0x3FF0_0000_0000_0000),
+        );
+        _mm256_sub_pd(_mm256_castsi256_pd(bits), _mm256_set1_pd(1.0))
+    }
+
+    /// 8×`u64` → 8×`f64` in `[0, 1)`.
+    #[inline]
+    #[target_feature(enable = "avx512f")]
+    pub(crate) unsafe fn u64x8(v: __m512i) -> __m512d {
+        let bits = _mm512_or_si512(
+            _mm512_srli_epi64(v, 11),
+            _mm512_set1_epi64(0x3FF0_0000_0000_0000),
+        );
+        _mm512_sub_pd(_mm512_castsi512_pd(bits), _mm512_set1_pd(1.0))
+    }
+}
+
+macro_rules! randi_wide {
+    (i 32) => {
+        i64
+    };
+    (i 64) => {
+        i128
+    };
+    (u 32) => {
+        u64
+    };
+    (u 64) => {
+        u128
+    };
+}
+
+pub(crate) use randi_wide;
+
+macro_rules! i2f_bits {
+    (32 bits) => {
+        0x3F800000
+    };
+    (32 bias) => {
+        9
+    };
+    (64 bits) => {
+        0x3FF0000000000000
+    };
+    (64 bias) => {
+        11
+    };
+}
+
+pub(crate) use i2f_bits;
+
+macro_rules! u2f_01 {
+    ($ft:ty, $bits:tt, $x:expr) => {{
+        <$ft>::from_bits(($x >> i2f_bits!($bits bias)) | i2f_bits!($bits bits)) - 1.0
+    }};
+}
+
+pub(crate) use u2f_01;
+
 macro_rules! sm64_from_seed32 {
     ($seed:expr) => {{
-        use $crate::Rng32;
+        use $crate::Rng;
 
         let mut s = $crate::SplitMix32::new($seed);
         let sg = $crate::SplitMix64::new(((s.nextu() as u64) << 32) | (s.nextu() as u64));
@@ -21,7 +131,8 @@ pub(crate) use sm64_from_seed32;
 macro_rules! impl_seed {
     ($t:ty, $bits:expr) => {
         ::pastey::paste! {
-            impl $crate::[<Seed $bits>] for self::$t {
+            impl $crate::Seed for self::$t {
+                type Seed = [<u $bits>];
                 fn from_seed(seed: [<u $bits>]) -> Self {
                     Self::new(seed)
                 }
@@ -32,15 +143,17 @@ macro_rules! impl_seed {
 
 pub(crate) use impl_seed;
 
-/// Implements [`crate::rng::Rng32`] for a counter-based block generator that owns
-/// `buf: [Wrap<u32>; N]` and `pos: Wrap<usize>` fields, by buffering blocks
-/// produced by an existing `fn $raw(&mut self) -> [u32; N]` method and handing
-/// out one scalar per call (recomputing a fresh block every `N`th call).
+/// Implements [`crate::rng::Rng`] (with `Word = u32`) for a counter-based block
+/// generator that owns `buf: [Wrap<u32>; N]` and `pos: Wrap<usize>` fields, by
+/// buffering blocks produced by an existing `fn $raw(&mut self) -> [u32; N]`
+/// method and handing out one scalar per call (recomputing a fresh block every
+/// `N`th call).
 ///
 /// Crate-internal only — call as `crate::_internal::impl_ring_rng32!`.
 macro_rules! impl_ring_rng32 {
     ($ty:ty, $n:expr, $raw:ident) => {
-        impl $crate::rng::Rng32 for $ty {
+        impl $crate::rng::Rng for $ty {
+            type Word = u32;
             #[inline]
             fn nextu(&mut self) -> u32 {
                 if self.pos >= $n {
@@ -56,12 +169,14 @@ macro_rules! impl_ring_rng32 {
 }
 pub(crate) use impl_ring_rng32;
 
-/// Implements [`crate::rng::Rng64`] for a counter-based block generator; see [`impl_ring_rng32`].
+/// Implements [`crate::rng::Rng`] (with `Word = u64`) for a counter-based block
+/// generator; see [`impl_ring_rng32`].
 ///
 /// Crate-internal only — call as `crate::_internal::impl_ring_rng64!`.
 macro_rules! impl_ring_rng64 {
     ($ty:ty, $n:expr, $raw:ident) => {
-        impl $crate::rng::Rng64 for $ty {
+        impl $crate::rng::Rng for $ty {
+            type Word = u64;
             #[inline]
             fn nextu(&mut self) -> u64 {
                 if self.pos >= $n {

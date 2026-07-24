@@ -3,9 +3,11 @@ use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
+#[cfg(feature = "simd")]
+use crate::_internal::{i2f_bits, u2f_01};
 use crate::{
     _internal::{impl_seed, sm64_from_seed32},
-    rng::{Rng32, Rng64},
+    rng::Rng,
 };
 
 // --- Squares32 ---
@@ -64,7 +66,8 @@ impl Squares32 {
 
 impl_seed!(Squares32, 32);
 
-impl Rng32 for Squares32 {
+impl Rng for Squares32 {
+    type Word = u32;
     #[inline(always)]
     fn nextu(&mut self) -> u32 {
         let out = Self::compute(self.c.value(), self.k.value());
@@ -114,7 +117,7 @@ impl Squares32x8 {
         let mut k = [0u64; SQUARES32x8];
         let mut seedgen = sm64_from_seed32!(seed);
         k.iter_mut().for_each(|v| {
-            use crate::rng::Rng64;
+            use crate::rng::Rng;
 
             *v = seedgen.nextu();
         });
@@ -188,9 +191,8 @@ impl Squares32x8 {
     pub unsafe fn nextf(&mut self) -> [f32; SQUARES32x8] {
         let out = unsafe { self.nextu() };
         let mut dst = [0f32; SQUARES32x8];
-        let scale = 1.0 / (u32::MAX as f32 + 1.0);
         for i in 0..SQUARES32x8 {
-            dst[i] = out[i] as f32 * scale;
+            dst[i] = u2f_01!(f32, 32, out[i]);
         }
         dst
     }

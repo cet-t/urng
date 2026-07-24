@@ -1,4 +1,4 @@
-﻿use crate::rng::{Rng32, Rng64};
+use crate::rng::Rng;
 
 /// Weighted random sampling trait for 32-bit generators.
 ///
@@ -16,7 +16,7 @@
 /// let mut sampler = Alias32::new(&mut rng, &[1.0f32, 9.0]);
 /// assert!(sampler.sample() < 2);
 /// ```
-pub trait Sampler32<'a, R: Rng32 + 'a> {
+pub trait Sampler32<'a, R: Rng<Word = u32> + 'a> {
     /// Samples a random index based on the weights.
     fn sample(&mut self) -> usize;
     /// Updates the weights of the sampler.
@@ -39,7 +39,7 @@ pub trait Sampler32<'a, R: Rng32 + 'a> {
 /// let mut sampler = Alias64::new(&mut rng, &[1.0f64, 2.0, 4.0, 8.0]);
 /// assert!(sampler.sample() < 4);
 /// ```
-pub trait Sampler64<'a, R: Rng64 + 'a> {
+pub trait Sampler64<'a, R: Rng<Word = u64> + 'a> {
     /// Samples a random index based on the weights.
     fn sample(&mut self) -> usize;
     /// Updates the weights of the sampler.

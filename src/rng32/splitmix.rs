@@ -1,9 +1,9 @@
-﻿#[cfg(feature = "simd")]
+#[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
-use crate::{_internal::impl_seed, rng::Rng32};
+use crate::{_internal::impl_seed, rng::Rng};
 
 /// A SplitMix32 pseudo-random number generator.
 ///
@@ -37,7 +37,8 @@ impl SplitMix32 {
 
 impl_seed!(SplitMix32, 32);
 
-impl Rng32 for SplitMix32 {
+impl Rng for SplitMix32 {
+    type Word = u32;
     #[inline]
     fn nextu(&mut self) -> u32 {
         self.state += wrap!(0x9E3779B9);

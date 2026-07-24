@@ -1,5 +1,5 @@
 use crate::_internal::{fill_chunk_auto, prefer_nt};
-use crate::rng::Rng64;
+use crate::rng::Rng;
 use crate::rng64::{
     SplitMix64,
     xoroshiro::{Xoroshiro128Pp, Xoroshiro128Ss},

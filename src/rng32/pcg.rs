@@ -1,11 +1,11 @@
-﻿#[cfg(feature = "simd")]
+#[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
 use wrapn::Wrap;
 
 use crate::{
     _internal::{impl_seed, sm64_from_seed32},
-    Rng32, Rng64,
+    Rng,
 };
 
 // --- Pcg32 ---
@@ -41,7 +41,8 @@ impl Pcg32 {
 
 impl_seed!(Pcg32, 32);
 
-impl Rng32 for Pcg32 {
+impl Rng for Pcg32 {
+    type Word = u32;
     #[inline]
     fn nextu(&mut self) -> u32 {
         let oldstate = self.state;

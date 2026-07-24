@@ -1,11 +1,11 @@
-﻿use std::ptr;
+use std::ptr;
 
 use bytemuck::cast_slice;
 use wrapn::{Wrap, wrap};
 
 use crate::{
     _internal::{impl_seed, sm64_from_seed32},
-    rng::{Rng32, Rng64},
+    rng::Rng,
     rng32::SplitMix32,
 };
 
@@ -160,7 +160,8 @@ impl Mt19937 {
 
 impl_seed!(Mt19937, 32);
 
-impl Rng32 for Mt19937 {
+impl Rng for Mt19937 {
+    type Word = u32;
     #[inline]
     fn nextu(&mut self) -> u32 {
         if self.mti >= MT32_N {
@@ -341,7 +342,8 @@ impl Sfmt19937 {
 
 impl_seed!(Sfmt19937, 32);
 
-impl Rng32 for Sfmt19937 {
+impl Rng for Sfmt19937 {
+    type Word = u32;
     #[inline]
     fn nextu(&mut self) -> u32 {
         if self.idx >= SFMT_N * 4 {
@@ -381,7 +383,7 @@ macro_rules! define_sfmt_variant {
             ///
             #[doc = concat!(
                 "```\n",
-                "use urng::rng::Rng32;\n",
+                "use urng::rng::Rng;\n",
                 "use urng::rng32::",
                 stringify!([<Sfmt $mexp>]),
                 ";\n\n",
@@ -530,7 +532,8 @@ macro_rules! define_sfmt_variant {
 
             impl_seed!([<Sfmt $mexp>], 32);
 
-            impl Rng32 for [<Sfmt $mexp>] {
+            impl Rng for [<Sfmt $mexp>] {
+    type Word = u32;
                 #[inline]
                 fn nextu(&mut self) -> u32 {
                     if self.idx >= $n * 4 {

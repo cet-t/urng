@@ -4,7 +4,9 @@ use std::arch::x86_64::*;
 use wrapn::{Wrap, wrap};
 
 use crate::_internal::impl_seed;
-use crate::rng::Rng64;
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
+use crate::_internal::{i2f_bits, u2f_01};
+use crate::rng::Rng;
 use crate::rng64::SplitMix64;
 
 /// A 64-bit Self-made random number generator.
@@ -41,7 +43,8 @@ impl Cet64 {
 
 impl_seed!(Cet64, 64);
 
-impl Rng64 for Cet64 {
+impl Rng for Cet64 {
+    type Word = u64;
     #[inline(always)]
     fn nextu(&mut self) -> u64 {
         self.s += SP1;
@@ -78,7 +81,8 @@ impl Cet256 {
 
 impl_seed!(Cet256, 64);
 
-impl Rng64 for Cet256 {
+impl Rng for Cet256 {
+    type Word = u64;
     #[inline(always)]
     fn nextu(&mut self) -> u64 {
         self.s[0] += SP1;
@@ -166,10 +170,9 @@ impl Cet64x8 {
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn nextf(&mut self) -> [f64; 8] {
         let u = unsafe { self.nextu() };
-        let scale = 1.0 / (u64::MAX as f64 + 1.0);
         let mut out = [0f64; 8];
         for i in 0..8 {
-            out[i] = u[i] as f64 * scale;
+            out[i] = u2f_01!(f64, 64, u[i]);
         }
         out
     }
@@ -196,10 +199,10 @@ impl Cet64x8 {
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn randf(&mut self, min: f64, max: f64) -> [f64; 8] {
         let u = unsafe { self.nextu() };
-        let scale = (max - min) * (1.0 / (u64::MAX as f64 + 1.0));
+        let range = max - min;
         let mut out = [0f64; 8];
         for i in 0..8 {
-            out[i] = u[i] as f64 * scale + min;
+            out[i] = u2f_01!(f64, 64, u[i]) * range + min;
         }
         out
     }
@@ -277,8 +280,7 @@ impl Cet256x2 {
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn nextf(&mut self) -> [f64; 2] {
         let u = unsafe { self.nextu() };
-        let scale = 1.0 / (u64::MAX as f64 + 1.0);
-        [u[0] as f64 * scale, u[1] as f64 * scale]
+        [u2f_01!(f64, 64, u[0]), u2f_01!(f64, 64, u[1])]
     }
 
     ///
@@ -302,8 +304,11 @@ impl Cet256x2 {
     #[target_feature(enable = "avx512f,avx512dq")]
     pub unsafe fn randf(&mut self, min: f64, max: f64) -> [f64; 2] {
         let u = unsafe { self.nextu() };
-        let scale = (max - min) * (1.0 / (u64::MAX as f64 + 1.0));
-        [u[0] as f64 * scale + min, u[1] as f64 * scale + min]
+        let range = max - min;
+        [
+            u2f_01!(f64, 64, u[0]) * range + min,
+            u2f_01!(f64, 64, u[1]) * range + min,
+        ]
     }
 }
 

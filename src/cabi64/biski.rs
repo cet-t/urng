@@ -1,5 +1,5 @@
 use crate::{
-    rng::Rng64,
+    rng::Rng,
     rng64::{Biski64, SplitMix64},
 };
 use rayon::prelude::*;
@@ -127,7 +127,7 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use super::{STRIDE, SplitMix64};
-    use crate::rng::Rng64;
+    use crate::rng::Rng;
     use crate::rng64::biski::Biski64x8;
     use rayon::prelude::*;
     use std::arch::x86_64::*;

@@ -1,7 +1,7 @@
 use wrapn::Wrap;
 
 use crate::_internal::impl_seed;
-use crate::rng::Rng64;
+use crate::rng::Rng;
 use crate::rng64::SplitMix64;
 
 // --- Xorshift64 ---
@@ -13,7 +13,7 @@ use crate::rng64::SplitMix64;
 /// # Examples
 ///
 /// ```
-/// use urng::rng::Rng64;
+/// use urng::rng::Rng;
 /// use urng::rng64::Xorshift64;
 ///
 /// let mut rng = Xorshift64::new(1);
@@ -36,7 +36,8 @@ impl Xorshift64 {
 
 impl_seed!(Xorshift64, 64);
 
-impl Rng64 for Xorshift64 {
+impl Rng for Xorshift64 {
+    type Word = u64;
     #[inline]
     fn nextu(&mut self) -> u64 {
         let mut x = self.a;

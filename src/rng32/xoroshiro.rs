@@ -3,10 +3,10 @@ use std::arch::x86_64::*;
 
 use wrapn::{Wrap, wrap};
 
-#[cfg(feature = "simd")]
-use crate::_internal::FSCALE32;
 use crate::_internal::impl_seed;
-use crate::rng::Rng32;
+#[cfg(feature = "simd")]
+use crate::_internal::{i2f_bits, u2f_01};
+use crate::rng::Rng;
 use crate::rng32::SplitMix32;
 
 pub struct Xoroshiro64Ss {
@@ -25,7 +25,8 @@ impl Xoroshiro64Ss {
 
 impl_seed!(Xoroshiro64Ss, 32);
 
-impl Rng32 for Xoroshiro64Ss {
+impl Rng for Xoroshiro64Ss {
+    type Word = u32;
     #[inline(always)]
     fn nextu(&mut self) -> u32 {
         let s0 = self.s[0];
@@ -107,9 +108,8 @@ impl Xoroshiro64Ssx8 {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    pub(crate) fn nextfv(&mut self, scale: __m256) -> __m256 {
-        let v_f32 = _mm256_cvtepi32_ps(self.nextuv());
-        _mm256_mul_ps(v_f32, scale)
+    pub(crate) fn nextfv(&mut self) -> __m256 {
+        unsafe { crate::_internal::simd_f01::u32x8(self.nextuv()) }
     }
 
     #[inline]
@@ -126,8 +126,8 @@ impl Xoroshiro64Ssx8 {
     #[inline]
     #[target_feature(enable = "avx2")]
     pub(crate) fn randfv(&mut self, v_mult: __m256, v_min: __m256) -> __m256 {
-        let v_f32 = _mm256_cvtepi32_ps(self.nextuv());
-        _mm256_add_ps(_mm256_mul_ps(v_f32, v_mult), v_min)
+        let base = unsafe { crate::_internal::simd_f01::u32x8(self.nextuv()) };
+        _mm256_add_ps(_mm256_mul_ps(base, v_mult), v_min)
     }
 }
 
@@ -197,14 +197,13 @@ impl Xoroshiro64Ssx16 {
     }
 
     pub fn nextf(&mut self) -> [f32; XOROSHIRO64SSX16] {
-        self.nextu().map(|x| x as f32 * FSCALE32)
+        self.nextu().map(|x| u2f_01!(f32, 32, x))
     }
 
     #[inline]
     #[target_feature(enable = "avx512f")]
-    pub(crate) fn nextfv(&mut self, scale: __m512) -> __m512 {
-        let v_f32 = _mm512_cvtepu32_ps(self.nextuv());
-        _mm512_mul_ps(v_f32, scale)
+    pub(crate) fn nextfv(&mut self) -> __m512 {
+        unsafe { crate::_internal::simd_f01::u32x16(self.nextuv()) }
     }
 
     #[inline]
@@ -221,8 +220,8 @@ impl Xoroshiro64Ssx16 {
     #[inline]
     #[target_feature(enable = "avx512f")]
     pub(crate) fn randfv(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
-        let v_f32 = _mm512_cvtepu32_ps(self.nextuv());
-        _mm512_add_ps(_mm512_mul_ps(v_f32, v_mult), v_min)
+        let base = unsafe { crate::_internal::simd_f01::u32x16(self.nextuv()) };
+        _mm512_add_ps(_mm512_mul_ps(base, v_mult), v_min)
     }
 }
 

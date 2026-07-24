@@ -1,4 +1,4 @@
-use crate::rng::Rng32;
+use crate::rng::Rng;
 use crate::rng32::{Xorshift32, Xorshift128};
 
 /// Creates a new `Xorshift32` instance.

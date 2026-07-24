@@ -1,4 +1,4 @@
-use crate::rng::Rng32;
+use crate::rng::Rng;
 use crate::rng32::SplitMix32;
 use std::slice::from_raw_parts_mut;
 

@@ -4,9 +4,9 @@ use std::arch::x86_64::*;
 use wrapn::{Wrap, wrap};
 
 #[cfg(feature = "simd")]
-use crate::_internal::FSCALE32;
+use crate::_internal::{i2f_bits, u2f_01};
 #[allow(unused_imports)]
-use crate::rng::Rng32;
+use crate::rng::Rng;
 use crate::{_internal::impl_seed, rng32::SplitMix32};
 
 // --- Philox32 ---
@@ -14,14 +14,14 @@ use crate::{_internal::impl_seed, rng32::SplitMix32};
 /// A Philox 4x32 random number generator.
 ///
 /// This is a counter-based RNG suitable for parallel applications. Implements
-/// [`Rng32`] directly: each call to [`Rng32::nextu`] hands out one `u32` from
+/// [`Rng`] directly: each call to [`Rng::nextu`] hands out one `u32` from
 /// an internal 4-word buffer, recomputing a fresh block every 4th call.
 ///
 /// # Examples
 ///
 /// ```
 /// use urng::rng32::Philox32x4;
-/// use urng::rng::Rng32;
+/// use urng::rng::Rng;
 ///
 /// let mut rng = Philox32x4::new(1);
 /// let _: u32 = rng.nextu();
@@ -119,7 +119,7 @@ impl Philox32x4 {
     /// Generates the next block of 4 random `u32` values in one call.
     ///
     /// This is the raw bulk-generation path (used internally to refill the
-    /// scalar [`Rng32::nextu`] buffer, and available directly for
+    /// scalar [`Rng::nextu`] buffer, and available directly for
     /// throughput-sensitive callers that want the whole block at once).
     #[inline(always)]
     pub fn next_raw(&mut self) -> [u32; 4] {
@@ -280,7 +280,7 @@ impl Philox32x4x4 {
     /// The caller must ensure the CPU supports the `avx512f` target feature.
     #[target_feature(enable = "avx512f")]
     pub fn nextf(&mut self) -> [f32; PHILOX32x16] {
-        self.nextu().map(|x| (x as f32) * FSCALE32)
+        self.nextu().map(|x| u2f_01!(f32, 32, x))
     }
 
     /// Generates a random `i32` value in the range [min, max].
@@ -303,8 +303,7 @@ impl Philox32x4x4 {
     #[target_feature(enable = "avx512f")]
     pub fn randf(&mut self, min: f32, max: f32) -> [f32; PHILOX32x16] {
         let range = max - min;
-        let scale = range * FSCALE32;
-        self.nextu().map(|x| (x as f32 * scale) + min)
+        self.nextu().map(|x| u2f_01!(f32, 32, x) * range + min)
     }
 }
 

@@ -1,6 +1,6 @@
 use wrapn::Wrap;
 
-use crate::rng::Rng64;
+use crate::rng::Rng;
 
 // --- Lcg64 ---
 
@@ -12,7 +12,7 @@ use crate::rng::Rng64;
 /// # Examples
 ///
 /// ```
-/// use urng::rng::Rng64;
+/// use urng::rng::Rng;
 /// use urng::rng64::Lcg64;
 ///
 /// let mut rng = Lcg64::new(8, 13, 5, 24);
@@ -43,7 +43,8 @@ impl Lcg64 {
 }
 
 #[allow(deprecated)]
-impl Rng64 for Lcg64 {
+impl Rng for Lcg64 {
+    type Word = u64;
     #[inline]
     fn nextu(&mut self) -> u64 {
         self.x = (self.x * self.a + self.b) % self.m;
