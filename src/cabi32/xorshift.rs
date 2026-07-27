@@ -1,5 +1,5 @@
+use crate::prng::b32::{Xorshift32, Xorshift128};
 use crate::rng::Rng;
-use crate::rng32::{Xorshift32, Xorshift128};
 
 /// Creates a new `Xorshift32` instance.
 /// The caller is responsible for freeing the memory using `xorshift32_free`.

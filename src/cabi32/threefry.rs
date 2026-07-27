@@ -1,5 +1,5 @@
 use crate::_internal::{fill_chunk_auto, prefer_nt};
-use crate::rng32::{Threefry32x2, Threefry32x4};
+use crate::cbrng::b32::{Threefry32x2, Threefry32x4};
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 use std::slice::from_raw_parts_mut;

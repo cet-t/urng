@@ -1,5 +1,5 @@
+use crate::prng::b32::Pcg32;
 use crate::rng::Rng;
-use crate::rng32::Pcg32;
 use std::slice::from_raw_parts_mut;
 
 /// Creates a new `Pcg32` instance.
@@ -78,7 +78,7 @@ pub use simd::*;
 mod simd {
     use super::*;
     use crate::dispatch_simd;
-    use crate::rng32::{
+    use crate::prng::b32::{
         PCG32_MULT, PCG32X8_LANE, PCG32X8_PAR_CHUNK, PCG32X8_PAR_CHUNK_BLOCKS, Pcg32Simd, Pcg32x8,
     };
     use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};

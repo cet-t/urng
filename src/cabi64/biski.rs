@@ -1,6 +1,6 @@
 use crate::{
+    prng::b64::{Biski64, SplitMix64},
     rng::Rng,
-    rng64::{Biski64, SplitMix64},
 };
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
@@ -127,8 +127,8 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use super::{STRIDE, SplitMix64};
+    use crate::prng::b64::biski::Biski64x8;
     use crate::rng::Rng;
-    use crate::rng64::biski::Biski64x8;
     use rayon::prelude::*;
     use std::arch::x86_64::*;
     use std::slice::from_raw_parts_mut;
@@ -153,7 +153,7 @@ mod simd {
     #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
     unsafe fn biski64x8_next_u64s_chunk(chunk_idx: usize, chunk: &mut [u64], nt: bool, seed: u64) {
         let chunk_base = seed.wrapping_add((chunk_idx as u64).wrapping_mul(STRIDE));
-        let inc = _mm512_set1_epi64(crate::rng64::biski::INC as i64);
+        let inc = _mm512_set1_epi64(crate::prng::b64::biski::INC as i64);
 
         macro_rules! make_state {
             ($group:expr) => {{
@@ -277,7 +277,7 @@ mod simd {
     #[allow(unsafe_op_in_unsafe_fn, unused_assignments)]
     unsafe fn biski64x8_next_f64s_chunk(chunk_idx: usize, chunk: &mut [f64], _nt: bool, seed: u64) {
         let chunk_base = seed.wrapping_add((chunk_idx as u64).wrapping_mul(STRIDE));
-        let inc = _mm512_set1_epi64(crate::rng64::biski::INC as i64);
+        let inc = _mm512_set1_epi64(crate::prng::b64::biski::INC as i64);
         let exp_bits = _mm512_set1_epi64(0x3FF0000000000000u64 as i64);
         let ones = _mm512_set1_pd(1.0f64);
 
@@ -390,7 +390,7 @@ mod simd {
         max: i64,
     ) {
         let chunk_base = seed.wrapping_add((chunk_idx as u64).wrapping_mul(STRIDE));
-        let inc = _mm512_set1_epi64(crate::rng64::biski::INC as i64);
+        let inc = _mm512_set1_epi64(crate::prng::b64::biski::INC as i64);
         let range = (max as i128 - min as i128 + 1) as u128;
 
         macro_rules! make_state {
@@ -498,7 +498,7 @@ mod simd {
         max: f64,
     ) {
         let chunk_base = seed.wrapping_add((chunk_idx as u64).wrapping_mul(STRIDE));
-        let inc = _mm512_set1_epi64(crate::rng64::biski::INC as i64);
+        let inc = _mm512_set1_epi64(crate::prng::b64::biski::INC as i64);
         let exp_bits = _mm512_set1_epi64(0x3FF0000000000000u64 as i64);
         let one = _mm512_set1_pd(1.0f64);
         let range = _mm512_set1_pd(max - min);

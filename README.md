@@ -14,7 +14,7 @@ Standard generators implement the unified `Rng` trait (`Word = u32` or `Word = u
 Portable wide generators require the `wide` feature and expose safe fixed-array bulk APIs.
 AVX generators expose a bulk-generation API and are listed separately; they require the `simd` feature.
 
-### 32-bit Generators (`urng::rng32`)
+### 32-bit Generators (`urng::prng::b32`)
 
 | Struct          | Algorithm        | Period / State   |
 | --------------- | ---------------- | ---------------- |
@@ -40,13 +40,12 @@ AVX generators expose a bulk-generation API and are listed separately; they requ
 | `Xoshiro128Pp`  | xoshiro128++     | $2^{128}-1$      |
 | `Xoshiro128Ss`  | xoshiro128\*\*   | $2^{128}-1$      |
 | `Xoroshiro64Ss` | xoroshiro64\*\*  | $2^{64}-1$       |
-| `Lcg32`         | LCG              | $m$              |
 | `Threefry32x4`  | Threefry 4x32    | -                |
 | `Threefry32x2`  | Threefry 2x32    | -                |
 | `Squares32`     | Squares          | -                |
 | `Jsf32`         | JSF32            | -                |
 
-### 64-bit Generators (`urng::rng64`)
+### 64-bit Generators (`urng::prng::b64`)
 
 | Struct           | Algorithm           | Period / State   |
 | ---------------- | ------------------- | ---------------- |
@@ -63,7 +62,6 @@ AVX generators expose a bulk-generation API and are listed separately; they requ
 | `TwistedGFSR`    | TGFSR               | $2^{800}$ approx |
 | `Cet64`          | CET                 | $2^{64}$         |
 | `Cet256`         | CET                 | $2^{256}$        |
-| `Lcg64`          | LCG                 | $m$              |
 | `Threefish256`   | Threefish-256       | -                |
 | `Biski64`        | Biski64             | $2^{64}$         |
 
@@ -146,10 +144,10 @@ Weighted random index selection. Two implementations are provided for each bit-w
 
 Hardware-noise-assisted seed generation. Wraps an existing `Rng` and mixes in hardware noise (RDSEED/RDRAND on x86/x86_64, timestamp fallback elsewhere) via a Murmur3-style hash.
 
-| Struct      | Module          | Input RNG          | Output            |
-| ----------- | --------------- | ------------------ | ----------------- |
-| `SeedGen32` | `urng::seedgen` | `Rng<Word = u32>`  | `(u32, u32)` pair |
-| `SeedGen64` | `urng::seedgen` | `Rng<Word = u64>`  | `(u64, u64)` pair |
+| Struct      | Module          | Input RNG         | Output            |
+| ----------- | --------------- | ----------------- | ----------------- |
+| `SeedGen32` | `urng::seedgen` | `Rng<Word = u32>` | `(u32, u32)` pair |
+| `SeedGen64` | `urng::seedgen` | `Rng<Word = u64>` | `(u64, u64)` pair |
 
 `next_seed_pair()` returns `(raw, processed)` — the raw hardware value and the mixed seed.
 
@@ -161,7 +159,7 @@ Enable the `urng` feature on `cribler` for pre-built typed convenience that work
 
 ```toml
 [dependencies]
-urng = "0.13.0"
+urng = "1.0.0"
 cribler = { version = "0.3", features = ["urng"] }
 ```
 
@@ -198,8 +196,6 @@ use urng::*;
 let mut rng = Sfc32::default();
 let _ = Rng::nextu(&mut rng);
 ```
-
-> The deprecated `Lcg32`/`Lcg64` implement `Default` with the fixed parameters `new(8, 13, 5, 24)` instead, since an LCG has no single sensible auto-generated seed.
 
 ### Basic Usage
 

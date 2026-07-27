@@ -6,7 +6,7 @@ macro_rules! impl_variants {
         ::pastey::paste! {
             #[doc = concat!("JSF (Jenkins Small Fast) 32-bit RNG producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
-            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Jsf32`]. Each `nextu` call returns an"]
+            #[doc = "Portable-SIMD counterpart of [`crate::prng::b32::Jsf32`]. Each `nextu` call returns an"]
             #[doc = "array of `u32`; `nextf`, `randi` and `randf` return the same number of `f32`/`i32`"]
             #[doc = "values in parallel."]
             #[doc = ""]

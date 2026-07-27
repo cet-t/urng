@@ -5,8 +5,6 @@
 pub mod biski;
 /// CET C ABI exports.
 pub mod cet;
-/// LCG C ABI exports.
-pub mod lcg;
 /// Mersenne Twister and SFMT C ABI exports.
 pub mod mersenne;
 /// Philox C ABI exports.
@@ -28,7 +26,6 @@ pub mod xoshiro;
 
 pub use biski::*;
 pub use cet::*;
-pub use lcg::*;
 pub use mersenne::*;
 pub use philox::*;
 pub use sfc::*;

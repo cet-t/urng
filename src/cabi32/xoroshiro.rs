@@ -1,7 +1,7 @@
 use crate::{
     _internal::{fill_chunk_auto, prefer_nt},
+    prng::b32::Xoroshiro64Ss,
     rng::Rng,
-    rng32::Xoroshiro64Ss,
 };
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
@@ -120,10 +120,10 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     #[cfg(target_arch = "x86_64")]
-    use crate::rng32::xoroshiro::{XOROSHIRO64SSX8, XOROSHIRO64SSX16};
+    use crate::prng::b32::xoroshiro::{XOROSHIRO64SSX8, XOROSHIRO64SSX16};
     use crate::{
         _internal::chunk_seed32,
-        rng32::xoroshiro::{Xoroshiro64Ssx8, Xoroshiro64Ssx16},
+        prng::b32::xoroshiro::{Xoroshiro64Ssx8, Xoroshiro64Ssx16},
     };
     use rayon::prelude::*;
     #[cfg(target_arch = "x86_64")]

@@ -7,7 +7,7 @@ macro_rules! impl_variants {
         ::pastey::paste! {
             #[doc = concat!("Xoroshiro64** producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
-            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Xoroshiro64Ss`]. A 64-bit state (two"]
+            #[doc = "Portable-SIMD counterpart of [`crate::prng::b32::Xoroshiro64Ss`]. A 64-bit state (two"]
             #[doc = "32-bit words) per lane; each `nextu` call returns an array of `u32`, one per lane."]
             #[doc = ""]
             #[doc = "# Example"]

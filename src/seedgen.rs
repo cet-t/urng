@@ -10,7 +10,7 @@
 //!
 //! ```
 //! use urng::seedgen::SeedGen32;
-//! use urng::rng32::SplitMix32;
+//! use urng::prng::b32::SplitMix32;
 //!
 //! let mut rng = SplitMix32::new(0);
 //! let mut sg = SeedGen32::new(&mut rng, 0);
@@ -52,7 +52,7 @@ const FALLBACK_MULTIPLIER_64: u64 = 0x2545_f491_4f6c_dd1d;
 ///
 /// ```
 /// use urng::seedgen::SeedGen32;
-/// use urng::rng32::SplitMix32;
+/// use urng::prng::b32::SplitMix32;
 ///
 /// let mut rng = SplitMix32::new(12345);
 /// let mut sg = SeedGen32::new(&mut rng, 0);
@@ -110,7 +110,7 @@ impl<'a, R: Rng<Word = u32>> SeedGen32<'a, R> {
 ///
 /// ```
 /// use urng::seedgen::SeedGen64;
-/// use urng::rng64::SplitMix64;
+/// use urng::prng::b64::SplitMix64;
 ///
 /// let mut rng = SplitMix64::new(12345);
 /// let mut sg = SeedGen64::new(&mut rng, 0);

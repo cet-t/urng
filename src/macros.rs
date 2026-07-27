@@ -3,12 +3,12 @@
 //! These macros provide a convenient way to generate random numbers using various
 //! algorithms with seeds generated from the current system time.
 
-#[macro_export]
 /// Dispatches to an AVX-512 optimized path on x86_64 when available, otherwise falls back.
 ///
 /// Two forms:
 /// - `dispatch_simd!(RetType, fallback_fn, avx512_fn, seed)` — allocate and return a raw pointer.
 /// - `dispatch_simd!(Avx512T, FallbackT, fallback_fn, avx512_fn, ptr [, args])` — operate in-place.
+#[macro_export]
 macro_rules! dispatch_simd {
     ($ret_type:ty, $fallback_fn:ident, $avx512_fn:ident, $seed:expr) => {{
         #[cfg(target_arch = "x86_64")]
@@ -83,9 +83,10 @@ macro_rules! unsafe_test {
     };
 }
 
+/// Implements `Default` and [`crate::Seed`] for one or more `seed: u32`-constructed
+/// RNGs. `Default` seeds via [`crate::_internal::default_seed32`] (a time-based,
+/// per-call mix); `Seed::from_seed` forwards a raw `u32` to `new`.
 #[macro_export]
-/// Implements `Default` for one or more `seed: u32`-constructed RNGs, seeding
-/// via [`crate::_internal::default_seed32`] (a time-based, per-call mix).
 macro_rules! impl_default_from_seed32 {
     ($($type:ty),* $(,)?) => {
         $(
@@ -95,13 +96,22 @@ macro_rules! impl_default_from_seed32 {
                     Self::new($crate::_internal::default_seed32())
                 }
             }
+
+            impl $crate::Seed for $type {
+                type Seed = u32;
+                #[inline]
+                fn from_seed(seed: u32) -> Self {
+                    Self::new(seed)
+                }
+            }
         )*
     };
 }
 
+/// Implements `Default` and [`crate::Seed`] for one or more `seed: u64`-constructed
+/// RNGs. `Default` seeds via [`crate::_internal::default_seed64`] (a time-based,
+/// per-call mix); `Seed::from_seed` forwards a raw `u64` to `new`.
 #[macro_export]
-/// Implements `Default` for one or more `seed: u64`-constructed RNGs, seeding
-/// via [`crate::_internal::default_seed64`] (a time-based, per-call mix).
 macro_rules! impl_default_from_seed64 {
     ($($type:ty),* $(,)?) => {
         $(
@@ -109,6 +119,14 @@ macro_rules! impl_default_from_seed64 {
                 #[inline]
                 fn default() -> Self {
                     Self::new($crate::_internal::default_seed64())
+                }
+            }
+
+            impl $crate::Seed for $type {
+                type Seed = u64;
+                #[inline]
+                fn from_seed(seed: u64) -> Self {
+                    Self::new(seed)
                 }
             }
         )*

@@ -7,7 +7,7 @@ macro_rules! impl_variants {
         pastey::paste! {
             #[doc = concat!("SplitMix32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
-            #[doc = "Portable-SIMD counterpart of [`crate::rng32::SplitMix32`]. A fast finalizer-based"]
+            #[doc = "Portable-SIMD counterpart of [`crate::prng::b32::SplitMix32`]. A fast finalizer-based"]
             #[doc = "generator, commonly used to seed the other `wide` generators. Each `nextu` call"]
             #[doc = "returns an array of `u32`, one per lane."]
             #[doc = ""]

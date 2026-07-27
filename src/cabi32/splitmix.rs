@@ -1,5 +1,5 @@
+use crate::prng::b32::SplitMix32;
 use crate::rng::Rng;
-use crate::rng32::SplitMix32;
 use std::slice::from_raw_parts_mut;
 
 /// Creates a new `SplitMix32` instance.
@@ -82,7 +82,7 @@ pub use simd::*;
 mod simd {
     use super::*;
     use crate::dispatch_simd;
-    use crate::rng32::{
+    use crate::prng::b32::{
         SPLITMIX32_GAMMA, SPLITMIX32x16, SPLITMIX32x16_PAR_CHUNK, SplitMix32Simd, SplitMix32x16,
     };
     use rayon::iter::{IndexedParallelIterator, ParallelIterator};

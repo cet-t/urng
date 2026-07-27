@@ -1,4 +1,4 @@
-use crate::{rng::Rng, rng32::*};
+use crate::{cbrng::b32::*, prng::b32::*, rng::Rng};
 
 crate::impl_rand_trait!(
     Mt19937,

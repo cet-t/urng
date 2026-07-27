@@ -7,7 +7,7 @@ macro_rules! impl_variants {
         ::pastey::paste! {
             #[doc = concat!("SFC32 (Small Fast Counter) producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
-            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Sfc32`]. Uses a 128-bit state plus an"]
+            #[doc = "Portable-SIMD counterpart of [`crate::prng::b32::Sfc32`]. Uses a 128-bit state plus an"]
             #[doc = "internal counter; each `nextu` call returns an array of `u32`, one per lane."]
             #[doc = ""]
             #[doc = "# Example"]

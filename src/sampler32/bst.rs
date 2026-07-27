@@ -8,7 +8,7 @@ use crate::sampler::Sampler32;
 /// ```
 /// use urng::sampler::Sampler32;
 /// use urng::sampler32::Bst32;
-/// use urng::rng32::Mt19937;
+/// use urng::prng::b32::Mt19937;
 ///
 /// let mut rng = Mt19937::new(1);
 /// let mut sampler = Bst32::new(&mut rng, &[1.0f32, 9.0]);
@@ -60,7 +60,7 @@ impl<'a, R: Rng<Word = u32> + 'a> Sampler32<'a, R> for Bst32<'a, R> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rng32::Mt19937;
+    use crate::prng::b32::Mt19937;
     use crate::sampler::Sampler32;
 
     #[test]

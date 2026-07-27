@@ -1,5 +1,5 @@
+use crate::prng::b64::{Cet64, Cet256, SplitMix64};
 use crate::rng::Rng;
-use crate::rng64::{Cet64, Cet256, SplitMix64};
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
 
@@ -225,7 +225,7 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use super::{STRIDE, SplitMix64};
-    use crate::rng64::{Cet64x8, Cet256x2};
+    use crate::prng::b64::{Cet64x8, Cet256x2};
     use rayon::prelude::*;
     use std::arch::x86_64::*;
     use std::slice::from_raw_parts_mut;

@@ -1,5 +1,5 @@
 use crate::_internal::{fill_chunk_auto, prefer_nt};
-use crate::rng64::SplitMix64;
+use crate::prng::b64::SplitMix64;
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
 

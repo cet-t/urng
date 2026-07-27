@@ -1,5 +1,5 @@
 use crate::Rng;
-use crate::rng32::Jsf32;
+use crate::prng::b32::Jsf32;
 use std::slice::from_raw_parts_mut;
 
 /// Creates a new `Jsf32` instance.
@@ -94,7 +94,7 @@ pub use simd::*;
 mod simd {
     use crate::_internal::chunk_seed32;
     use crate::Rng32V512;
-    use crate::rng32::jsf::{JSF32X16, Jsf32x16};
+    use crate::prng::b32::jsf::{JSF32X16, Jsf32x16};
     use rayon::prelude::*;
     #[cfg(target_arch = "x86_64")]
     use std::arch::x86_64::*;

@@ -9,7 +9,7 @@ macro_rules! impl_threefry32x2_variants {
         ::pastey::paste! {
             #[doc = concat!("Threefry 2x32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
-            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Threefry32x2`]. A counter-based generator"]
+            #[doc = "Portable-SIMD counterpart of [`crate::cbrng::b32::Threefry32x2`]. A counter-based generator"]
             #[doc = "using a reduced-round (20-round) Threefish cipher with 2 output words per block; each"]
             #[doc = "`nextu` call returns an array of `u32`, one per lane."]
             #[doc = ""]
@@ -125,7 +125,7 @@ macro_rules! impl_threefry32x4_variants {
         ::pastey::paste! {
             #[doc = concat!("Threefry 4x32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
-            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Threefry32x4`]. A counter-based generator"]
+            #[doc = "Portable-SIMD counterpart of [`crate::cbrng::b32::Threefry32x4`]. A counter-based generator"]
             #[doc = "using a reduced-round (20-round) Threefish cipher with 4 output words per block; each"]
             #[doc = "`nextu` call returns an array of `u32`, one per lane."]
             #[doc = ""]

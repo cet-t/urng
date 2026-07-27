@@ -1,6 +1,6 @@
 use std::slice::from_raw_parts_mut;
 
-use crate::{rng::Rng, rng32::Sfc32};
+use crate::{prng::b32::Sfc32, rng::Rng};
 
 // --- Sfc32 ---
 
@@ -76,7 +76,7 @@ mod simd {
 
     use crate::{
         _internal::chunk_seed32,
-        rng32::sfc::{SFC32X4, SFC32X8, SFC32X16, Sfc32x4, Sfc32x8, Sfc32x16},
+        prng::b32::sfc::{SFC32X4, SFC32X8, SFC32X16, Sfc32x4, Sfc32x8, Sfc32x16},
     };
 
     // --- Sfc32x4 ---

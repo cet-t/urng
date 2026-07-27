@@ -128,21 +128,6 @@ macro_rules! sm64_from_seed32 {
 
 pub(crate) use sm64_from_seed32;
 
-macro_rules! impl_seed {
-    ($t:ty, $bits:expr) => {
-        ::pastey::paste! {
-            impl $crate::Seed for self::$t {
-                type Seed = [<u $bits>];
-                fn from_seed(seed: [<u $bits>]) -> Self {
-                    Self::new(seed)
-                }
-            }
-        }
-    };
-}
-
-pub(crate) use impl_seed;
-
 /// Implements [`crate::rng::Rng`] (with `Word = u32`) for a counter-based block
 /// generator that owns `buf: [Wrap<u32>; N]` and `pos: Wrap<usize>` fields, by
 /// buffering blocks produced by an existing `fn $raw(&mut self) -> [u32; N]`
@@ -154,8 +139,9 @@ macro_rules! impl_ring_rng32 {
     ($ty:ty, $n:expr, $raw:ident) => {
         impl $crate::rng::Rng for $ty {
             type Word = u32;
+
             #[inline]
-            fn nextu(&mut self) -> u32 {
+            fn nextu(&mut self) -> Self::Word {
                 if self.pos >= $n {
                     self.buf = self.$raw().map(::core::convert::Into::into);
                     self.pos = 0.into();
@@ -177,8 +163,9 @@ macro_rules! impl_ring_rng64 {
     ($ty:ty, $n:expr, $raw:ident) => {
         impl $crate::rng::Rng for $ty {
             type Word = u64;
+
             #[inline]
-            fn nextu(&mut self) -> u64 {
+            fn nextu(&mut self) -> Self::Word {
                 if self.pos >= $n {
                     self.buf = self.$raw().map(::core::convert::Into::into);
                     self.pos = 0.into();
@@ -198,14 +185,14 @@ static DEFAULT_SEED_COUNTER: AtomicU64 = AtomicU64::new(0);
 ///
 /// Mixes wall-clock nanoseconds with a call counter (to avoid identical
 /// seeds for back-to-back calls within the same timer tick) through the
-/// existing [`crate::rng64::SplitMix64::compute`] finalizer.
+/// existing [`crate::prng::b64::SplitMix64::compute`] finalizer.
 pub(crate) fn default_seed64() -> u64 {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_nanos() as u64;
     let count = DEFAULT_SEED_COUNTER.fetch_add(1, Ordering::Relaxed);
-    crate::rng64::SplitMix64::compute(nanos ^ count.wrapping_mul(0x9E3779B97F4A7C15))
+    crate::prng::b64::SplitMix64::compute(nanos ^ count.wrapping_mul(0x9E3779B97F4A7C15))
 }
 
 /// 32-bit counterpart of [`default_seed64`]: folds the 64-bit mix down via xor.
@@ -410,7 +397,7 @@ pub(crate) fn par_fill_reseed64<R, T, NF, SF>(
         .par_chunks_mut(PAR_CHUNK)
         .enumerate()
         .for_each(|(chunk_idx, chunk)| {
-            let chunk_seed = crate::rng64::SplitMix64::compute(
+            let chunk_seed = crate::prng::b64::SplitMix64::compute(
                 base_seed.wrapping_add((chunk_idx as u64).wrapping_mul(0x9E3779B97F4A7C15)),
             );
             let mut rng = new_rng(chunk_seed);

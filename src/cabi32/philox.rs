@@ -1,4 +1,4 @@
-use crate::rng32::Philox32x4;
+use crate::cbrng::b32::Philox32x4;
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 use std::slice::from_raw_parts_mut;
@@ -319,11 +319,11 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use super::*;
-    use crate::dispatch_simd;
-    use crate::rng32::{
+    use crate::cbrng::b32::{
         PHILOX32x4x4_CHUNK_RATIO, PHILOX32x4x4_PAR_CHUNK, PHILOX32x4x4_SHIFT, PHILOX32x16,
         PHILOX32x16_SHIFT, Philox32, Philox32x4x4,
     };
+    use crate::dispatch_simd;
     use rayon::iter::{IndexedParallelIterator, ParallelIterator};
     use rayon::slice::ParallelSliceMut;
     use std::arch::x86_64::*;

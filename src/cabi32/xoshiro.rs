@@ -1,5 +1,5 @@
+use crate::prng::b32::{Xoshiro128Pp, Xoshiro128Ss};
 use crate::rng::Rng;
-use crate::rng32::{Xoshiro128Pp, Xoshiro128Ss};
 use std::slice::from_raw_parts_mut;
 
 // --- Xoshiro128++ ---
@@ -182,7 +182,7 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use crate::_internal::chunk_seed32;
-    use crate::rng32::{Xoshiro128Ppx16, Xoshiro128Ssx16};
+    use crate::prng::b32::{Xoshiro128Ppx16, Xoshiro128Ssx16};
     use rayon::iter::{IndexedParallelIterator, ParallelIterator};
     use rayon::slice::ParallelSliceMut;
     #[cfg(target_arch = "x86_64")]

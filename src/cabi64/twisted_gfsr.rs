@@ -1,5 +1,5 @@
+use crate::prng::b64::TwistedGFSR;
 use crate::rng::Rng;
-use crate::rng64::TwistedGFSR;
 
 /// Creates a new heap-allocated `TwistedGFSR` using the built-in default seed array.
 /// The `_seed` argument is currently unused. The caller must free the result with

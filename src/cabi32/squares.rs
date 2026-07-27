@@ -1,11 +1,11 @@
-use crate::rng32::Squares32;
+use crate::cbrng::b32::Squares32;
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 use std::slice::from_raw_parts_mut;
 
 #[cfg(feature = "simd")]
 mod simd_chunks {
-    use crate::rng32::{SQUARES32x8, Squares32x8};
+    use crate::cbrng::b32::{SQUARES32x8, Squares32x8};
     use std::arch::x86_64::*;
 
     #[allow(non_upper_case_globals)]
@@ -556,8 +556,8 @@ pub use simd::*;
 mod simd {
     use super::simd_chunks::*;
     use super::*;
+    use crate::cbrng::b32::{SQUARES32x8, Squares32Simd, Squares32x8};
     use crate::dispatch_simd;
-    use crate::rng32::{SQUARES32x8, Squares32Simd, Squares32x8};
     use std::arch::x86_64::*;
 
     /// Creates a new `Squares32x8` instance.

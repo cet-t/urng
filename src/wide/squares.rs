@@ -7,7 +7,7 @@ macro_rules! impl_squares32_variants {
         ::pastey::paste! {
             #[doc = concat!("Squares32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
-            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Squares32`]. A counter-based generator that"]
+            #[doc = "Portable-SIMD counterpart of [`crate::cbrng::b32::Squares32`]. A counter-based generator that"]
             #[doc = "runs four rounds of the middle-square scramble over wide `u64` state; each `nextu` call"]
             #[doc = "returns an array of `u32`."]
             #[doc = ""]
@@ -75,7 +75,7 @@ impl_squares32_variants!(8, 8);
 
 /// Squares32 producing 16 values per call by combining two [`Squares32x8`] streams.
 ///
-/// Portable-SIMD counterpart of [`crate::rng32::Squares32`]. Each `nextu` call returns a
+/// Portable-SIMD counterpart of [`crate::cbrng::b32::Squares32`]. Each `nextu` call returns a
 /// `[u32; 16]` by drawing 8 values from each underlying `Squares32x8` lane-group (with
 /// counters offset by 8 to keep the two groups independent).
 ///

@@ -12,13 +12,13 @@ pub type ShuffleResult<T> = std::result::Result<T, self::SliceShuffleError>;
 /// An iterator that yields references to the elements of a slice in a shuffled order.
 ///
 /// Returned by [`Shuffle::shuffled`].
-pub struct ShuffledIter<'a, T> {
+pub struct ShuffledIterator<'a, T> {
     pub(crate) slice: &'a [T],
     pub(crate) indices: Vec<usize>,
     pub(crate) pos: usize,
 }
 
-impl<'a, T> Iterator for ShuffledIter<'a, T> {
+impl<'a, T> Iterator for ShuffledIterator<'a, T> {
     type Item = &'a T;
 
     #[inline(always)]
@@ -59,7 +59,7 @@ pub trait Shuffle: Rng {
     fn shuffled<'a, T>(
         &mut self,
         src: &'a [T],
-    ) -> crate::ShuffleResult<crate::ShuffledIter<'a, T>> {
+    ) -> crate::ShuffleResult<crate::ShuffledIterator<'a, T>> {
         if src.is_empty() {
             return Err(crate::SliceShuffleError(()));
         }
@@ -69,7 +69,7 @@ pub trait Shuffle: Rng {
             let j = self.nextu().to_index(len);
             indices.swap(i, j);
         });
-        Ok(crate::ShuffledIter {
+        Ok(crate::ShuffledIterator {
             slice: src,
             indices,
             pos: 0,

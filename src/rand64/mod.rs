@@ -1,4 +1,4 @@
-use crate::rng64::*;
+use crate::{cbrng::b64::*, prng::b64::*};
 
 crate::impl_rand_trait!(
     Biski64,

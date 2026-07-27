@@ -7,7 +7,7 @@ macro_rules! impl_pcg32_variants {
         ::pastey::paste! {
             #[doc = concat!("PCG32 (Permuted Congruential Generator) producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
-            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Pcg32`]. Uses the PCG-XSH-RR output"]
+            #[doc = "Portable-SIMD counterpart of [`crate::prng::b32::Pcg32`]. Uses the PCG-XSH-RR output"]
             #[doc = "function over wide `u64` state; each `nextu` call returns an array of `u32`."]
             #[doc = ""]
             #[doc = "# Example"]
@@ -64,7 +64,7 @@ impl_pcg32_variants!(8, 8);
 
 /// PCG32 producing 16 values per call by combining two [`Pcg32x8`] streams.
 ///
-/// Portable-SIMD counterpart of [`crate::rng32::Pcg32`]. Each `nextu` call returns
+/// Portable-SIMD counterpart of [`crate::prng::b32::Pcg32`]. Each `nextu` call returns
 /// a `[u32; 16]` by drawing 8 values from each underlying `Pcg32x8` lane-group.
 ///
 /// # Example

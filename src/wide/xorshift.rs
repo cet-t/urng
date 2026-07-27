@@ -7,7 +7,7 @@ macro_rules! impl_xorshift32_variants {
         ::pastey::paste! {
             #[doc = concat!("Xorshift32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
-            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Xorshift32`]. A shift-register generator;"]
+            #[doc = "Portable-SIMD counterpart of [`crate::prng::b32::Xorshift32`]. A shift-register generator;"]
             #[doc = "each `nextu` call returns an array of `u32`, one per lane."]
             #[doc = ""]
             #[doc = "# Example"]
@@ -60,7 +60,7 @@ macro_rules! impl_xorshift128_variants {
         ::pastey::paste! {
             #[doc = concat!("Xorshift128 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
-            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Xorshift128`]. A 128-bit internal state;"]
+            #[doc = "Portable-SIMD counterpart of [`crate::prng::b32::Xorshift128`]. A 128-bit internal state;"]
             #[doc = "each `nextu` call returns an array of `u32`, one per lane."]
             #[doc = ""]
             #[doc = "# Example"]
@@ -123,7 +123,7 @@ macro_rules! impl_xorwow_variants {
         ::pastey::paste! {
             #[doc = concat!("Xorwow producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
-            #[doc = "Portable-SIMD counterpart of [`crate::rng32::Xorwow`]. Combines a Xorshift state with a"]
+            #[doc = "Portable-SIMD counterpart of [`crate::prng::b32::Xorwow`]. Combines a Xorshift state with a"]
             #[doc = "Weyl (linear) counter; each `nextu` call returns an array of `u32`, one per lane."]
             #[doc = ""]
             #[doc = "# Example"]

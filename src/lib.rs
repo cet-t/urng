@@ -9,10 +9,15 @@ pub mod rngv;
 #[cfg(feature = "simd")]
 pub use crate::rngv::*;
 
-/// Consolidated 32-bit random number generators.
-pub mod rng32;
+/// Stateful pseudo-random number generators (32/64-bit).
+pub mod prng;
 #[allow(ambiguous_glob_reexports)]
-pub use crate::rng32::*;
+pub use crate::prng::*;
+
+/// Counter-based random number generators (32/64-bit).
+pub mod cbrng;
+#[allow(ambiguous_glob_reexports)]
+pub use crate::cbrng::*;
 
 #[cfg(feature = "rand")]
 pub mod rand32;
@@ -21,11 +26,6 @@ pub mod rand32;
 pub mod cabi32;
 #[cfg(feature = "cabi")]
 pub use crate::cabi32::*;
-
-/// Consolidated 64-bit random number generators.
-pub mod rng64;
-#[allow(ambiguous_glob_reexports)]
-pub use crate::rng64::*;
 
 #[cfg(feature = "rand")]
 pub(crate) mod rand64;

@@ -1,5 +1,5 @@
+use crate::prng::b64::{Sfc64, SplitMix64};
 use crate::rng::Rng;
-use crate::rng64::{Sfc64, SplitMix64};
 use rayon::prelude::*;
 use std::slice::from_raw_parts_mut;
 
@@ -127,7 +127,7 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use super::*;
-    use crate::rng64::Sfc64x8;
+    use crate::prng::b64::Sfc64x8;
     use std::arch::x86_64::*;
 
     #[unsafe(no_mangle)]

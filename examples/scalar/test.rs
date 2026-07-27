@@ -122,7 +122,6 @@ fn main() {
     println!("{}", "─".repeat(72).bright_black());
 
     // --- 32-bit (Rng::nextu() -> u32) ---
-    // Lcg32 excluded: deprecated, fixed-parameter generator not meant for benchmarking.
     let mut r32 = Vec::new();
     bench32!(r32, Philox32x4, Threefry32x4, Threefry32x2);
     bench32!(r32, Squares32);
@@ -143,7 +142,6 @@ fn main() {
     println!("{}", "─".repeat(72).bright_black());
 
     // --- 64-bit (Rng::nextu() -> u64) ---
-    // Lcg64 excluded: deprecated, fixed-parameter generator not meant for benchmarking.
     let mut r64 = Vec::new();
     bench64!(r64, Philox64);
     bench64!(r64, SplitMix64);

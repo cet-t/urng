@@ -1,5 +1,5 @@
+use crate::prng::b64::Xorshift64;
 use crate::rng::Rng;
-use crate::rng64::Xorshift64;
 
 /// Creates a new heap-allocated `Xorshift64` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`xorshift64_free`].

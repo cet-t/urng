@@ -1,8 +1,8 @@
-use crate::rng::Rng;
-use crate::rng32::{
+use crate::prng::b32::{
     Mt19937, Sfmt607, Sfmt1279, Sfmt2281, Sfmt4253, Sfmt11213, Sfmt19937, Sfmt44497, Sfmt86243,
     Sfmt132049, Sfmt216091,
 };
+use crate::rng::Rng;
 use std::slice::from_raw_parts_mut;
 
 /// Creates a new `Mt19937` instance.

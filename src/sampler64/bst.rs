@@ -8,7 +8,7 @@ use crate::sampler::Sampler64;
 /// ```
 /// use urng::sampler::Sampler64;
 /// use urng::sampler64::Bst64;
-/// use urng::rng64::Mt1993764;
+/// use urng::prng::b64::Mt1993764;
 ///
 /// let mut rng = Mt1993764::new(1);
 /// let mut sampler = Bst64::new(&mut rng, &[1.0f64, 2.0, 4.0, 8.0]);
@@ -60,7 +60,7 @@ impl<'a, R: Rng<Word = u64> + 'a> Sampler64<'a, R> for Bst64<'a, R> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rng64::Mt1993764;
+    use crate::prng::b64::Mt1993764;
     use crate::sampler::Sampler64;
 
     #[test]

@@ -3,8 +3,6 @@
 
 /// JSF C ABI exports.
 pub mod jsf;
-/// LCG C ABI exports.
-pub mod lcg;
 /// Mersenne Twister and SFMT C ABI exports.
 pub mod mersenne;
 /// PCG C ABI exports.
@@ -27,7 +25,6 @@ pub mod xorshift;
 pub mod xoshiro;
 
 pub use jsf::*;
-pub use lcg::*;
 pub use mersenne::*;
 pub use pcg::*;
 pub use philox::*;
