@@ -15,8 +15,7 @@ use crate::{_internal::FSCALE64, prng::b64::SplitMix64, rng::Rng};
 /// # Examples
 ///
 /// ```
-/// use urng::cbrng::b64::Philox64;
-/// use urng::rng::Rng;
+/// use urng::{Rng, Philox64};
 ///
 /// let mut rng = Philox64::new(1);
 /// let _: u64 = rng.nextu();

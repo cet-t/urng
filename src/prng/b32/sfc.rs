@@ -12,19 +12,10 @@ use crate::{prng::b32::SplitMix32, rng::Rng};
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Sfc32};
 ///
 /// let mut rng = Sfc32::new(1);
-/// let _ = Rng::nextu(&mut rng);
-/// ```
-///
-/// A time-seeded instance can also be created via `Default`:
-///
-/// ```
-/// use urng::*;
-///
-/// let mut rng = Sfc32::default();
-/// let _ = Rng::nextu(&mut rng);
+/// let _ = rng.nextu();
 /// ```
 #[repr(C, align(64))]
 pub struct Sfc32 {
@@ -69,7 +60,7 @@ pub(crate) const SFC32X4: usize = 4;
 /// # Examples
 ///
 /// ```
-/// use urng::prng::b32::sfc::Sfc32x4;
+/// use urng::Sfc32x4;
 ///
 /// let mut rng = Sfc32x4::new(1);
 /// let _ = rng.nextu();
@@ -169,7 +160,7 @@ pub(crate) const SFC32X8: usize = 8;
 /// # Examples
 ///
 /// ```no_run
-/// use urng::prng::b32::sfc::Sfc32x8;
+/// use urng::Sfc32x8;
 ///
 /// let mut rng = unsafe { Sfc32x8::new(1) };
 /// let _ = rng.nextu();
@@ -265,7 +256,7 @@ pub(crate) const SFC32X16: usize = 16;
 /// # Examples
 ///
 /// ```no_run
-/// use urng::prng::b32::sfc::Sfc32x16;
+/// use urng::Sfc32x16;
 ///
 /// let mut rng = unsafe { Sfc32x16::new(1) };
 /// let _ = rng.nextu();

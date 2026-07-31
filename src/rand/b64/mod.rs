@@ -15,5 +15,6 @@ crate::impl_rand_trait!(
     Xoroshiro128Ss,
     Xorshift64,
     Xoshiro256Pp,
-    Xoshiro256Ss
+    Xoshiro256Ss,
+    WyHash64
 );

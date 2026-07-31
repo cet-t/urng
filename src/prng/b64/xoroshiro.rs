@@ -9,7 +9,7 @@ use crate::{prng::b64::SplitMix64, rng::Rng};
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Xoroshiro128Pp};
 ///
 /// let mut rng = Xoroshiro128Pp::new(1);
 /// let _ = rng.nextu();
@@ -104,7 +104,7 @@ impl Rng for Xoroshiro128Pp {
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Xoroshiro128Ss};
 ///
 /// let mut rng = Xoroshiro128Ss::new(1);
 /// let _ = rng.nextu();

@@ -49,7 +49,7 @@ const THREEFISH_R_256: [[u32; 2]; 8] = [
 /// # Examples
 ///
 /// ```
-/// use urng::cbrng::b64::Threefish256;
+/// use urng::Threefish256;
 ///
 /// let mut rng = Threefish256::new(1);
 /// let _ = rng.nextu();

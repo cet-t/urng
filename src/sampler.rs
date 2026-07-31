@@ -1,16 +1,22 @@
+//! Weighted random selection.
+
+pub mod b32;
+pub mod b64;
+
+pub use b32::*;
+pub use b64::*;
+
 use crate::rng::Rng;
 
 /// Weighted random sampling trait for 32-bit generators.
 ///
 /// Implementors provide O(1) or O(log n) weighted index selection.
-/// Available implementations: [`crate::sampler32::Bst32`], [`crate::sampler32::Alias32`].
+/// Available implementations: [`crate::sampler::b32::Bst32`], [`crate::sampler::b32::Alias32`].
 ///
 /// # Examples
 ///
 /// ```
-/// use urng::sampler::Sampler32;
-/// use urng::sampler32::Alias32;
-/// use urng::prng::b32::Mt19937;
+/// use urng::{Sampler32, Alias32, Mt19937};
 ///
 /// let mut rng = Mt19937::new(1);
 /// let mut sampler = Alias32::new(&mut rng, &[1.0f32, 9.0]);
@@ -26,14 +32,12 @@ pub trait Sampler32<'a, R: Rng<Word = u32> + 'a> {
 /// Weighted random sampling trait for 64-bit generators.
 ///
 /// Implementors provide O(1) or O(log n) weighted index selection.
-/// Available implementations: [`crate::sampler64::Bst64`], [`crate::sampler64::Alias64`].
+/// Available implementations: [`crate::sampler::b64::Bst64`], [`crate::sampler::b64::Alias64`].
 ///
 /// # Examples
 ///
 /// ```
-/// use urng::sampler::Sampler64;
-/// use urng::sampler64::Alias64;
-/// use urng::prng::b64::Mt1993764;
+/// use urng::{Sampler64, Alias64, Mt1993764};
 ///
 /// let mut rng = Mt1993764::new(1);
 /// let mut sampler = Alias64::new(&mut rng, &[1.0f64, 2.0, 4.0, 8.0]);

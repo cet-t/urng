@@ -14,7 +14,7 @@ use crate::rng::Rng;
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Xoshiro256Pp};
 ///
 /// let mut rng = Xoshiro256Pp::new(1);
 /// let _ = rng.nextu();
@@ -129,7 +129,7 @@ impl Xoshiro256Ssx2 {
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Xoshiro256Ss};
 ///
 /// let mut rng = Xoshiro256Ss::new(1);
 /// let _ = rng.nextu();

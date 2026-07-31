@@ -4,16 +4,16 @@
 //! and re-exports the main generator types. Counter-based generators live in
 //! [`crate::cbrng::b64`].
 
-pub mod biski;
-pub mod cet;
-pub mod mersenne;
-pub mod sfc;
-pub mod splitmix;
-pub mod twisted_gfsr;
-pub mod wyhash;
-pub mod xoroshiro;
-pub mod xorshift;
-pub mod xoshiro;
+pub(crate) mod biski;
+pub(crate) mod cet;
+pub(crate) mod mersenne;
+pub(crate) mod sfc;
+pub(crate) mod splitmix;
+pub(crate) mod twisted_gfsr;
+pub(crate) mod wyhash;
+pub(crate) mod xoroshiro;
+pub(crate) mod xorshift;
+pub(crate) mod xoshiro;
 
 pub use biski::Biski64;
 #[cfg(feature = "simd")]
@@ -27,7 +27,7 @@ pub use sfc::Sfc64;
 pub use sfc::Sfc64x8;
 pub use splitmix::SplitMix64;
 pub use twisted_gfsr::TwistedGFSR;
-pub use wyhash::*;
+pub use wyhash::WyHash64;
 pub use xoroshiro::{Xoroshiro128Pp, Xoroshiro128Ss};
 pub use xorshift::Xorshift64;
 #[cfg(feature = "simd")]
@@ -48,4 +48,5 @@ crate::impl_default_from_seed64!(
     Xorshift64,
     Xoshiro256Pp,
     Xoshiro256Ss,
+    WyHash64
 );

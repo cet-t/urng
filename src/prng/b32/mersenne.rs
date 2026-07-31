@@ -64,7 +64,7 @@ fn sfmt_recursion(
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Mt19937};
 ///
 /// let mut rng = Mt19937::new(1);
 /// let _ = rng.nextu();
@@ -179,13 +179,12 @@ impl Rng for Mt19937 {
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Sfmt19937};
 ///
 /// let mut rng = Sfmt19937::new(1);
 /// let _ = rng.nextu();
 /// ```
-#[repr(C)]
-#[repr(align(16))]
+#[repr(C, align(16))]
 pub struct Sfmt19937 {
     state: [u32x4; SFMT_N],
     idx: Wrap<usize>,
@@ -377,10 +376,10 @@ macro_rules! define_sfmt_variant {
             ///
             #[doc = concat!(
                 "```\n",
-                "use urng::rng::Rng;\n",
-                "use urng::prng::b32::",
+                "use urng::{Rng, ",
                 stringify!([<Sfmt $mexp>]),
-                ";\n\n",
+                "};\n",
+                "\n",
                 "let mut rng = ",
                 stringify!([<Sfmt $mexp>]),
                 "::new(1);\n",

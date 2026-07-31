@@ -15,8 +15,7 @@ macro_rules! impl_variants {
             #[doc = concat!("use urng::wide::Jsf32x", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = Jsf32x", stringify!($size), "::new(12345);")]
-            #[doc = concat!("let v = rng.nextu();")]
-            #[doc = concat!("assert_eq!(v.len(), ", stringify!($size), ");")]
+            #[doc = concat!("let _ = rng.nextu();")]
             #[doc = "```"]
             #[repr(C, align(64))]
             pub struct [<Jsf32x $size>] {

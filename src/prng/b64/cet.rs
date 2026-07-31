@@ -10,13 +10,10 @@ use crate::rng::Rng;
 
 /// A 64-bit Self-made random number generator.
 ///
-/// This generator uses a 4-cell cellular automaton state and a Weyl counter.
-/// It is designed for high performance and quality.
-///
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Cet64};
 ///
 /// let mut rng = Cet64::new(1);
 /// let _ = rng.nextu();
@@ -58,6 +55,16 @@ impl Rng for Cet64 {
     }
 }
 
+/// A 64-bit Self-made random number generator.
+///
+/// # Examples
+///
+/// ```
+/// use urng::{Rng, Cet256};
+///
+/// let mut rng = Cet256::new(1);
+/// let _ = rng.nextu();
+/// ```
 pub struct Cet256 {
     s: [Wrap<u64>; 4],
 }

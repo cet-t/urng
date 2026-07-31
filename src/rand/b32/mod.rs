@@ -1,4 +1,4 @@
-use crate::{cbrng::b32::*, prng::b32::*, rng::Rng};
+use crate::{Rng, cbrng::b32::*, prng::b32::*};
 
 crate::impl_rand_trait!(
     Mt19937,
@@ -46,7 +46,7 @@ crate::impl_try_rng_trait!(
     Xorshift128,
     Xorwow,
     Xoshiro128Pp,
-    Xoshiro128Ss
+    Xoshiro128Ss,
 );
 
 impl rand_core::TryRng for Philox32x4 {

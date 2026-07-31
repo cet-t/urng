@@ -12,8 +12,7 @@ use crate::{prng::b64::SplitMix64, rng::Rng};
 /// # Examples
 ///
 /// ```
-/// use urng::rng::Rng;
-/// use urng::prng::b64::Biski64;
+/// use urng::{Rng, Biski64};
 ///
 /// let mut rng = Biski64::new(1);
 /// let _ = rng.nextu();
@@ -59,7 +58,7 @@ impl Rng for Biski64 {
 /// # Examples
 ///
 /// ```no_run
-/// use urng::prng::b64::Biski64x8;
+/// use urng::Biski64x8;
 ///
 /// unsafe {
 ///     let mut rng = Biski64x8::new(0);

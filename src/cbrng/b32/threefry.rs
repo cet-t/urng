@@ -16,8 +16,7 @@ const THREEFRY32_C240: u32 = 0x1BD11BDA;
 /// # Examples
 ///
 /// ```
-/// use urng::cbrng::b32::Threefry32x4;
-/// use urng::rng::Rng;
+/// use urng::{Rng, Threefry32x4};
 ///
 /// let mut rng = Threefry32x4::new(1);
 /// let _: u32 = rng.nextu();
@@ -174,8 +173,7 @@ crate::_internal::impl_ring_rng32!(Threefry32x4, 4, next_raw);
 /// # Examples
 ///
 /// ```
-/// use urng::cbrng::b32::Threefry32x2;
-/// use urng::rng::Rng;
+/// use urng::{Rng, Threefry32x2};
 ///
 /// let mut rng = Threefry32x2::new(1);
 /// let _: u32 = rng.nextu();

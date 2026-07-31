@@ -8,9 +8,9 @@ use crate::sampler::Sampler64;
 /// # Examples
 ///
 /// ```
-/// use urng::sampler::Sampler64;
-/// use urng::sampler64::Alias64;
-/// use urng::prng::b64::Mt1993764;
+/// use urng::Sampler64;
+/// use urng::Alias64;
+/// use urng::Mt1993764;
 ///
 /// let mut rng = Mt1993764::new(1);
 /// let mut sampler = Alias64::new(&mut rng, &[1.0f64, 2.0, 4.0, 8.0]);

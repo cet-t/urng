@@ -8,6 +8,7 @@ authors = ["cet"]
 description = "Universal Random Number Generator"
 repository = "https://github.com/cet-t/urng"
 keywords = ["random", "rng"]
+exclude = ["bench.md", "build.rs", "test.nu"]
 
 [profile.release]
 opt-level = 3
@@ -50,6 +51,7 @@ path = "examples/iter/test.rs"
 [[example]]
 name = "test"
 path = "examples/test/test.rs"
+
 
 [features]
 rand = ["dep:rand_core"]

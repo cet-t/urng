@@ -10,7 +10,7 @@ use crate::rng::Rng;
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, SplitMix64};
 ///
 /// let mut rng = SplitMix64::new(1);
 /// assert_eq!(rng.nextu(), 10451216379200822465);

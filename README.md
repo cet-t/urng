@@ -14,7 +14,7 @@ Standard generators implement the unified `Rng` trait (`Word = u32` or `Word = u
 Portable wide generators require the `wide` feature and expose safe fixed-array bulk APIs.
 AVX generators expose a bulk-generation API and are listed separately; they require the `simd` feature.
 
-### 32-bit Generators (`urng::prng::b32`)
+### 32-bit Generators (`urng::`)
 
 | Struct          | Algorithm        | Period / State   |
 | --------------- | ---------------- | ---------------- |
@@ -45,7 +45,7 @@ AVX generators expose a bulk-generation API and are listed separately; they requ
 | `Squares32`     | Squares          | -                |
 | `Jsf32`         | JSF32            | -                |
 
-### 64-bit Generators (`urng::prng::b64`)
+### 64-bit Generators (`urng::`)
 
 | Struct           | Algorithm           | Period / State   |
 | ---------------- | ------------------- | ---------------- |
@@ -129,14 +129,14 @@ These generators expose a bulk-generation API and require AVX support at runtime
 
 > Requires the `sampler` feature.
 
-Weighted random index selection. Two implementations are provided for each bit-width, both implementing the `Sampler32` / `Sampler64` trait (`urng::sampler`).
+Weighted random index selection. Two implementations are provided for each bit-width, both implementing the `Sampler32` / `Sampler64` trait (`urng::Sampler32` / `urng::Sampler64`).
 
-| Struct    | Module            | Algorithm      | Build | Sample   |
-| --------- | ----------------- | -------------- | ----- | -------- |
-| `Bst32`   | `urng::sampler32` | Cumulative BST | O(n)  | O(log n) |
-| `Alias32` | `urng::sampler32` | Walker's Alias | O(n)  | O(1)     |
-| `Bst64`   | `urng::sampler64` | Cumulative BST | O(n)  | O(log n) |
-| `Alias64` | `urng::sampler64` | Walker's Alias | O(n)  | O(1)     |
+| Struct    | Module   | Algorithm      | Build | Sample   |
+| --------- | -------- | -------------- | ----- | -------- |
+| `Bst32`   | `urng::` | Cumulative BST | O(n)  | O(log n) |
+| `Alias32` | `urng::` | Walker's Alias | O(n)  | O(1)     |
+| `Bst64`   | `urng::` | Cumulative BST | O(n)  | O(log n) |
+| `Alias64` | `urng::` | Walker's Alias | O(n)  | O(1)     |
 
 ## SeedGen
 
@@ -144,10 +144,9 @@ Weighted random index selection. Two implementations are provided for each bit-w
 
 Hardware-noise-assisted seed generation. Wraps an existing `Rng` and mixes in hardware noise (RDSEED/RDRAND on x86/x86_64, timestamp fallback elsewhere) via a Murmur3-style hash.
 
-| Struct      | Module          | Input RNG         | Output            |
-| ----------- | --------------- | ----------------- | ----------------- |
-| `SeedGen32` | `urng::seedgen` | `Rng<Word = u32>` | `(u32, u32)` pair |
-| `SeedGen64` | `urng::seedgen` | `Rng<Word = u64>` | `(u64, u64)` pair |
+| Struct    | Module          | Input RNG                             | Output                           |
+| --------- | --------------- | -------------------------------------- | -------------------------------- |
+| `SeedGen` | `urng::seedgen` | `Rng<Word = u32>` / `Rng<Word = u64>` | `(u32, u32)` / `(u64, u64)` pair |
 
 `next_seed_pair()` returns `(raw, processed)` — the raw hardware value and the mixed seed.
 
@@ -166,18 +165,15 @@ cribler = { version = "0.3", features = ["urng"] }
 The suites construct each named case from a seed, so no generator instance needs to be passed in:
 
 ```rust,ignore
-use cribler::ChiSqSuite;
-use urng::*;
+use cribler::Suite;
+use urng::Rng;
 
-let results = Suite::new(1)
-    .from_urng32::<urng::Xorshift32>()?
-    .from_urng32::<urng::Pcg32>()?
-    .from_urng32::<urng::SplitMix32>()?
+let results = cribler::Suite::default()
+    .from_urng32::<urng::Sfc32>()?
     .from_rand::<rand_sfc::Sfc32>()?
-    .from_custom(Tiny64(1))?
     .run()?;
 
-for r in &results {
+for r in results.iter() {
     println!("{}", serde_json::to_string_pretty(&r)?);
 }
 ```

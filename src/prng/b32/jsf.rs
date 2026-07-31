@@ -11,8 +11,7 @@ use crate::{Rng32V256, Rng32V512};
 ///
 /// # Example
 /// ```
-/// use urng::rng::Rng;
-/// use urng::prng::b32::Jsf32;
+/// use urng::{Rng, Jsf32};
 ///
 /// let mut rng = Jsf32::new(12345);
 /// ```
@@ -112,7 +111,7 @@ impl Rng32V256 for Jsf32x8 {
 /// # Example
 /// ```no_run
 /// use urng::Rng32V512;
-/// use urng::prng::b32::Jsf32x16;
+/// use urng::Jsf32x16;
 ///
 /// let mut rng = unsafe { Jsf32x16::new(12345) };
 /// let _ = unsafe { rng.nextu() };

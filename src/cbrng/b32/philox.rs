@@ -20,8 +20,7 @@ use crate::rng::Rng;
 /// # Examples
 ///
 /// ```
-/// use urng::cbrng::b32::Philox32x4;
-/// use urng::rng::Rng;
+/// use urng::{Rng, Philox32x4};
 ///
 /// let mut rng = Philox32x4::new(1);
 /// let _: u32 = rng.nextu();
@@ -313,7 +312,7 @@ impl Philox32x4x4 {
 /// # Examples
 ///
 /// ```
-/// use urng::cbrng::b32::Philox32;
+/// use urng::Philox32;
 ///
 /// let _ = core::mem::size_of::<Philox32>();
 /// ```

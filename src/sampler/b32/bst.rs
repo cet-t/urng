@@ -6,9 +6,9 @@ use crate::sampler::Sampler32;
 /// # Examples
 ///
 /// ```
-/// use urng::sampler::Sampler32;
-/// use urng::sampler32::Bst32;
-/// use urng::prng::b32::Mt19937;
+/// use urng::Sampler32;
+/// use urng::Bst32;
+/// use urng::Mt19937;
 ///
 /// let mut rng = Mt19937::new(1);
 /// let mut sampler = Bst32::new(&mut rng, &[1.0f32, 9.0]);

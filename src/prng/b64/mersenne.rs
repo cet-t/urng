@@ -65,7 +65,7 @@ fn sfmt_recursion(
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Mt1993764};
 ///
 /// let mut rng = Mt1993764::new(1);
 /// let _ = rng.nextu();
@@ -176,7 +176,7 @@ impl Rng for Mt1993764 {
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Sfmt1993764};
 ///
 /// let mut rng = Sfmt1993764::new(1);
 /// let _ = rng.nextu();

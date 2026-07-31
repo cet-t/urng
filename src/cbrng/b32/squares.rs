@@ -14,7 +14,7 @@ use crate::{_internal::sm64_from_seed32, rng::Rng};
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Squares32};
 ///
 /// let mut rng = Squares32::new(1);
 /// let _ = rng.nextu();
@@ -84,7 +84,7 @@ pub const SQUARES32x8: usize = 8;
 /// # Examples
 ///
 /// ```no_run
-/// use urng::cbrng::b32::Squares32x8;
+/// use urng::Squares32x8;
 /// unsafe {
 ///     let mut rng = Squares32x8::new(1);
 ///     let _ = rng.nextu();
@@ -202,7 +202,7 @@ impl Squares32x8 {
 /// # Examples
 ///
 /// ```
-/// use urng::cbrng::b32::Squares32Simd;
+/// use urng::Squares32Simd;
 ///
 /// let _ = core::mem::size_of::<Squares32Simd>();
 /// ```

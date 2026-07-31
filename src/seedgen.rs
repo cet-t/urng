@@ -1,19 +1,20 @@
-//! Hardware-noise-based seed generators.
+//! Hardware-noise-based seed generator.
 //!
-//! [`SeedGen32`] and [`SeedGen64`] mix hardware noise (RDSEED/RDRAND on x86/x86_64)
-//! with an existing RNG to produce high-quality seed values.
-//! Falls back to a timestamp-based noise source on platforms without those instructions.
+//! [`SeedGen`] mixes hardware noise (RDSEED/RDRAND on x86/x86_64) with an
+//! existing RNG to produce high-quality seed values, for either `u32` or
+//! `u64` word width. Falls back to a timestamp-based noise source on
+//! platforms without those instructions.
 //!
 //! Enabled by the `seedgen` crate feature.
 //!
 //! # Examples
 //!
 //! ```
-//! use urng::seedgen::SeedGen32;
-//! use urng::prng::b32::SplitMix32;
+//! use urng::SeedGen;
+//! use urng::SplitMix32;
 //!
 //! let mut rng = SplitMix32::new(0);
-//! let mut sg = SeedGen32::new(&mut rng, 0);
+//! let mut sg = SeedGen::new(&mut rng, 0u32);
 //! let (raw, processed): (u32, u32) = sg.next_seed_pair();
 //! assert_eq!(raw <= u32::MAX, true);
 //! ```
@@ -22,7 +23,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use wrapn::wrap;
 
-use crate::rng::Rng;
+use crate::rng::{Rng, Word};
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::{_rdrand32_step, _rdrand64_step, _rdseed32_step, _rdseed64_step};
@@ -30,130 +31,137 @@ use std::arch::x86_64::{_rdrand32_step, _rdrand64_step, _rdseed32_step, _rdseed6
 #[cfg(target_arch = "x86")]
 use std::arch::x86::{_rdrand32_step, _rdseed32_step};
 
-// --- 32-bit constants ---
-const SEED_MIX_INCREMENT: u32 = 0x9E3779B9;
-const SEED_MIX_MULTIPLIER: u32 = 0x85eb_ca6b;
-const FALLBACK_MULTIPLIER: u32 = 0x27d4_eb2d;
-
-// --- 64-bit constants ---
-const SEED_MIX_INCREMENT_64: u64 = 0x9E37_79B9_7F4A_7C15;
-const SEED_MIX_MULTIPLIER_64: u64 = 0xff51_afd7_ed55_8ccd;
-const FALLBACK_MULTIPLIER_64: u64 = 0x2545_f491_4f6c_dd1d;
-
-// ── SeedGen32 ──────────────────────────────────────────────
-
-/// Hardware-noise-assisted 32-bit seed generator.
-///
-/// Wraps an existing [`Rng<Word = u32>`] and mixes hardware noise (RDSEED/RDRAND on x86/x86_64,
-/// timestamp fallback elsewhere) into a Murmur3-style hash to produce reproducibly
-/// high-entropy seed values.
-///
-/// # Examples
-///
-/// ```
-/// use urng::seedgen::SeedGen32;
-/// use urng::prng::b32::SplitMix32;
-///
-/// let mut rng = SplitMix32::new(12345);
-/// let mut sg = SeedGen32::new(&mut rng, 0);
-/// let (raw, seed): (u32, u32) = sg.next_seed_pair();
-/// assert_eq!(raw <= u32::MAX, true);
-/// ```
-pub struct SeedGen32<'a, R: Rng<Word = u32>> {
-    rng: &'a mut R,
-    seed: u32,
+mod sealed {
+    pub trait Sealed {}
+    impl Sealed for u32 {}
+    impl Sealed for u64 {}
 }
 
-impl<'a, R: Rng<Word = u32>> SeedGen32<'a, R> {
-    /// Creates a new `SeedGen32` wrapping `rng` with the given initial `seed`.
-    pub fn new(rng: &'a mut R, seed: u32) -> Self {
-        Self { rng, seed }
+/// A [`Word`] that can drive [`SeedGen`] (`u32` or `u64`).
+///
+/// Centralizes the hardware-noise source, timestamp fallback, and Murmur3-style
+/// mixing formula for each word width, so [`SeedGen`] itself stays width-agnostic.
+pub trait SeedWord: sealed::Sealed + Word {
+    /// Reads hardware noise (RDSEED/RDRAND) if available on this platform.
+    fn hardware_noise() -> Option<Self>;
+    /// Timestamp-based fallback noise source, used when hardware noise is unavailable.
+    fn fallback_noise(seed: Self) -> Self;
+    /// Draws a mixing value from `rng`, in this word's native width.
+    fn rng_mix<R: Rng<Word = Self>>(rng: &mut R) -> Self;
+    /// Mixes `raw` noise with `rng_mix` and the running `seed` into the next seed value.
+    fn mix(raw: Self, rng_mix: Self, seed: Self) -> Self;
+}
+
+impl SeedWord for u32 {
+    fn hardware_noise() -> Option<Self> {
+        hardware_noise32()
     }
 
-    /// Produces the next seed pair derived from hardware noise.
-    ///
-    /// Returns `(raw, processed)` where `raw` is the value read from the
-    /// hardware noise source (RDSEED/RDRAND when available, x86 and x86_64)
-    /// and `processed` is the mixed value that updates the internal seed state.
-    pub fn next_seed_pair(&mut self) -> (u32, u32) {
-        let raw = self.noise();
-        let processed = self.process(raw);
-        (raw, processed)
+    fn fallback_noise(seed: Self) -> Self {
+        fallback_noise32(seed)
     }
 
-    fn process(&mut self, raw: u32) -> u32 {
-        let rng_mix = self.rng.randi(0, i32::MAX) as u32;
+    fn rng_mix<R: Rng<Word = Self>>(rng: &mut R) -> Self {
+        rng.randi(0, i32::MAX) as u32
+    }
+
+    fn mix(raw: Self, rng_mix: Self, seed: Self) -> Self {
+        const SEED_MIX_INCREMENT: u32 = 0x9E3779B9;
+        const SEED_MIX_MULTIPLIER: u32 = 0x85eb_ca6b;
+
         let mut value = wrap!(raw ^ rng_mix);
-        value += self.seed;
+        value += seed;
         value += SEED_MIX_INCREMENT;
         value ^= value >> 16;
         value *= SEED_MIX_MULTIPLIER;
         value ^= value >> 13;
-        self.seed = value.value();
         value.value()
-    }
-
-    fn noise(&self) -> u32 {
-        hardware_noise32().unwrap_or_else(|| fallback_noise32(self.seed))
     }
 }
 
-// ── SeedGen64 ──────────────────────────────────────────────
+impl SeedWord for u64 {
+    fn hardware_noise() -> Option<Self> {
+        hardware_noise64()
+    }
 
-/// Hardware-noise-assisted 64-bit seed generator.
+    fn fallback_noise(seed: Self) -> Self {
+        fallback_noise64(seed)
+    }
+
+    fn rng_mix<R: Rng<Word = Self>>(rng: &mut R) -> Self {
+        rng.randi(0, i64::MAX) as u64
+    }
+
+    fn mix(raw: Self, rng_mix: Self, seed: Self) -> Self {
+        const SEED_MIX_INCREMENT_64: u64 = 0x9E37_79B9_7F4A_7C15;
+        const SEED_MIX_MULTIPLIER_64: u64 = 0xff51_afd7_ed55_8ccd;
+
+        let mut value = wrap!(raw ^ rng_mix);
+        value += seed;
+        value += SEED_MIX_INCREMENT_64;
+        value ^= value >> 33;
+        value += SEED_MIX_MULTIPLIER_64;
+        value ^= value >> 29;
+        value.value()
+    }
+}
+
+// ── SeedGen ────────────────────────────────────────────────
+
+/// Hardware-noise-assisted seed generator.
 ///
-/// Like [`SeedGen32`] but produces 64-bit seed values.
-/// On x86_64 uses native RDSEED64/RDRAND64; on x86 (32-bit) combines two 32-bit
-/// samples; on other platforms falls back to a timestamp-based mix.
+/// Wraps an existing [`Rng`] and mixes hardware noise (RDSEED/RDRAND on x86/x86_64,
+/// timestamp fallback elsewhere) into a Murmur3-style hash to produce reproducibly
+/// high-entropy seed values, in the RNG's own word width (`u32` or `u64`).
 ///
 /// # Examples
 ///
 /// ```
-/// use urng::seedgen::SeedGen64;
-/// use urng::prng::b64::SplitMix64;
+/// use urng::SeedGen;
+/// use urng::SplitMix64;
 ///
 /// let mut rng = SplitMix64::new(12345);
-/// let mut sg = SeedGen64::new(&mut rng, 0);
+/// let mut sg = SeedGen::new(&mut rng, 0u64);
 /// let (raw, seed): (u64, u64) = sg.next_seed_pair();
 /// assert_eq!(raw <= u64::MAX, true);
 /// ```
-pub struct SeedGen64<'a, R: Rng<Word = u64>> {
+pub struct SeedGen<'a, R: Rng>
+where
+    R::Word: SeedWord,
+{
     rng: &'a mut R,
-    seed: u64,
+    seed: R::Word,
 }
 
-impl<'a, R: Rng<Word = u64>> SeedGen64<'a, R> {
-    /// Creates a new `SeedGen64` wrapping `rng` with the given initial `seed`.
-    pub fn new(rng: &'a mut R, seed: u64) -> Self {
+impl<'a, R: Rng> SeedGen<'a, R>
+where
+    R::Word: SeedWord,
+{
+    /// Creates a new `SeedGen` wrapping `rng` with the given initial `seed`.
+    pub fn new(rng: &'a mut R, seed: R::Word) -> Self {
         Self { rng, seed }
     }
 
     /// Produces the next seed pair derived from hardware noise.
     ///
     /// Returns `(raw, processed)` where `raw` is the value read from the
-    /// hardware noise source (RDSEED64/RDRAND64 on x86_64; two RDSEED32 calls
-    /// combined on x86) and `processed` is the mixed value that updates the
-    /// internal seed state.
-    pub fn next_seed_pair(&mut self) -> (u64, u64) {
+    /// hardware noise source (RDSEED/RDRAND when available) and `processed`
+    /// is the mixed value that updates the internal seed state.
+    pub fn next_seed_pair(&mut self) -> (R::Word, R::Word) {
         let raw = self.noise();
         let processed = self.process(raw);
         (raw, processed)
     }
 
-    fn process(&mut self, raw: u64) -> u64 {
-        let rng_mix = self.rng.randi(0, i64::MAX) as u64;
-        let mut value = wrap!(raw ^ rng_mix);
-        value += self.seed;
-        value += SEED_MIX_INCREMENT_64;
-        value ^= value >> 33;
-        value += SEED_MIX_MULTIPLIER_64;
-        value ^= value >> 29;
-        self.seed = value.value();
-        value.value()
+    fn process(&mut self, raw: R::Word) -> R::Word {
+        let rng_mix = R::Word::rng_mix(self.rng);
+        let value = R::Word::mix(raw, rng_mix, self.seed);
+        self.seed = value;
+        value
     }
 
-    fn noise(&self) -> u64 {
-        hardware_noise64().unwrap_or_else(|| fallback_noise64(self.seed))
+    fn noise(&self) -> R::Word {
+        R::Word::hardware_noise().unwrap_or_else(|| R::Word::fallback_noise(self.seed))
     }
 }
 
@@ -202,6 +210,9 @@ fn hardware_noise64() -> Option<u64> {
 }
 
 // ── fallback noise ─────────────────────────────────────────
+
+const FALLBACK_MULTIPLIER: u32 = 0x27d4_eb2d;
+const FALLBACK_MULTIPLIER_64: u64 = 0x2545_f491_4f6c_dd1d;
 
 fn fallback_noise32(seed: u32) -> u32 {
     let now = SystemTime::now()

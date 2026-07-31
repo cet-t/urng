@@ -4,14 +4,15 @@
 //! and re-exports the main generator types. Counter-based generators live in
 //! [`crate::cbrng::b32`].
 
-pub mod jsf;
-pub mod mersenne;
-pub mod pcg;
-pub mod sfc;
-pub mod splitmix;
-pub mod xoroshiro;
-pub mod xorshift;
-pub mod xoshiro;
+pub(crate) mod jsf;
+pub(crate) mod mersenne;
+pub(crate) mod pcg;
+pub(crate) mod sfc;
+pub(crate) mod splitmix;
+pub(crate) mod xoroshiro;
+pub(crate) mod xorshift;
+pub(crate) mod xorwow;
+pub(crate) mod xoshiro;
 
 pub use jsf::Jsf32;
 #[cfg(feature = "simd")]
@@ -32,7 +33,8 @@ pub use splitmix::{SplitMix32Simd, SplitMix32x16};
 pub use xoroshiro::Xoroshiro64Ss;
 #[cfg(feature = "simd")]
 pub use xoroshiro::Xoroshiro64Ssx16;
-pub use xorshift::{Xorshift32, Xorshift128, Xorwow};
+pub use xorshift::{Xorshift32, Xorshift128};
+pub use xorwow::Xorwow;
 pub use xoshiro::{Xoshiro128Pp, Xoshiro128Ss};
 #[cfg(feature = "simd")]
 pub use xoshiro::{Xoshiro128Ppx16, Xoshiro128Ssx16};

@@ -12,8 +12,7 @@ use crate::rng::Rng;
 /// # Examples
 ///
 /// ```
-/// use urng::rng::Rng;
-/// use urng::prng::b64::Xorshift64;
+/// use urng::{Rng, Xorshift64};
 ///
 /// let mut rng = Xorshift64::new(1);
 /// let _ = rng.nextu();

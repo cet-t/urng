@@ -1,68 +1,47 @@
 use colored::Colorize;
 use criterion::measurement::{Measurement, WallTime};
 use thousands::Separable;
-#[rustfmt::skip]
-#[allow(unused_imports)]
 use urng::{
-    cabi32::{
-        mt19937_free, mt19937_new, mt19937_next_u32s,
-        pcg32_free, pcg32_new, pcg32_next_u32s,
-        pcg32simd_free, pcg32simd_new, pcg32simd_next_u32s,
-        pcg32x8_free, pcg32x8_new, pcg32x8_next_u32s,
-        philox32_free, philox32_new, philox32_next_u32s,
-        philox32x4_free, philox32x4_new, philox32x4_next_u32s,
-        philox32x4x4_free, philox32x4x4_new, philox32x4x4_next_u32s,
-        sfmt607_free, sfmt607_new, sfmt607_next_u32s,
-        sfmt1279_free, sfmt1279_new, sfmt1279_next_u32s,
-        sfmt2281_free, sfmt2281_new, sfmt2281_next_u32s,
-        sfmt4253_free, sfmt4253_new, sfmt4253_next_u32s,
-        sfmt11213_free, sfmt11213_new, sfmt11213_next_u32s,
-        sfmt19937_free, sfmt19937_new, sfmt19937_next_u32s,
-        sfmt44497_free, sfmt44497_new, sfmt44497_next_u32s,
-        sfmt86243_free, sfmt86243_new, sfmt86243_next_u32s,
-        sfmt132049_free, sfmt132049_new, sfmt132049_next_u32s,
-        sfmt216091_free, sfmt216091_new, sfmt216091_next_u32s,
-        splitmix32_free, splitmix32_new, splitmix32_next_u32s,
-        splitmix32simd_free, splitmix32simd_new, splitmix32simd_next_u32s,
-        splitmix32x16_free, splitmix32x16_new, splitmix32x16_next_u32s,
-        squares32_free, squares32_new, squares32_next_u32s,
-        squares32simd_free, squares32simd_new, squares32simd_next_u32s,
-        squares32x8_free, squares32x8_new, squares32x8_next_u32s,
-        threefry32x2_free, threefry32x2_new, threefry32x2_next_u32s,
-        threefry32x4_free, threefry32x4_new, threefry32x4_next_u32s,
-        xoroshiro64ss_free, xoroshiro64ss_new, xoroshiro64ss_next_u32s,
-        xoroshiro64ssx8_free, xoroshiro64ssx8_new, xoroshiro64ssx8_next_u32s,
-        xoroshiro64ssx16_free, xoroshiro64ssx16_new, xoroshiro64ssx16_next_u32s,
-        xoshiro128pp_free, xoshiro128pp_new, xoshiro128pp_next_u32s,
-        xoshiro128ppx16_free, xoshiro128ppx16_new, xoshiro128ppx16_next_u32s,
-        xoshiro128ss_free, xoshiro128ss_new, xoshiro128ss_next_u32s,
-        xoshiro128ssx16_free, xoshiro128ssx16_new, xoshiro128ssx16_next_u32s,
-        jsf32_free, jsf32_new, jsf32_next_u32s,
-        jsf32x16_free, jsf32x16_new, jsf32x16_next_u32s,
-        sfc32_free, sfc32_new, sfc32_next_u32s,
-        sfc32x4_free, sfc32x4_new, sfc32x4_next_u32s,
-        sfc32x8_free, sfc32x8_new, sfc32x8_next_u32s,
-        sfc32x16_free, sfc32x16_new, sfc32x16_next_u32s,
+    cabi::{
+        biski64_free, biski64_new, biski64_next_u64s, biski64x8_free, biski64x8_new,
+        biski64x8_next_u64s, cet64_free, cet64_new, cet64_next_u64s, cet64x8_free, cet64x8_new,
+        cet64x8_next_u64s, cet256_free, cet256_new, cet256_next_u64s, cet256x2_free, cet256x2_new,
+        cet256x2_next_u64s, mt1993764_free, mt1993764_new, mt1993764_next_u64s, philox64_free,
+        philox64_new, philox64_next_u64s, sfc64_free, sfc64_new, sfc64_next_u64s, sfc64x8_free,
+        sfc64x8_new, sfc64x8_next_u64s, sfmt1993764_free, sfmt1993764_new, sfmt1993764_next_u64s,
+        splitmix64_free, splitmix64_new, splitmix64_next_u64s, threefish256_free, threefish256_new,
+        threefish256_next_u64s, xoroshiro128pp_free, xoroshiro128pp_new, xoroshiro128pp_next_u64s,
+        xoroshiro128ss_free, xoroshiro128ss_new, xoroshiro128ss_next_u64s, xoshiro256pp_free,
+        xoshiro256pp_new, xoshiro256pp_next_u64s, xoshiro256ss_free, xoshiro256ss_new,
+        xoshiro256ss_next_u64s, xoshiro256ssx2_free, xoshiro256ssx2_new, xoshiro256ssx2_next_u64s,
     },
-    cabi64::{
-        mt1993764_free, mt1993764_new, mt1993764_next_u64s,
-        philox64_free, philox64_new, philox64_next_u64s,
-        sfmt1993764_free, sfmt1993764_new, sfmt1993764_next_u64s,
-        splitmix64_free, splitmix64_new, splitmix64_next_u64s,
-        cet64_free, cet64_new, cet64_next_u64s,
-        cet64x8_free, cet64x8_new, cet64x8_next_u64s,
-        cet256_free, cet256_new, cet256_next_u64s,
-        cet256x2_free, cet256x2_new, cet256x2_next_u64s,
-        threefish256_free, threefish256_new, threefish256_next_u64s,
-        xoroshiro128pp_free, xoroshiro128pp_new, xoroshiro128pp_next_u64s,
-        xoroshiro128ss_free, xoroshiro128ss_new, xoroshiro128ss_next_u64s,
-        xoshiro256pp_free, xoshiro256pp_new, xoshiro256pp_next_u64s,
-        xoshiro256ss_free, xoshiro256ss_new, xoshiro256ss_next_u64s,
-        xoshiro256ssx2_free, xoshiro256ssx2_new, xoshiro256ssx2_next_u64s,
-        sfc64_free, sfc64_new, sfc64_next_u64s,
-        sfc64x8_free, sfc64x8_new, sfc64x8_next_u64s,
-        biski64_free, biski64_new, biski64_next_u64s,
-        biski64x8_free, biski64x8_new, biski64x8_next_u64s,
+    cabi::{
+        jsf32_free, jsf32_new, jsf32_next_u32s, jsf32x16_free, jsf32x16_new, jsf32x16_next_u32s,
+        mt19937_free, mt19937_new, mt19937_next_u32s, pcg32_free, pcg32_new, pcg32_next_u32s,
+        pcg32simd_free, pcg32simd_new, pcg32simd_next_u32s, pcg32x8_free, pcg32x8_new,
+        pcg32x8_next_u32s, philox32_free, philox32_new, philox32_next_u32s, philox32x4_free,
+        philox32x4_new, philox32x4_next_u32s, philox32x4x4_free, philox32x4x4_new,
+        philox32x4x4_next_u32s, sfc32_free, sfc32_new, sfc32_next_u32s, sfc32x4_free, sfc32x4_new,
+        sfc32x4_next_u32s, sfc32x8_free, sfc32x8_new, sfc32x8_next_u32s, sfc32x16_free,
+        sfc32x16_new, sfc32x16_next_u32s, sfmt607_free, sfmt607_new, sfmt607_next_u32s,
+        sfmt1279_free, sfmt1279_new, sfmt1279_next_u32s, sfmt2281_free, sfmt2281_new,
+        sfmt2281_next_u32s, sfmt4253_free, sfmt4253_new, sfmt4253_next_u32s, sfmt11213_free,
+        sfmt11213_new, sfmt11213_next_u32s, sfmt19937_free, sfmt19937_new, sfmt19937_next_u32s,
+        sfmt44497_free, sfmt44497_new, sfmt44497_next_u32s, sfmt86243_free, sfmt86243_new,
+        sfmt86243_next_u32s, sfmt132049_free, sfmt132049_new, sfmt132049_next_u32s,
+        sfmt216091_free, sfmt216091_new, sfmt216091_next_u32s, splitmix32_free, splitmix32_new,
+        splitmix32_next_u32s, splitmix32simd_free, splitmix32simd_new, splitmix32simd_next_u32s,
+        splitmix32x16_free, splitmix32x16_new, splitmix32x16_next_u32s, squares32_free,
+        squares32_new, squares32_next_u32s, squares32simd_free, squares32simd_new,
+        squares32simd_next_u32s, squares32x8_free, squares32x8_new, squares32x8_next_u32s,
+        threefry32x2_free, threefry32x2_new, threefry32x2_next_u32s, threefry32x4_free,
+        threefry32x4_new, threefry32x4_next_u32s, xoroshiro64ss_free, xoroshiro64ss_new,
+        xoroshiro64ss_next_u32s, xoroshiro64ssx8_free, xoroshiro64ssx8_new,
+        xoroshiro64ssx8_next_u32s, xoroshiro64ssx16_free, xoroshiro64ssx16_new,
+        xoroshiro64ssx16_next_u32s, xoshiro128pp_free, xoshiro128pp_new, xoshiro128pp_next_u32s,
+        xoshiro128ppx16_free, xoshiro128ppx16_new, xoshiro128ppx16_next_u32s, xoshiro128ss_free,
+        xoshiro128ss_new, xoshiro128ss_next_u32s, xoshiro128ssx16_free, xoshiro128ssx16_new,
+        xoshiro128ssx16_next_u32s,
     },
 };
 
@@ -333,7 +312,14 @@ fn main() {
         buf32, r32, sfmt607, sfmt1279, sfmt2281, sfmt4253, sfmt11213, sfmt44497, sfmt86243,
         sfmt132049, sfmt216091
     );
-    bench32!(buf32, r32, xoshiro128pp, xoshiro128ppx16, xoshiro128ssx16);
+    bench32!(
+        buf32,
+        r32,
+        xoshiro128pp,
+        xoshiro128ss,
+        xoshiro128ppx16,
+        xoshiro128ssx16
+    );
     bench32!(buf32, r32, xoroshiro64ss, xoroshiro64ssx8, xoroshiro64ssx16);
     bench32!(buf32, r32, jsf32, jsf32x16);
     bench32!(buf32, r32, sfc32, sfc32x4, sfc32x8, sfc32x16);
@@ -344,7 +330,7 @@ fn main() {
     // --- 64-bit ---
     let mut buf64 = vec![0u64; N];
     {
-        use urng::cabi64::splitmix64_next_u64s;
+        use urng::cabi::splitmix64_next_u64s;
         let ptr = splitmix64_new(0);
         splitmix64_next_u64s(ptr, buf64.as_mut_ptr(), N);
         splitmix64_free(ptr);

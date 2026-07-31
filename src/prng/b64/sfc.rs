@@ -15,7 +15,7 @@ use crate::rng::Rng;
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Sfc64};
 ///
 /// let mut rng = Sfc64::new(1);
 /// let _ = Rng::nextu(&mut rng);
@@ -63,7 +63,7 @@ impl Rng for Sfc64 {
 /// # Examples
 ///
 /// ```no_run
-/// use urng::prng::b64::Sfc64x8;
+/// use urng::Sfc64x8;
 ///
 /// unsafe {
 ///     let mut rng = Sfc64x8::new(0);

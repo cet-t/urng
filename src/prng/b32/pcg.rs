@@ -14,7 +14,7 @@ use crate::{_internal::sm64_from_seed32, Rng};
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, Pcg32};
 ///
 /// let mut rng = Pcg32::new(1);
 /// let _ = rng.nextu();
@@ -65,7 +65,7 @@ pub const PCG32_MULT: u64 = 6364136223846793005;
 /// # Examples
 ///
 /// ```no_run
-/// use urng::prng::b32::Pcg32x8;
+/// use urng::Pcg32x8;
 ///
 /// unsafe {
 ///     let mut rng = Pcg32x8::new(1);
@@ -158,7 +158,7 @@ impl Pcg32x8 {
 /// # Examples
 ///
 /// ```
-/// use urng::prng::b32::Pcg32Simd;
+/// use urng::Pcg32Simd;
 ///
 /// let _ = core::mem::size_of::<Pcg32Simd>();
 /// ```

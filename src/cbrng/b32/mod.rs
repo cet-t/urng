@@ -1,8 +1,8 @@
 //! Counter-based 32-bit random number generators.
 
-pub mod philox;
-pub mod squares;
-pub mod threefry;
+pub(crate) mod philox;
+pub(crate) mod squares;
+pub(crate) mod threefry;
 
 pub use philox::Philox32x4;
 #[cfg(feature = "simd")]

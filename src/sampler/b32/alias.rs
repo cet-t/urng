@@ -8,9 +8,9 @@ use crate::sampler::Sampler32;
 /// # Examples
 ///
 /// ```
-/// use urng::sampler::Sampler32;
-/// use urng::sampler32::Alias32;
-/// use urng::prng::b32::Mt19937;
+/// use urng::Sampler32;
+/// use urng::Alias32;
+/// use urng::Mt19937;
 ///
 /// let mut rng = Mt19937::new(1);
 /// let mut sampler = Alias32::new(&mut rng, &[1.0f32, 9.0]);

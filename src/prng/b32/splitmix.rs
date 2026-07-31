@@ -13,7 +13,7 @@ use crate::rng::Rng;
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, SplitMix32};
 ///
 /// let mut rng = SplitMix32::new(1);
 /// let _ = rng.nextu();
@@ -63,7 +63,7 @@ pub const SPLITMIX32_GAMMA: u32 = 0x9E37_79B9;
 /// # Examples
 ///
 /// ```no_run
-/// use urng::prng::b32::SplitMix32x16;
+/// use urng::SplitMix32x16;
 ///
 /// unsafe {
 ///     let mut rng = SplitMix32x16::new(1);
@@ -137,7 +137,7 @@ impl SplitMix32x16 {
 /// # Examples
 ///
 /// ```
-/// use urng::prng::b32::SplitMix32Simd;
+/// use urng::SplitMix32Simd;
 ///
 /// let _ = core::mem::size_of::<SplitMix32Simd>();
 /// ```

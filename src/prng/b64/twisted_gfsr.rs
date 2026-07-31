@@ -13,7 +13,7 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use urng::*;
+/// use urng::{Rng, TwistedGFSR};
 ///
 /// let mut rng = TwistedGFSR::new(0);
 /// let _ = rng.nextu();

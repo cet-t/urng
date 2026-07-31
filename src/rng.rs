@@ -19,8 +19,6 @@ pub trait Word: sealed::Sealed + Copy {
     type Float: Copy;
     /// The signed integer type used for ranged draws (`i32` / `i64`).
     type Int: Copy;
-    /// The bit width of the word (`32` or `64`).
-    const BITS: u32;
 
     /// Maps the word uniformly onto `[0, 1)`.
     fn to_f01(self) -> Self::Float;
@@ -39,7 +37,6 @@ macro_rules! impl_word {
             impl Word for [<u $bits>] {
                 type Float = [<f $bits>];
                 type Int = [<i $bits>];
-                const BITS: u32 = $bits;
 
                 #[inline(always)]
                 fn to_f01(self) -> Self::Float {
