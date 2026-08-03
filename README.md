@@ -129,7 +129,7 @@ These generators expose a bulk-generation API and require AVX support at runtime
 
 > Requires the `sampler` feature.
 
-Weighted random index selection. Two implementations are provided for each bit-width, both implementing the `Sampler32` / `Sampler64` trait (`urng::Sampler32` / `urng::Sampler64`).
+Weighted random index selection. Two implementations are provided for each bit-width, both implementing the `Sampler` trait (`urng::Sampler`).
 
 | Struct    | Module   | Algorithm      | Build | Sample   |
 | --------- | -------- | -------------- | ----- | -------- |

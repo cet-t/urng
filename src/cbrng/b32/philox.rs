@@ -304,22 +304,6 @@ impl Philox32x4x4 {
     }
 }
 
-// -- Philox32 --
-
-/// Opaque handle for the Philox32 RNG.
-/// Dispatched at runtime to AVX-512 (`Philox32x4x4`) or scalar (`Philox32x4`) implementation.
-///
-/// # Examples
-///
-/// ```
-/// use urng::Philox32;
-///
-/// let _ = core::mem::size_of::<Philox32>();
-/// ```
-#[cfg(feature = "simd")]
-#[repr(C)]
-pub struct Philox32([u8; 0]);
-
 #[cfg(test)]
 mod tests {
     use super::*;

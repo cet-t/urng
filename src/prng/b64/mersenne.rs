@@ -1,6 +1,5 @@
 use std::ptr;
 
-use bytemuck;
 use wrapn::{Wrap, wrap};
 
 use crate::prng::b64::SplitMix64;

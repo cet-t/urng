@@ -52,61 +52,38 @@ pub trait SeedWord: sealed::Sealed + Word {
     fn mix(raw: Self, rng_mix: Self, seed: Self) -> Self;
 }
 
-impl SeedWord for u32 {
-    fn hardware_noise() -> Option<Self> {
-        hardware_noise32()
-    }
+macro_rules! impl_seed_word {
+    ($bits:expr, $inc:expr, $mult:expr, $offsets:expr) => {
+        ::pastey::paste! {
+            impl SeedWord for [<u $bits>] {
+                fn hardware_noise() -> Option<Self> {
+                    [<hardware_noise $bits>]()
+                }
 
-    fn fallback_noise(seed: Self) -> Self {
-        fallback_noise32(seed)
-    }
+                fn fallback_noise(seed: Self) -> Self {
+                    [<fallback_noise $bits>](seed)
+                }
 
-    fn rng_mix<R: Rng<Word = Self>>(rng: &mut R) -> Self {
-        rng.randi(0, i32::MAX) as u32
-    }
+                fn rng_mix<R: Rng<Word = Self>>(rng: &mut R) -> Self {
+                    rng.randi(0, [<i $bits>]::MAX) as [<u $bits>]
+                }
 
-    fn mix(raw: Self, rng_mix: Self, seed: Self) -> Self {
-        const SEED_MIX_INCREMENT: u32 = 0x9E3779B9;
-        const SEED_MIX_MULTIPLIER: u32 = 0x85eb_ca6b;
-
-        let mut value = wrap!(raw ^ rng_mix);
-        value += seed;
-        value += SEED_MIX_INCREMENT;
-        value ^= value >> 16;
-        value *= SEED_MIX_MULTIPLIER;
-        value ^= value >> 13;
-        value.value()
-    }
+                fn mix(raw: Self, rng_mix: Self, seed: Self) -> Self {
+                    let mut value = wrap!(raw ^ rng_mix);
+                    value += seed;
+                    value += $inc;
+                    value ^= value >> $offsets[0];
+                    value *= $mult;
+                    value ^= value >> $offsets[1];
+                    value.value()
+                }
+            }
+        }
+    };
 }
 
-impl SeedWord for u64 {
-    fn hardware_noise() -> Option<Self> {
-        hardware_noise64()
-    }
-
-    fn fallback_noise(seed: Self) -> Self {
-        fallback_noise64(seed)
-    }
-
-    fn rng_mix<R: Rng<Word = Self>>(rng: &mut R) -> Self {
-        rng.randi(0, i64::MAX) as u64
-    }
-
-    fn mix(raw: Self, rng_mix: Self, seed: Self) -> Self {
-        const SEED_MIX_INCREMENT_64: u64 = 0x9E37_79B9_7F4A_7C15;
-        const SEED_MIX_MULTIPLIER_64: u64 = 0xff51_afd7_ed55_8ccd;
-
-        let mut value = wrap!(raw ^ rng_mix);
-        value += seed;
-        value += SEED_MIX_INCREMENT_64;
-        value ^= value >> 33;
-        value += SEED_MIX_MULTIPLIER_64;
-        value ^= value >> 29;
-        value.value()
-    }
-}
-
-// ── SeedGen ────────────────────────────────────────────────
+impl_seed_word!(32, 0x9E3779B9, 0x85eb_ca6b, [16, 13]);
+impl_seed_word!(64, 0x9E37_79B9_7F4A_7C15, 0xff51_afd7_ed55_8ccd, [33, 29]);
 
 /// Hardware-noise-assisted seed generator.
 ///
@@ -165,8 +142,6 @@ where
     }
 }
 
-// ── hardware noise ─────────────────────────────────────────
-
 fn hardware_noise32() -> Option<u32> {
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     {
@@ -209,79 +184,55 @@ fn hardware_noise64() -> Option<u64> {
     None
 }
 
-// ── fallback noise ─────────────────────────────────────────
+macro_rules! impl_noise {
+    ($bits:expr, $offsets:expr, $mult:expr) => {
+        ::pastey::paste! {
+            fn [<fallback_noise $bits>](seed: [<u $bits>]) -> [<u $bits>] {
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos();
 
-const FALLBACK_MULTIPLIER: u32 = 0x27d4_eb2d;
-const FALLBACK_MULTIPLIER_64: u64 = 0x2545_f491_4f6c_dd1d;
-
-fn fallback_noise32(seed: u32) -> u32 {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
-
-    let mut value = (now as u32)
-        .wrapping_add(seed.rotate_left(7))
-        .wrapping_mul(FALLBACK_MULTIPLIER);
-    value ^= ((now >> 32) as u32).wrapping_add(seed.rotate_right(5));
-    value ^ (value >> 15)
-}
-
-fn fallback_noise64(seed: u64) -> u64 {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
-
-    let mut value = (now as u64)
-        .wrapping_add(seed.rotate_left(11))
-        .wrapping_mul(FALLBACK_MULTIPLIER_64);
-    value ^= ((now >> 64) as u64).wrapping_add(seed.rotate_right(7));
-    value ^ (value >> 31)
-}
-
-// ── x86 / x86_64 intrinsics ───────────────────────────────
-
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-unsafe fn rdseed32_once() -> Option<u32> {
-    let mut value = 0u32;
-    for _ in 0..4 {
-        if unsafe { _rdseed32_step(&mut value) } == 1 {
-            return Some(value);
+                let mut value = (now as [<u $bits>])
+                    .wrapping_add(seed.rotate_left($offsets[0]))
+                    .wrapping_mul($mult);
+                value ^= ((now >> $bits) as [<u $bits>]).wrapping_add(seed.rotate_right($offsets[1]));
+                value ^ (value >> ($bits / 2 - 1))
+            }
         }
-    }
-    None
+    };
 }
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-unsafe fn rdrand32_once() -> Option<u32> {
-    let mut value = 0u32;
-    for _ in 0..4 {
-        if unsafe { _rdrand32_step(&mut value) } == 1 {
-            return Some(value);
+impl_noise!(32, [7, 5], 0x27d4eb2d);
+impl_noise!(64, [11, 7], 0x2545_f491_4f6c_dd1d);
+
+macro_rules! impl_rd {
+    ($bits:expr, $($arches:expr),+) => {
+        ::pastey::paste! {
+            #[cfg(any($(target_arch = $arches),+))]
+            unsafe fn [<rdseed $bits _once>]() -> Option<[<u $bits>]> {
+                let mut value = 0 as [<u $bits>];
+                for _ in 0..4 {
+                    if unsafe { [<_rdseed $bits _step>](&mut value) } == 1 {
+                        return Some(value);
+                    }
+                }
+                None
+            }
+
+            #[cfg(any($(target_arch = $arches),+))]
+            unsafe fn [<rdrand $bits _once>]() -> Option<[<u $bits>]> {
+                let mut value = 0 as [<u $bits>];
+                for _ in 0..4 {
+                    if unsafe { [<_rdrand $bits _step>](&mut value) } == 1 {
+                        return Some(value);
+                    }
+                }
+                None
+            }
         }
-    }
-    None
+    };
 }
 
-#[cfg(target_arch = "x86_64")]
-unsafe fn rdseed64_once() -> Option<u64> {
-    let mut value = 0u64;
-    for _ in 0..4 {
-        if unsafe { _rdseed64_step(&mut value) } == 1 {
-            return Some(value);
-        }
-    }
-    None
-}
-
-#[cfg(target_arch = "x86_64")]
-unsafe fn rdrand64_once() -> Option<u64> {
-    let mut value = 0u64;
-    for _ in 0..4 {
-        if unsafe { _rdrand64_step(&mut value) } == 1 {
-            return Some(value);
-        }
-    }
-    None
-}
+impl_rd!(32, "x86", "x86_64");
+impl_rd!(64, "x86_64");

@@ -113,7 +113,3 @@ pub trait Seed {
     /// Builds `Self` from a seed.
     fn from_seed(seed: Self::Seed) -> Self;
 }
-
-pub fn default<R: self::Rng + Default>() -> R {
-    R::default()
-}

@@ -19,29 +19,28 @@ use urng::{
         jsf32_free, jsf32_new, jsf32_next_u32s, jsf32x16_free, jsf32x16_new, jsf32x16_next_u32s,
         mt19937_free, mt19937_new, mt19937_next_u32s, pcg32_free, pcg32_new, pcg32_next_u32s,
         pcg32simd_free, pcg32simd_new, pcg32simd_next_u32s, pcg32x8_free, pcg32x8_new,
-        pcg32x8_next_u32s, philox32_free, philox32_new, philox32_next_u32s, philox32x4_free,
-        philox32x4_new, philox32x4_next_u32s, philox32x4x4_free, philox32x4x4_new,
-        philox32x4x4_next_u32s, sfc32_free, sfc32_new, sfc32_next_u32s, sfc32x4_free, sfc32x4_new,
-        sfc32x4_next_u32s, sfc32x8_free, sfc32x8_new, sfc32x8_next_u32s, sfc32x16_free,
-        sfc32x16_new, sfc32x16_next_u32s, sfmt607_free, sfmt607_new, sfmt607_next_u32s,
-        sfmt1279_free, sfmt1279_new, sfmt1279_next_u32s, sfmt2281_free, sfmt2281_new,
-        sfmt2281_next_u32s, sfmt4253_free, sfmt4253_new, sfmt4253_next_u32s, sfmt11213_free,
-        sfmt11213_new, sfmt11213_next_u32s, sfmt19937_free, sfmt19937_new, sfmt19937_next_u32s,
-        sfmt44497_free, sfmt44497_new, sfmt44497_next_u32s, sfmt86243_free, sfmt86243_new,
-        sfmt86243_next_u32s, sfmt132049_free, sfmt132049_new, sfmt132049_next_u32s,
-        sfmt216091_free, sfmt216091_new, sfmt216091_next_u32s, splitmix32_free, splitmix32_new,
-        splitmix32_next_u32s, splitmix32simd_free, splitmix32simd_new, splitmix32simd_next_u32s,
-        splitmix32x16_free, splitmix32x16_new, splitmix32x16_next_u32s, squares32_free,
-        squares32_new, squares32_next_u32s, squares32simd_free, squares32simd_new,
-        squares32simd_next_u32s, squares32x8_free, squares32x8_new, squares32x8_next_u32s,
-        threefry32x2_free, threefry32x2_new, threefry32x2_next_u32s, threefry32x4_free,
-        threefry32x4_new, threefry32x4_next_u32s, xoroshiro64ss_free, xoroshiro64ss_new,
-        xoroshiro64ss_next_u32s, xoroshiro64ssx8_free, xoroshiro64ssx8_new,
-        xoroshiro64ssx8_next_u32s, xoroshiro64ssx16_free, xoroshiro64ssx16_new,
-        xoroshiro64ssx16_next_u32s, xoshiro128pp_free, xoshiro128pp_new, xoshiro128pp_next_u32s,
-        xoshiro128ppx16_free, xoshiro128ppx16_new, xoshiro128ppx16_next_u32s, xoshiro128ss_free,
-        xoshiro128ss_new, xoshiro128ss_next_u32s, xoshiro128ssx16_free, xoshiro128ssx16_new,
-        xoshiro128ssx16_next_u32s,
+        pcg32x8_next_u32s, philox32x4_free, philox32x4_new, philox32x4_next_u32s,
+        philox32x4x4_free, philox32x4x4_new, philox32x4x4_next_u32s, sfc32_free, sfc32_new,
+        sfc32_next_u32s, sfc32x4_free, sfc32x4_new, sfc32x4_next_u32s, sfc32x8_free, sfc32x8_new,
+        sfc32x8_next_u32s, sfc32x16_free, sfc32x16_new, sfc32x16_next_u32s, sfmt607_free,
+        sfmt607_new, sfmt607_next_u32s, sfmt1279_free, sfmt1279_new, sfmt1279_next_u32s,
+        sfmt2281_free, sfmt2281_new, sfmt2281_next_u32s, sfmt4253_free, sfmt4253_new,
+        sfmt4253_next_u32s, sfmt11213_free, sfmt11213_new, sfmt11213_next_u32s, sfmt19937_free,
+        sfmt19937_new, sfmt19937_next_u32s, sfmt44497_free, sfmt44497_new, sfmt44497_next_u32s,
+        sfmt86243_free, sfmt86243_new, sfmt86243_next_u32s, sfmt132049_free, sfmt132049_new,
+        sfmt132049_next_u32s, sfmt216091_free, sfmt216091_new, sfmt216091_next_u32s,
+        splitmix32_free, splitmix32_new, splitmix32_next_u32s, splitmix32simd_free,
+        splitmix32simd_new, splitmix32simd_next_u32s, splitmix32x16_free, splitmix32x16_new,
+        splitmix32x16_next_u32s, squares32_free, squares32_new, squares32_next_u32s,
+        squares32simd_free, squares32simd_new, squares32simd_next_u32s, squares32x8_free,
+        squares32x8_new, squares32x8_next_u32s, threefry32x2_free, threefry32x2_new,
+        threefry32x2_next_u32s, threefry32x4_free, threefry32x4_new, threefry32x4_next_u32s,
+        xoroshiro64ss_free, xoroshiro64ss_new, xoroshiro64ss_next_u32s, xoroshiro64ssx8_free,
+        xoroshiro64ssx8_new, xoroshiro64ssx8_next_u32s, xoroshiro64ssx16_free,
+        xoroshiro64ssx16_new, xoroshiro64ssx16_next_u32s, xoshiro128pp_free, xoshiro128pp_new,
+        xoshiro128pp_next_u32s, xoshiro128ppx16_free, xoshiro128ppx16_new,
+        xoshiro128ppx16_next_u32s, xoshiro128ss_free, xoshiro128ss_new, xoshiro128ss_next_u32s,
+        xoshiro128ssx16_free, xoshiro128ssx16_new, xoshiro128ssx16_next_u32s,
     },
 };
 
@@ -302,7 +301,7 @@ fn main() {
     println!("{}", "─".repeat(72).bright_black());
 
     let mut r32 = Vec::new();
-    bench32!(buf32, r32, philox32x4x4, philox32x4, philox32);
+    bench32!(buf32, r32, philox32x4x4, philox32x4);
     bench32!(buf32, r32, threefry32x4, threefry32x2);
     bench32!(buf32, r32, squares32, squares32x8, squares32simd);
     bench32!(buf32, r32, pcg32, pcg32x8, pcg32simd);
@@ -360,7 +359,6 @@ fn main() {
         buf32,
         r32_l3,
         philox32x4x4,
-        philox32,
         threefry32x4,
         squares32x8,
         pcg32x8,

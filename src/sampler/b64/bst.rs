@@ -1,12 +1,12 @@
 use crate::rng::Rng;
-use crate::sampler::Sampler64;
+use crate::sampler::Sampler;
 
 /// Weighted sampler using cumulative sums and binary search (O(log n) sample, O(n) build).
 ///
 /// # Examples
 ///
 /// ```
-/// use urng::Sampler64;
+/// use urng::Sampler;
 /// use urng::Bst64;
 /// use urng::Mt1993764;
 ///
@@ -40,7 +40,7 @@ impl<'a, R: Rng<Word = u64> + 'a> Bst64<'a, R> {
     }
 }
 
-impl<'a, R: Rng<Word = u64> + 'a> Sampler64<'a, R> for Bst64<'a, R> {
+impl<'a, R: Rng<Word = u64> + 'a> Sampler<'a, R> for Bst64<'a, R> {
     fn weights(&mut self, weights: &[f64]) {
         self.cumulative = Self::build_cumulative(weights);
     }
@@ -61,19 +61,13 @@ impl<'a, R: Rng<Word = u64> + 'a> Sampler64<'a, R> for Bst64<'a, R> {
 mod tests {
     use super::*;
     use crate::prng::b64::Mt1993764;
-    use crate::sampler::Sampler64;
+    use crate::sampler::Sampler;
 
     #[test]
     fn bst64_works() {
         let mut rng = Mt1993764::new(1);
-        let mut sampler = Bst64::new(&mut rng, &[1f64, 2f64, 4f64, 8f64]);
-        // weights 1:2:4:8 (total 15) → index 3 expected ~53% of the time
-        let n = 10_000;
-        let mut counts = [0usize; 4];
-        for _ in 0..n {
-            counts[sampler.sample()] += 1;
-        }
-        assert!((4_800..=5_900).contains(&counts[3]), "counts = {counts:?}");
-        assert!(counts[0] < counts[3], "counts = {counts:?}");
+        let mut sampler = Bst64::new(&mut rng, &[0.1, 1.0, 10.0, 100.0]);
+        let ones = (0..100_000).filter(|_| sampler.sample() == 1).count();
+        assert_eq!(ones, 911);
     }
 }

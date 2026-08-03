@@ -318,12 +318,10 @@ pub use simd::*;
 
 #[cfg(feature = "simd")]
 mod simd {
-    use super::*;
     use crate::cbrng::b32::{
         PHILOX32x4x4_CHUNK_RATIO, PHILOX32x4x4_PAR_CHUNK, PHILOX32x4x4_SHIFT, PHILOX32x16,
-        PHILOX32x16_SHIFT, Philox32, Philox32x4x4,
+        PHILOX32x16_SHIFT, Philox32x4x4,
     };
-    use crate::dispatch_simd;
     use rayon::iter::{IndexedParallelIterator, ParallelIterator};
     use rayon::slice::ParallelSliceMut;
     use std::arch::x86_64::*;
@@ -1100,91 +1098,5 @@ mod simd {
             }
             rng.c = _mm512_loadu_si512(c_array.as_ptr() as *const _);
         }
-    }
-
-    /// Creates a new `Philox32` instance, dispatching to AVX-512 or scalar implementation.
-    /// The caller is responsible for freeing the memory using `philox32_free`.
-    #[unsafe(no_mangle)]
-    pub extern "C" fn philox32_new(seed: u32) -> *mut Philox32 {
-        dispatch_simd!(Philox32, philox32x4_new, philox32x4x4_new, seed)
-    }
-    /// Frees the memory of a `Philox32` instance.
-    #[unsafe(no_mangle)]
-    pub extern "C" fn philox32_free(ptr: *mut Philox32) {
-        dispatch_simd!(
-            Philox32x4x4,
-            Philox32x4,
-            philox32x4_free,
-            philox32x4x4_free,
-            ptr
-        )
-    }
-    /// Fills the output buffer with the next random `u32` values using the best available implementation.
-    #[unsafe(no_mangle)]
-    pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: usize) {
-        dispatch_simd!(
-            Philox32x4x4,
-            Philox32x4,
-            philox32x4_next_u32s,
-            philox32x4x4_next_u32s,
-            ptr,
-            out,
-            count
-        )
-    }
-    /// Fills the output buffer with the next random `f32` values in the range [0, 1).
-    #[unsafe(no_mangle)]
-    pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: usize) {
-        dispatch_simd!(
-            Philox32x4x4,
-            Philox32x4,
-            philox32x4_next_f32s,
-            philox32x4x4_next_f32s,
-            ptr,
-            out,
-            count
-        )
-    }
-    /// Fills the output buffer with random `i32` values in the range [min, max].
-    #[unsafe(no_mangle)]
-    pub extern "C" fn philox32_rand_i32s(
-        ptr: *mut Philox32,
-        out: *mut i32,
-        count: usize,
-        min: i32,
-        max: i32,
-    ) {
-        dispatch_simd!(
-            Philox32x4x4,
-            Philox32x4,
-            philox32x4_rand_i32s,
-            philox32x4x4_rand_i32s,
-            ptr,
-            out,
-            count,
-            min,
-            max
-        )
-    }
-    /// Fills the output buffer with random `f32` values in the range [min, max).
-    #[unsafe(no_mangle)]
-    pub extern "C" fn philox32_rand_f32s(
-        ptr: *mut Philox32,
-        out: *mut f32,
-        count: usize,
-        min: f32,
-        max: f32,
-    ) {
-        dispatch_simd!(
-            Philox32x4x4,
-            Philox32x4,
-            philox32x4_rand_f32s,
-            philox32x4x4_rand_f32s,
-            ptr,
-            out,
-            count,
-            min,
-            max
-        )
     }
 } // mod simd

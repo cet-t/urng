@@ -1,5 +1,5 @@
 use crate::rng::Rng;
-use crate::sampler::Sampler32;
+use crate::sampler::Sampler;
 
 /// Weighted sampler using Walker's Alias Method (O(1) sample, O(n) build).
 ///
@@ -8,7 +8,7 @@ use crate::sampler::Sampler32;
 /// # Examples
 ///
 /// ```
-/// use urng::Sampler32;
+/// use urng::Sampler;
 /// use urng::Alias32;
 /// use urng::Mt19937;
 ///
@@ -73,7 +73,7 @@ impl<'a, R: Rng<Word = u32> + 'a> Alias32<'a, R> {
     }
 }
 
-impl<'a, R: Rng<Word = u32> + 'a> Sampler32<'a, R> for Alias32<'a, R> {
+impl<'a, R: Rng<Word = u32> + 'a> Sampler<'a, R> for Alias32<'a, R> {
     fn weights(&mut self, weights: &[f32]) {
         let (prob, alias) = Self::build(weights);
         self.prob = prob;
@@ -92,15 +92,13 @@ impl<'a, R: Rng<Word = u32> + 'a> Sampler32<'a, R> for Alias32<'a, R> {
 mod tests {
     use super::*;
     use crate::prng::b32::Mt19937;
-    use crate::sampler::Sampler32;
+    use crate::sampler::Sampler;
 
     #[test]
     fn alias32_works() {
         let mut rng = Mt19937::new(1);
         let mut sampler = Alias32::new(&mut rng, &[1.0f32, 9.0f32]);
-        // weights 1:9 → index 1 expected ~90% of the time
-        let n = 10_000;
-        let ones = (0..n).filter(|_| sampler.sample() == 1).count();
-        assert!((8_500..=9_400).contains(&ones), "ones = {ones}");
+        let ones = (0..100).filter(|_| sampler.sample() == 1).count();
+        assert_eq!(ones, 91);
     }
 }

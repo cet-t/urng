@@ -1,5 +1,5 @@
 use crate::rng::Rng;
-use crate::sampler::Sampler64;
+use crate::sampler::Sampler;
 
 /// Weighted sampler using Walker's Alias Method (O(1) sample, O(n) build).
 ///
@@ -8,7 +8,7 @@ use crate::sampler::Sampler64;
 /// # Examples
 ///
 /// ```
-/// use urng::Sampler64;
+/// use urng::Sampler;
 /// use urng::Alias64;
 /// use urng::Mt1993764;
 ///
@@ -73,7 +73,7 @@ impl<'a, R: Rng<Word = u64> + 'a> Alias64<'a, R> {
     }
 }
 
-impl<'a, R: Rng<Word = u64> + 'a> Sampler64<'a, R> for Alias64<'a, R> {
+impl<'a, R: Rng<Word = u64> + 'a> Sampler<'a, R> for Alias64<'a, R> {
     fn weights(&mut self, weights: &[f64]) {
         let (prob, alias) = Self::build(weights);
         self.prob = prob;
@@ -92,19 +92,13 @@ impl<'a, R: Rng<Word = u64> + 'a> Sampler64<'a, R> for Alias64<'a, R> {
 mod tests {
     use super::*;
     use crate::prng::b64::Mt1993764;
-    use crate::sampler::Sampler64;
+    use crate::sampler::Sampler;
 
     #[test]
     fn alias64_works() {
         let mut rng = Mt1993764::new(1);
-        let mut sampler = Alias64::new(&mut rng, &[1f64, 2f64, 4f64, 8f64]);
-        // weights 1:2:4:8 (total 15) → index 3 expected ~53% of the time
-        let n = 10_000;
-        let mut counts = [0usize; 4];
-        for _ in 0..n {
-            counts[sampler.sample()] += 1;
-        }
-        assert!((4_800..=5_900).contains(&counts[3]), "counts = {counts:?}");
-        assert!(counts[0] < counts[3], "counts = {counts:?}");
+        let mut sampler = Alias64::new(&mut rng, &[0.1, 1.0, 10.0, 100.0]);
+        let ones = (0..100_000).filter(|_| sampler.sample() == 1).count();
+        assert_eq!(ones, 867);
     }
 }

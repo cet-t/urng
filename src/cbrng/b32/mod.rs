@@ -6,7 +6,7 @@ pub(crate) mod threefry;
 
 pub use philox::Philox32x4;
 #[cfg(feature = "simd")]
-pub use philox::{Philox32, Philox32x4x4};
+pub use philox::Philox32x4x4;
 pub use squares::Squares32;
 #[cfg(feature = "simd")]
 pub use squares::{Squares32Simd, Squares32x8};
