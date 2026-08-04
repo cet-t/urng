@@ -194,22 +194,6 @@ impl Squares32x8 {
     }
 }
 
-// -- Squares32Simd --
-
-/// Opaque handle for the Squares32 RNG.
-/// Dispatched at runtime to AVX-512 (`Squares32x8`) or scalar (`Squares32`) implementation.
-///
-/// # Examples
-///
-/// ```
-/// use urng::Squares32Simd;
-///
-/// let _ = core::mem::size_of::<Squares32Simd>();
-/// ```
-#[cfg(feature = "simd")]
-#[repr(C)]
-pub struct Squares32Simd([u8; 0]);
-
 #[cfg(test)]
 mod tests {
     use super::*;

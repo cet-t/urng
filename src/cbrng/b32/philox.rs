@@ -20,22 +20,21 @@ use crate::rng::Rng;
 /// # Examples
 ///
 /// ```
-/// use urng::{Rng, Philox32x4};
+/// use urng::{Rng, Philox32};
 ///
-/// let mut rng = Philox32x4::new(1);
+/// let mut rng = Philox32::new(1);
 /// let _: u32 = rng.nextu();
 /// ```
 #[repr(C)]
-pub struct Philox32x4 {
+pub struct Philox32 {
     pub(crate) c: [Wrap<u32>; 4],
     pub(crate) k: [Wrap<u32>; 2],
     pub(crate) buf: [Wrap<u32>; 4],
     pub(crate) pos: Wrap<usize>,
 }
 
-impl Philox32x4 {
-    /// Creates a new `Philox32x4` instance seeded with the given value.
-    ///
+impl Philox32 {
+    /// Creates a new `Philox32` instance seeded with the given value.
     pub fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
@@ -137,7 +136,7 @@ impl Philox32x4 {
     }
 }
 
-crate::_internal::impl_ring_rng32!(Philox32x4, 4, next_raw);
+crate::_internal::impl_ring_rng32!(Philox32, 4, next_raw);
 
 // --- Philox32x4-10 x4 ---
 
@@ -175,7 +174,6 @@ impl Philox32x4x4 {
     /// # Safety
     ///
     /// Must only be called on a CPU that supports AVX-512F.
-    ///
     #[target_feature(enable = "avx512f")]
     pub fn new(seed: u32) -> Self {
         let mut c = [0; PHILOX32x16];
@@ -308,7 +306,7 @@ impl Philox32x4x4 {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Philox32x4);
+    crate::safe_test!(Philox32);
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     crate::unsafe_test!(Philox32x4x4);
 }

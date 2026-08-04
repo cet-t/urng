@@ -1,11 +1,11 @@
-use urng::{Choice, Philox32x4, Philox64, Rng, Sfc32, Shuffle};
+use urng::{Choice, Philox32, Philox64, Rng, Sfc32, Shuffle};
 
 fn main() -> anyhow::Result<()> {
     let mut rng = Sfc32::default();
     println!("{}", rng.nextu());
     println!("{}", rng.nextf());
 
-    let mut rng = Philox32x4::default();
+    let mut rng = Philox32::default();
     println!("{}", rng.nextu());
     println!("{}", rng.nextf());
 

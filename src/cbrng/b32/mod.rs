@@ -4,12 +4,12 @@ pub(crate) mod philox;
 pub(crate) mod squares;
 pub(crate) mod threefry;
 
-pub use philox::Philox32x4;
+pub use philox::Philox32;
 #[cfg(feature = "simd")]
 pub use philox::Philox32x4x4;
 pub use squares::Squares32;
 #[cfg(feature = "simd")]
-pub use squares::{Squares32Simd, Squares32x8};
+pub use squares::Squares32x8;
 pub use threefry::{Threefry32x2, Threefry32x4};
 
 #[cfg(all(feature = "cabi", feature = "simd"))]
@@ -20,4 +20,4 @@ pub(crate) use philox::{
 #[cfg(all(feature = "cabi", feature = "simd"))]
 pub(crate) use squares::SQUARES32x8;
 
-crate::impl_default_from_seed32!(Squares32, Philox32x4, Threefry32x2, Threefry32x4,);
+crate::impl_default_from_seed32!(Squares32, Philox32, Threefry32x2, Threefry32x4,);

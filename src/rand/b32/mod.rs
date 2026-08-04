@@ -13,7 +13,7 @@ crate::impl_rand_trait!(
     Sfmt132049,
     Sfmt216091,
     Pcg32,
-    Philox32x4,
+    Philox32,
     Sfc32,
     SplitMix32,
     Squares32,
@@ -49,7 +49,7 @@ crate::impl_try_rng_trait!(
     Xoshiro128Ss,
 );
 
-impl rand_core::TryRng for Philox32x4 {
+impl rand_core::TryRng for Philox32 {
     type Error = std::convert::Infallible;
 
     fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
@@ -96,9 +96,9 @@ mod tests {
     }
 
     #[test]
-    fn philox32x4_works() {
-        let mut rng0 = Philox32x4::seed_from_u64(0);
-        let mut rng1 = Philox32x4::seed_from_u64(0);
+    fn philox32_works() {
+        let mut rng0 = Philox32::seed_from_u64(0);
+        let mut rng1 = Philox32::seed_from_u64(0);
         assert_eq!(rng0.next_u32(), rng1.next_u32());
     }
 }

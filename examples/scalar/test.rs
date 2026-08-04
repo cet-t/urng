@@ -123,7 +123,7 @@ fn main() {
 
     // --- 32-bit (Rng::nextu() -> u32) ---
     let mut r32 = Vec::new();
-    bench32!(r32, Philox32x4, Threefry32x4, Threefry32x2);
+    bench32!(r32, Philox32, Threefry32x4, Threefry32x2);
     bench32!(r32, Squares32);
     bench32!(r32, Pcg32);
     bench32!(r32, SplitMix32);

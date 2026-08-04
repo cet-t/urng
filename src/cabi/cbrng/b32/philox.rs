@@ -1,18 +1,18 @@
-use crate::cbrng::b32::Philox32x4;
+use crate::cbrng::b32::Philox32;
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 use std::slice::from_raw_parts_mut;
 
-/// Creates a new `Philox32x4` instance.
-/// The caller is responsible for freeing the memory using `philox32x4_free`.
+/// Creates a new `Philox32` instance.
+/// The caller is responsible for freeing the memory using `philox32_free`.
 #[unsafe(no_mangle)]
-pub extern "C" fn philox32x4_new(seed: u32) -> *mut Philox32x4 {
-    Box::into_raw(Box::new(Philox32x4::new(seed)))
+pub extern "C" fn philox32_new(seed: u32) -> *mut Philox32 {
+    Box::into_raw(Box::new(Philox32::new(seed)))
 }
 
-/// Frees the memory of a `Philox32x4` instance.
+/// Frees the memory of a `Philox32` instance.
 #[unsafe(no_mangle)]
-pub extern "C" fn philox32x4_free(ptr: *mut Philox32x4) {
+pub extern "C" fn philox32_free(ptr: *mut Philox32) {
     if !ptr.is_null() {
         unsafe {
             let _ = Box::from_raw(ptr);
@@ -25,7 +25,7 @@ const PHILOX32_PAR_CHUNK: usize = 4096;
 /// Fills the output buffer with the next random `u32` values.
 /// This function uses parallel processing for large counts.
 #[unsafe(no_mangle)]
-pub extern "C" fn philox32x4_next_u32s(ptr: *mut Philox32x4, out: *mut u32, count: usize) {
+pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: usize) {
     if count == 0 {
         return;
     }
@@ -53,7 +53,7 @@ pub extern "C" fn philox32x4_next_u32s(ptr: *mut Philox32x4, out: *mut u32, coun
                         c[1] += 1;
                     }
 
-                    let result = Philox32x4::compute(c, k);
+                    let result = Philox32::compute(c, k);
                     dst[0] = result[0];
                     dst[1] = result[1];
                     dst[2] = result[2];
@@ -72,7 +72,7 @@ pub extern "C" fn philox32x4_next_u32s(ptr: *mut Philox32x4, out: *mut u32, coun
                         c[1] += 1;
                     }
 
-                    let result = Philox32x4::compute(c, k);
+                    let result = Philox32::compute(c, k);
                     rem.copy_from_slice(&result[..rem.len()]);
                 }
             });
@@ -92,7 +92,7 @@ pub extern "C" fn philox32x4_next_u32s(ptr: *mut Philox32x4, out: *mut u32, coun
 
 /// Fills the output buffer with the next random `f32` values in the range [0, 1).
 #[unsafe(no_mangle)]
-pub extern "C" fn philox32x4_next_f32s(ptr: *mut Philox32x4, out: *mut f32, count: usize) {
+pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: usize) {
     if count == 0 {
         return;
     }
@@ -121,7 +121,7 @@ pub extern "C" fn philox32x4_next_f32s(ptr: *mut Philox32x4, out: *mut f32, coun
                         c[1] += 1;
                     }
 
-                    let result = Philox32x4::compute(c, k);
+                    let result = Philox32::compute(c, k);
                     dst[0] = result[0] as f32 * scale;
                     dst[1] = result[1] as f32 * scale;
                     dst[2] = result[2] as f32 * scale;
@@ -140,7 +140,7 @@ pub extern "C" fn philox32x4_next_f32s(ptr: *mut Philox32x4, out: *mut f32, coun
                         c[1] += 1;
                     }
 
-                    let result = Philox32x4::compute(c, k);
+                    let result = Philox32::compute(c, k);
                     for j in 0..rem.len() {
                         rem[j] = result[j] as f32 * scale;
                     }
@@ -162,8 +162,8 @@ pub extern "C" fn philox32x4_next_f32s(ptr: *mut Philox32x4, out: *mut f32, coun
 
 /// Fills the output buffer with random `i32` values in the range [min, max].
 #[unsafe(no_mangle)]
-pub extern "C" fn philox32x4_rand_i32s(
-    ptr: *mut Philox32x4,
+pub extern "C" fn philox32_rand_i32s(
+    ptr: *mut Philox32,
     out: *mut i32,
     count: usize,
     min: i32,
@@ -197,7 +197,7 @@ pub extern "C" fn philox32x4_rand_i32s(
                         c[1] += 1;
                     }
 
-                    let result = Philox32x4::compute(c, k);
+                    let result = Philox32::compute(c, k);
                     dst[0] = ((result[0] as u64 * range) >> 32) as i32 + min;
                     dst[1] = ((result[1] as u64 * range) >> 32) as i32 + min;
                     dst[2] = ((result[2] as u64 * range) >> 32) as i32 + min;
@@ -216,7 +216,7 @@ pub extern "C" fn philox32x4_rand_i32s(
                         c[1] += 1;
                     }
 
-                    let result = Philox32x4::compute(c, k);
+                    let result = Philox32::compute(c, k);
                     for j in 0..rem.len() {
                         rem[j] = ((result[j] as u64 * range) >> 32) as i32 + min;
                     }
@@ -238,8 +238,8 @@ pub extern "C" fn philox32x4_rand_i32s(
 
 /// Fills the output buffer with random `f32` values in the range [min, max).
 #[unsafe(no_mangle)]
-pub extern "C" fn philox32x4_rand_f32s(
-    ptr: *mut Philox32x4,
+pub extern "C" fn philox32_rand_f32s(
+    ptr: *mut Philox32,
     out: *mut f32,
     count: usize,
     min: f32,
@@ -274,7 +274,7 @@ pub extern "C" fn philox32x4_rand_f32s(
                         c[1] += 1;
                     }
 
-                    let result = Philox32x4::compute(c, k);
+                    let result = Philox32::compute(c, k);
                     dst[0] = (result[0] as f32 * scale_val) * range_val + min;
                     dst[1] = (result[1] as f32 * scale_val) * range_val + min;
                     dst[2] = (result[2] as f32 * scale_val) * range_val + min;
@@ -293,7 +293,7 @@ pub extern "C" fn philox32x4_rand_f32s(
                         c[1] += 1;
                     }
 
-                    let result = Philox32x4::compute(c, k);
+                    let result = Philox32::compute(c, k);
                     for j in 0..rem.len() {
                         rem[j] = (result[j] as f32 * scale_val) * range_val + min;
                     }

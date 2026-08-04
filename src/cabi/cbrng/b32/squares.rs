@@ -556,8 +556,7 @@ pub use simd::*;
 mod simd {
     use super::simd_chunks::*;
     use super::*;
-    use crate::cbrng::b32::{SQUARES32x8, Squares32Simd, Squares32x8};
-    use crate::dispatch_simd;
+    use crate::cbrng::b32::{SQUARES32x8, Squares32x8};
     use std::arch::x86_64::*;
 
     /// Creates a new `Squares32x8` instance.
@@ -759,99 +758,5 @@ mod simd {
             }
             rng.c = _mm512_loadu_si512(c_arr.as_ptr() as *const _);
         }
-    }
-
-    /// Creates a new `Squares32Simd` instance, dispatching to AVX-512 or scalar implementation.
-    /// The caller is responsible for freeing the memory using `squares32simd_free`.
-    #[unsafe(no_mangle)]
-    pub extern "C" fn squares32simd_new(seed: u32) -> *mut Squares32Simd {
-        dispatch_simd!(Squares32Simd, squares32_new, squares32x8_new, seed)
-    }
-    /// Frees the memory of a `Squares32Simd` instance.
-    #[unsafe(no_mangle)]
-    pub extern "C" fn squares32simd_free(ptr: *mut Squares32Simd) {
-        dispatch_simd!(
-            Squares32x8,
-            Squares32,
-            squares32_free,
-            squares32x8_free,
-            ptr
-        )
-    }
-    /// Fills the output buffer with the next random `u32` values using the best available implementation.
-    #[unsafe(no_mangle)]
-    pub extern "C" fn squares32simd_next_u32s(
-        ptr: *mut Squares32Simd,
-        out: *mut u32,
-        count: usize,
-    ) {
-        dispatch_simd!(
-            Squares32x8,
-            Squares32,
-            squares32_next_u32s,
-            squares32x8_next_u32s,
-            ptr,
-            out,
-            count
-        )
-    }
-    /// Fills the output buffer with the next random `f32` values in the range [0, 1).
-    #[unsafe(no_mangle)]
-    pub extern "C" fn squares32simd_next_f32s(
-        ptr: *mut Squares32Simd,
-        out: *mut f32,
-        count: usize,
-    ) {
-        dispatch_simd!(
-            Squares32x8,
-            Squares32,
-            squares32_next_f32s,
-            squares32x8_next_f32s,
-            ptr,
-            out,
-            count
-        )
-    }
-    /// Fills the output buffer with random `i32` values in the range [min, max].
-    #[unsafe(no_mangle)]
-    pub extern "C" fn squares32simd_rand_i32s(
-        ptr: *mut Squares32Simd,
-        out: *mut i32,
-        count: usize,
-        min: i32,
-        max: i32,
-    ) {
-        dispatch_simd!(
-            Squares32x8,
-            Squares32,
-            squares32_rand_i32s,
-            squares32x8_rand_i32s,
-            ptr,
-            out,
-            count,
-            min,
-            max
-        )
-    }
-    /// Fills the output buffer with random `f32` values in the range [min, max).
-    #[unsafe(no_mangle)]
-    pub extern "C" fn squares32simd_rand_f32s(
-        ptr: *mut Squares32Simd,
-        out: *mut f32,
-        count: usize,
-        min: f32,
-        max: f32,
-    ) {
-        dispatch_simd!(
-            Squares32x8,
-            Squares32,
-            squares32_rand_f32s,
-            squares32x8_rand_f32s,
-            ptr,
-            out,
-            count,
-            min,
-            max
-        )
     }
 } // mod simd
