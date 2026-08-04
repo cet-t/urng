@@ -18,6 +18,9 @@ pub use crate::prng::*;
 mod cbrng;
 pub use crate::cbrng::*;
 
+mod srng;
+pub use crate::srng::*;
+
 #[cfg(feature = "rand")]
 mod rand;
 
