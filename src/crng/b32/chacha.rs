@@ -2,16 +2,14 @@ use wrapn::{Wrap, wrap};
 
 use crate::{Rng, SplitMix32, impl_ring_rng32};
 
-const ROUNDS: usize = 20;
-
-pub struct ChaCha20 {
+pub struct ChaCha<const ROUNDS: usize> {
     x: [Wrap<u32>; 16],
 
     pub(crate) buf: [Wrap<u32>; 16],
     pub(crate) pos: Wrap<usize>,
 }
 
-impl ChaCha20 {
+impl<const ROUNDS: usize> ChaCha<ROUNDS> {
     pub fn new(seed: u32) -> Self {
         let mut sg = SplitMix32::new(seed);
         let x = [0_u32; 16].map(|_| wrap!(sg.nextu()));
@@ -60,10 +58,16 @@ impl ChaCha20 {
             [x[02], x[07], x[08], x[13]] = Self::qr(x[02], x[07], x[08], x[13]);
             [x[03], x[04], x[09], x[14]] = Self::qr(x[03], x[04], x[09], x[14]);
         }
+
+        self.x = x;
         x.map(|x| x.value())
     }
 }
 
+pub type ChaCha8 = ChaCha<8>;
+impl_ring_rng32!(ChaCha8, 16, next_raw);
+
+pub type ChaCha20 = ChaCha<20>;
 impl_ring_rng32!(ChaCha20, 16, next_raw);
 
 #[cfg(test)]
@@ -71,5 +75,6 @@ mod tests {
     use super::*;
     use crate::safe_test;
 
+    safe_test!(ChaCha8);
     safe_test!(ChaCha20);
 }

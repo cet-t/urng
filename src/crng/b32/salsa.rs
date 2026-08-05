@@ -2,16 +2,14 @@ use wrapn::{Wrap, wrap};
 
 use crate::{Rng, SplitMix32, impl_ring_rng32};
 
-const ROUNDS: usize = 20;
-
-pub struct Salsa20 {
+pub struct Salsa<const ROUNDS: usize> {
     x: [Wrap<u32>; 16],
 
     pub(crate) buf: [Wrap<u32>; 16],
     pub(crate) pos: Wrap<usize>,
 }
 
-impl Salsa20 {
+impl<const ROUNDS: usize> Salsa<ROUNDS> {
     pub fn new(seed: u32) -> Self {
         let mut sg = SplitMix32::new(seed);
 
@@ -50,10 +48,15 @@ impl Salsa20 {
             [x[10], x[11], x[08], x[09]] = Self::qr(x[10], x[11], x[08], x[09]);
             [x[15], x[12], x[13], x[14]] = Self::qr(x[15], x[12], x[13], x[14]);
         }
+        self.x = x;
         x.map(|x| x.value())
     }
 }
 
+pub type Salsa8 = Salsa<8>;
+impl_ring_rng32!(Salsa8, 16, next_raw);
+
+pub type Salsa20 = Salsa<20>;
 impl_ring_rng32!(Salsa20, 16, next_raw);
 
 #[cfg(test)]
@@ -61,5 +64,6 @@ mod tests {
     use super::*;
     use crate::safe_test;
 
+    safe_test!(Salsa8);
     safe_test!(Salsa20);
 }

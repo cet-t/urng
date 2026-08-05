@@ -137,8 +137,8 @@ fn main() {
     bench32!(r32, Xorshift32, Xorshift128, Xorwow);
     bench32!(r32, Jsf32);
     bench32!(r32, Sfc32);
-    bench32!(r32, Salsa20);
-    bench32!(r32, ChaCha20);
+    bench32!(r32, Salsa8, Salsa20);
+    bench32!(r32, ChaCha8, ChaCha20);
     print_group(&r32);
 
     println!("{}", "─".repeat(72).bright_black());

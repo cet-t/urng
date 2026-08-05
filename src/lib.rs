@@ -18,8 +18,9 @@ pub use crate::prng::*;
 mod cbrng;
 pub use crate::cbrng::*;
 
-mod srng;
-pub use crate::srng::*;
+/// Cipher-based random number generators (32-bit).
+mod crng;
+pub use crate::crng::*;
 
 #[cfg(feature = "rand")]
 mod rand;

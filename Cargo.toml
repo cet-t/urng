@@ -1,6 +1,6 @@
 [package]
 name = "urng"
-version = "1.0.0"
+version = "1.0.0-rc.1"
 edition = "2024"
 license = "MIT"
 rust-version = "1.92"
@@ -27,7 +27,7 @@ colored = "3.1.1"
 thousands = "0.2.0"
 plotters = "0.3"
 criterion = { version = "0.8.2", features = ["csv_output", "plotters"] }
-anyhow = "1"
+anyhow = "1.0.104"
 rand_sfc = "0.2.0"
 
 [[example]]
