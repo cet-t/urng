@@ -1,4 +1,4 @@
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu64};
 
 use crate::{prng::b64::SplitMix64, rng::Rng};
 
@@ -16,7 +16,7 @@ use crate::{prng::b64::SplitMix64, rng::Rng};
 /// ```
 #[repr(C)]
 pub struct Xoroshiro128Pp {
-    s: [Wrap<u64>; 2],
+    s: [wu64; 2],
 }
 
 impl Xoroshiro128Pp {
@@ -111,7 +111,7 @@ impl Rng for Xoroshiro128Pp {
 /// ```
 #[repr(C)]
 pub struct Xoroshiro128Ss {
-    s: [Wrap<u64>; 2],
+    s: [wu64; 2],
 }
 
 impl Xoroshiro128Ss {

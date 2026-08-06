@@ -1,7 +1,7 @@
 #[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu64};
 
 #[cfg(feature = "simd")]
 use crate::_internal::{i2f_bits, u2f_01};
@@ -20,8 +20,8 @@ use crate::{_internal::sm64_from_seed32, rng::Rng};
 /// let _ = rng.nextu();
 /// ```
 pub struct Squares32 {
-    pub(crate) c: Wrap<u64>,
-    pub(crate) k: Wrap<u64>,
+    pub(crate) c: wu64,
+    pub(crate) k: wu64,
 }
 
 impl Squares32 {

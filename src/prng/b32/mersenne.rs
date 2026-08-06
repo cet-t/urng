@@ -1,7 +1,7 @@
 use std::ptr;
 
 use bytemuck::cast_slice;
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu32, wusize};
 
 use crate::{_internal::sm64_from_seed32, prng::b32::SplitMix32, rng::Rng};
 
@@ -71,8 +71,8 @@ fn sfmt_recursion(
 /// ```
 #[repr(C)]
 pub struct Mt19937 {
-    mt: [Wrap<u32>; MT32_N],
-    mti: Wrap<usize>,
+    mt: [wu32; MT32_N],
+    mti: wusize,
 }
 
 const MT32_N: usize = 624;
@@ -187,7 +187,7 @@ impl Rng for Mt19937 {
 #[repr(C, align(16))]
 pub struct Sfmt19937 {
     state: [u32x4; SFMT_N],
-    idx: Wrap<usize>,
+    idx: wusize,
 }
 
 const SFMT_N: usize = 156;
@@ -390,7 +390,7 @@ macro_rules! define_sfmt_variant {
             #[repr(align(16))]
             pub struct [<Sfmt $mexp>] {
                 state: [u32x4; $n],
-                idx: ::wrapn::Wrap<usize>,
+                idx: ::wrapn::wusize,
             }
 
             impl [<Sfmt $mexp>] {

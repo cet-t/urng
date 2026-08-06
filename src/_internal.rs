@@ -129,7 +129,7 @@ macro_rules! sm64_from_seed32 {
 pub(crate) use sm64_from_seed32;
 
 /// Implements [`crate::rng::Rng`] (with `Word = u32`) for a counter-based block
-/// generator that owns `buf: [Wrap<u32>; N]` and `pos: Wrap<usize>` fields, by
+/// generator that owns `buf: [wu32; N]` and `pos: wusize` fields, by
 /// buffering blocks produced by an existing `fn $raw(&mut self) -> [u32; N]`
 /// method and handing out one scalar per call (recomputing a fresh block every
 /// `N`th call).

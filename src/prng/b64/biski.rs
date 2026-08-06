@@ -1,7 +1,7 @@
 #[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
-use wrapn::Wrap;
+use wrapn::wu64;
 
 #[cfg(feature = "simd")]
 use crate::_internal::{i2f_bits, u2f_01};
@@ -19,9 +19,9 @@ use crate::{prng::b64::SplitMix64, rng::Rng};
 /// ```
 #[repr(C, align(64))]
 pub struct Biski64 {
-    fast_loop: Wrap<u64>,
-    mix: Wrap<u64>,
-    loop_mix: Wrap<u64>,
+    fast_loop: wu64,
+    mix: wu64,
+    loop_mix: wu64,
 }
 
 impl Biski64 {

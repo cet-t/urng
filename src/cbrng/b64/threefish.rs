@@ -1,4 +1,4 @@
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu64, wusize};
 
 use crate::{
     _internal::{i2f_bits, u2f_01},
@@ -56,11 +56,11 @@ const THREEFISH_R_256: [[u32; 2]; 8] = [
 /// ```
 #[repr(C, align(64))]
 pub struct Threefish256 {
-    c: [Wrap<u64>; 4],
-    k: [Wrap<u64>; 5],
-    tw: [Wrap<u64>; 3],
-    index: Wrap<usize>,
-    buffer: [Wrap<u64>; 4],
+    c: [wu64; 4],
+    k: [wu64; 5],
+    tw: [wu64; 3],
+    index: wusize,
+    buffer: [wu64; 4],
 }
 
 impl Threefish256 {
@@ -87,13 +87,13 @@ impl Threefish256 {
     }
 
     #[inline(always)]
-    fn mix(x0: Wrap<u64>, x1: Wrap<u64>, r: u32) -> [Wrap<u64>; 2] {
+    fn mix(x0: wu64, x1: wu64, r: u32) -> [wu64; 2] {
         let y0 = x0 + x1;
         [y0, x1.rotate_left(r) ^ y0]
     }
 
     #[inline(always)]
-    fn key_schedule(k: &[Wrap<u64>; 5], tw: &[Wrap<u64>; 3], s: usize) -> [Wrap<u64>; 4] {
+    fn key_schedule(k: &[wu64; 5], tw: &[wu64; 3], s: usize) -> [wu64; 4] {
         let ki = KS_K_IDX[s];
         let ti = KS_TW_IDX[s];
         [
@@ -105,7 +105,7 @@ impl Threefish256 {
     }
 
     #[inline(always)]
-    fn next_block(&mut self) -> [Wrap<u64>; 4] {
+    fn next_block(&mut self) -> [wu64; 4] {
         let mut v = self.c;
 
         for r in 0..THREE_FISH_N_ROUNDS {

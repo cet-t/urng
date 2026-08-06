@@ -1,12 +1,12 @@
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu32, wusize};
 
 use crate::{Rng, SplitMix32, impl_ring_rng32};
 
 pub struct Salsa<const ROUNDS: usize> {
-    x: [Wrap<u32>; 16],
+    x: [wu32; 16],
 
-    pub(crate) buf: [Wrap<u32>; 16],
-    pub(crate) pos: Wrap<usize>,
+    pub(crate) buf: [wu32; 16],
+    pub(crate) pos: wusize,
 }
 
 impl<const ROUNDS: usize> Salsa<ROUNDS> {
@@ -22,12 +22,7 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
         }
     }
 
-    fn qr(
-        mut a: Wrap<u32>,
-        mut b: Wrap<u32>,
-        mut c: Wrap<u32>,
-        mut d: Wrap<u32>,
-    ) -> [Wrap<u32>; 4] {
+    fn qr(mut a: wu32, mut b: wu32, mut c: wu32, mut d: wu32) -> [wu32; 4] {
         b ^= (a + d).rotate_left(7);
         c ^= (b + a).rotate_left(9);
         d ^= (c + b).rotate_left(9);
@@ -38,18 +33,33 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
     fn next_raw(&mut self) -> [u32; 16] {
         let mut x = self.x;
         for _ in 0..ROUNDS {
-            [x[00], x[04], x[08], x[12]] = Self::qr(x[00], x[04], x[08], x[12]);
-            [x[05], x[09], x[13], x[01]] = Self::qr(x[05], x[09], x[13], x[01]);
-            [x[10], x[14], x[02], x[06]] = Self::qr(x[10], x[14], x[02], x[06]);
-            [x[15], x[03], x[07], x[11]] = Self::qr(x[15], x[03], x[07], x[11]);
+            [x[0], x[4], x[8], x[12]] = Self::qr(x[0], x[4], x[8], x[12]);
+            [x[5], x[9], x[13], x[1]] = Self::qr(x[5], x[9], x[13], x[1]);
+            [x[10], x[14], x[2], x[6]] = Self::qr(x[10], x[14], x[2], x[6]);
+            [x[15], x[3], x[7], x[11]] = Self::qr(x[15], x[3], x[7], x[11]);
 
-            [x[00], x[01], x[02], x[03]] = Self::qr(x[00], x[01], x[02], x[03]);
-            [x[05], x[06], x[07], x[04]] = Self::qr(x[05], x[06], x[07], x[04]);
-            [x[10], x[11], x[08], x[09]] = Self::qr(x[10], x[11], x[08], x[09]);
+            [x[0], x[1], x[2], x[3]] = Self::qr(x[0], x[1], x[2], x[3]);
+            [x[5], x[6], x[7], x[4]] = Self::qr(x[5], x[6], x[7], x[4]);
+            [x[10], x[11], x[8], x[9]] = Self::qr(x[10], x[11], x[8], x[9]);
             [x[15], x[12], x[13], x[14]] = Self::qr(x[15], x[12], x[13], x[14]);
         }
         self.x = x;
         x.map(|x| x.value())
+    }
+}
+
+impl<const ROUNDS: usize> Default for Salsa<ROUNDS> {
+    fn default() -> Self {
+        Self::new(crate::_internal::default_seed32())
+    }
+}
+
+impl<const ROUNDS: usize> crate::Seed for Salsa<ROUNDS> {
+    type Seed = u32;
+
+    #[inline]
+    fn from_seed(seed: Self::Seed) -> Self {
+        Self::new(seed)
     }
 }
 

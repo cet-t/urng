@@ -1,4 +1,4 @@
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu64, wusize};
 
 use crate::_internal::impl_ring_rng64;
 #[allow(unused_imports)]
@@ -22,10 +22,10 @@ use crate::{_internal::FSCALE64, prng::b64::SplitMix64, rng::Rng};
 /// ```
 #[repr(C, align(64))]
 pub struct Philox64 {
-    pub(crate) c: [Wrap<u64>; 2],
-    pub(crate) k: [Wrap<u64>; 2],
-    pub(crate) buf: [Wrap<u64>; 2],
-    pub(crate) pos: Wrap<usize>,
+    pub(crate) c: [wu64; 2],
+    pub(crate) k: [wu64; 2],
+    pub(crate) buf: [wu64; 2],
+    pub(crate) pos: wusize,
 }
 
 impl Philox64 {

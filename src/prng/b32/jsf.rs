@@ -1,7 +1,7 @@
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
-use wrapn::Wrap;
+use wrapn::wu32;
 
 use crate::{Rng, SplitMix32};
 #[cfg(feature = "simd")]
@@ -17,10 +17,10 @@ use crate::{Rng32V256, Rng32V512};
 /// ```
 #[repr(C, align(64))]
 pub struct Jsf32 {
-    pub(crate) a: Wrap<u32>,
-    pub(crate) b: Wrap<u32>,
-    pub(crate) c: Wrap<u32>,
-    pub(crate) d: Wrap<u32>,
+    pub(crate) a: wu32,
+    pub(crate) b: wu32,
+    pub(crate) c: wu32,
+    pub(crate) d: wu32,
 }
 
 impl Jsf32 {

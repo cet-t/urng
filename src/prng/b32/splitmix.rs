@@ -1,7 +1,7 @@
 #[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu32};
 
 use crate::rng::Rng;
 
@@ -20,7 +20,7 @@ use crate::rng::Rng;
 /// ```
 #[repr(C)]
 pub struct SplitMix32 {
-    state: Wrap<u32>,
+    state: wu32,
 }
 
 const A: u64 = 0xFF51_AFD7_ED55_8CCD;

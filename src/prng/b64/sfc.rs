@@ -1,7 +1,7 @@
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
-use wrapn::Wrap;
+use wrapn::wu64;
 
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use crate::_internal::{i2f_bits, u2f_01};
@@ -22,10 +22,10 @@ use crate::rng::Rng;
 /// ```
 #[repr(C, align(64))]
 pub struct Sfc64 {
-    a: Wrap<u64>,
-    b: Wrap<u64>,
-    c: Wrap<u64>,
-    counter: Wrap<u64>,
+    a: wu64,
+    b: wu64,
+    c: wu64,
+    counter: wu64,
 }
 
 impl Sfc64 {

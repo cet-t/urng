@@ -1,7 +1,7 @@
 #[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu32};
 
 use crate::{prng::b32::SplitMix32, rng::Rng};
 
@@ -22,7 +22,7 @@ use crate::{prng::b32::SplitMix32, rng::Rng};
 /// ```
 #[repr(C)]
 pub struct Xoshiro128Pp {
-    s: [Wrap<u32>; 4],
+    s: [wu32; 4],
 }
 
 impl Xoshiro128Pp {
@@ -79,7 +79,7 @@ impl Rng for Xoshiro128Pp {
 /// ```
 #[repr(C)]
 pub struct Xoshiro128Ss {
-    s: [Wrap<u32>; 4],
+    s: [wu32; 4],
 }
 
 impl Xoshiro128Ss {

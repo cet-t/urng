@@ -1,4 +1,4 @@
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu32, wusize};
 
 #[allow(unused_imports)]
 use crate::{_internal::FSCALE32, prng::b32::SplitMix32, rng::Rng};
@@ -23,11 +23,11 @@ const THREEFRY32_C240: u32 = 0x1BD11BDA;
 /// ```
 #[repr(C, align(64))]
 pub struct Threefry32x4 {
-    pub(crate) c: [Wrap<u32>; 4],
-    pub(crate) k: [Wrap<u32>; 5],
-    pub(crate) tw: [Wrap<u32>; 3],
-    pub(crate) pos: Wrap<usize>,
-    pub(crate) buf: [Wrap<u32>; 4],
+    pub(crate) c: [wu32; 4],
+    pub(crate) k: [wu32; 5],
+    pub(crate) tw: [wu32; 3],
+    pub(crate) pos: wusize,
+    pub(crate) buf: [wu32; 4],
 }
 
 impl Threefry32x4 {
@@ -179,10 +179,10 @@ crate::_internal::impl_ring_rng32!(Threefry32x4, 4, next_raw);
 /// let _: u32 = rng.nextu();
 /// ```
 pub struct Threefry32x2 {
-    pub(crate) c: [Wrap<u32>; 2],
-    pub(crate) k: [Wrap<u32>; 3],
-    pub(crate) buf: [Wrap<u32>; 2],
-    pub(crate) pos: Wrap<usize>,
+    pub(crate) c: [wu32; 2],
+    pub(crate) k: [wu32; 3],
+    pub(crate) buf: [wu32; 2],
+    pub(crate) pos: wusize,
 }
 
 impl Threefry32x2 {

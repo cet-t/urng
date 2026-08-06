@@ -1,7 +1,7 @@
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu32};
 
 #[cfg(feature = "simd")]
 use crate::_internal::{i2f_bits, u2f_01};
@@ -9,7 +9,7 @@ use crate::prng::b32::SplitMix32;
 use crate::rng::Rng;
 
 pub struct Xoroshiro64Ss {
-    s: [Wrap<u32>; 2],
+    s: [wu32; 2],
 }
 
 impl Xoroshiro64Ss {

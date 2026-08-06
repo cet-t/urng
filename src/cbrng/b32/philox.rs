@@ -1,7 +1,7 @@
 #[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu32, wusize};
 
 #[cfg(feature = "simd")]
 use crate::_internal::{i2f_bits, u2f_01};
@@ -27,10 +27,10 @@ use crate::rng::Rng;
 /// ```
 #[repr(C)]
 pub struct Philox32 {
-    pub(crate) c: [Wrap<u32>; 4],
-    pub(crate) k: [Wrap<u32>; 2],
-    pub(crate) buf: [Wrap<u32>; 4],
-    pub(crate) pos: Wrap<usize>,
+    pub(crate) c: [wu32; 4],
+    pub(crate) k: [wu32; 2],
+    pub(crate) buf: [wu32; 4],
+    pub(crate) pos: wusize,
 }
 
 impl Philox32 {
@@ -52,7 +52,7 @@ impl Philox32 {
 
     /// Computes Philox output from counter and key values (pure function).
     #[inline(always)]
-    pub(crate) fn compute(c: [Wrap<u32>; 4], k: [Wrap<u32>; 2]) -> [u32; 4] {
+    pub(crate) fn compute(c: [wu32; 4], k: [wu32; 2]) -> [u32; 4] {
         let mut x = c;
         let mut key = k;
 

@@ -1,7 +1,7 @@
 #[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
-use wrapn::Wrap;
+use wrapn::wu64;
 
 use crate::{_internal::sm64_from_seed32, Rng};
 
@@ -21,8 +21,8 @@ use crate::{_internal::sm64_from_seed32, Rng};
 /// ```
 #[repr(C)]
 pub struct Pcg32 {
-    state: Wrap<u64>,
-    inc: Wrap<u64>,
+    state: wu64,
+    inc: wu64,
 }
 
 impl Pcg32 {

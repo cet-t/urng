@@ -1,7 +1,7 @@
 #[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
-use wrapn::Wrap;
+use wrapn::wu32;
 
 #[cfg(feature = "simd")]
 use crate::_internal::{i2f_bits, u2f_01};
@@ -19,10 +19,10 @@ use crate::{prng::b32::SplitMix32, rng::Rng};
 /// ```
 #[repr(C, align(64))]
 pub struct Sfc32 {
-    pub a: Wrap<u32>,
-    pub b: Wrap<u32>,
-    pub c: Wrap<u32>,
-    pub counter: Wrap<u32>,
+    pub a: wu32,
+    pub b: wu32,
+    pub c: wu32,
+    pub counter: wu32,
 }
 
 impl Sfc32 {

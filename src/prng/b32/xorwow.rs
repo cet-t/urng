@@ -1,4 +1,4 @@
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu32};
 
 use crate::{Rng, SplitMix32};
 
@@ -18,8 +18,8 @@ use crate::{Rng, SplitMix32};
 /// ```
 #[repr(C)]
 pub struct Xorwow {
-    x: [Wrap<u32>; 5],
-    c: Wrap<u32>,
+    x: [wu32; 5],
+    c: wu32,
 }
 
 impl Xorwow {

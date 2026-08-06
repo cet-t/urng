@@ -1,6 +1,6 @@
 use std::ptr;
 
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu64, wusize};
 
 use crate::prng::b64::SplitMix64;
 use crate::rng::Rng;
@@ -71,8 +71,8 @@ fn sfmt_recursion(
 /// ```
 #[repr(C, align(64))]
 pub struct Mt1993764 {
-    mt: [Wrap<u64>; N],
-    mti: Wrap<usize>,
+    mt: [wu64; N],
+    mti: wusize,
 }
 
 const N: usize = 312;
@@ -183,7 +183,7 @@ impl Rng for Mt1993764 {
 #[repr(C, align(64))]
 pub struct Sfmt1993764 {
     state: [u32x4; SFMT_N],
-    idx: Wrap<usize>,
+    idx: wusize,
 }
 
 const SFMT_N: usize = 156;

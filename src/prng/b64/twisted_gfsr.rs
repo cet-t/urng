@@ -1,4 +1,4 @@
-use wrapn::Wrap;
+use wrapn::wusize;
 
 use crate::{
     _internal::{i2f_bits, u2f_01},
@@ -21,7 +21,7 @@ use crate::{
 #[repr(C, align(64))]
 pub struct TwistedGFSR {
     seed: [u32; N_GFSR],
-    index: Wrap<usize>,
+    index: wusize,
 }
 
 const N_GFSR: usize = 25;

@@ -1,9 +1,9 @@
-use wrapn::Wrap;
+use wrapn::wu64;
 
 use crate::{Rng, SplitMix64};
 
 pub struct WyHash64 {
-    s: Wrap<u64>,
+    s: wu64,
 }
 
 impl WyHash64 {
@@ -22,7 +22,7 @@ impl Rng for WyHash64 {
     fn nextu(&mut self) -> Self::Word {
         self.s += 0x60bee2bee120fc15;
         let mut tmp = self.s.cast::<u128>() * 0xa3b195354a39b70d;
-        let m1: Wrap<u64> = ((tmp >> 64) ^ tmp).cast();
+        let m1: wu64 = ((tmp >> 64) ^ tmp).cast();
         tmp = m1.cast::<u128>() * 0x1b03738712fad5c9;
         let m2 = (tmp >> 64) ^ tmp;
         m2.cast::<u64>().value()

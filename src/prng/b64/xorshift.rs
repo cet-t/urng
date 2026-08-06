@@ -1,4 +1,4 @@
-use wrapn::Wrap;
+use wrapn::wu64;
 
 use crate::prng::b64::SplitMix64;
 use crate::rng::Rng;
@@ -19,7 +19,7 @@ use crate::rng::Rng;
 /// ```
 #[repr(C)]
 pub struct Xorshift64 {
-    a: Wrap<u64>,
+    a: wu64,
 }
 
 impl Xorshift64 {

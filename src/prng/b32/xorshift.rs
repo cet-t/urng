@@ -1,4 +1,4 @@
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu32};
 
 use crate::prng::b32::SplitMix32;
 use crate::rng::Rng;
@@ -19,7 +19,7 @@ use crate::rng::Rng;
 /// ```
 #[repr(C)]
 pub struct Xorshift32 {
-    a: Wrap<u32>,
+    a: wu32,
 }
 
 impl Xorshift32 {
@@ -62,7 +62,7 @@ impl Rng for Xorshift32 {
 /// ```
 #[repr(C)]
 pub struct Xorshift128 {
-    x: [Wrap<u32>; 4],
+    x: [wu32; 4],
 }
 
 impl Xorshift128 {

@@ -1,7 +1,7 @@
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu64};
 
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use crate::_internal::{i2f_bits, u2f_01};
@@ -20,7 +20,7 @@ use crate::rng::Rng;
 /// ```
 #[repr(C)]
 pub struct Cet64 {
-    s: Wrap<u64>,
+    s: wu64,
 }
 
 const SP1: u64 = 0xFFFFFFFFFFFFFF43;
@@ -66,7 +66,7 @@ impl Rng for Cet64 {
 /// let _ = rng.nextu();
 /// ```
 pub struct Cet256 {
-    s: [Wrap<u64>; 4],
+    s: [wu64; 4],
 }
 
 impl Cet256 {

@@ -1,4 +1,4 @@
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu64};
 
 use crate::rng::Rng;
 
@@ -17,7 +17,7 @@ use crate::rng::Rng;
 /// ```
 #[repr(align(64))]
 pub struct SplitMix64 {
-    pub(crate) s: Wrap<u64>,
+    pub(crate) s: wu64,
 }
 
 impl SplitMix64 {

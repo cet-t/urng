@@ -1,12 +1,12 @@
-use wrapn::{Wrap, wrap};
+use wrapn::{wrap, wu32, wusize};
 
 use crate::{Rng, SplitMix32, impl_ring_rng32};
 
 pub struct ChaCha<const ROUNDS: usize> {
-    x: [Wrap<u32>; 16],
+    x: [wu32; 16],
 
-    pub(crate) buf: [Wrap<u32>; 16],
-    pub(crate) pos: Wrap<usize>,
+    pub(crate) buf: [wu32; 16],
+    pub(crate) pos: wusize,
 }
 
 impl<const ROUNDS: usize> ChaCha<ROUNDS> {
@@ -20,12 +20,7 @@ impl<const ROUNDS: usize> ChaCha<ROUNDS> {
         }
     }
 
-    fn qr(
-        mut a: Wrap<u32>,
-        mut b: Wrap<u32>,
-        mut c: Wrap<u32>,
-        mut d: Wrap<u32>,
-    ) -> [Wrap<u32>; 4] {
+    fn qr(mut a: wu32, mut b: wu32, mut c: wu32, mut d: wu32) -> [wu32; 4] {
         a += b;
         d ^= a;
         d = d.rotate_left(16);
@@ -48,19 +43,34 @@ impl<const ROUNDS: usize> ChaCha<ROUNDS> {
     fn next_raw(&mut self) -> [u32; 16] {
         let mut x = self.x;
         for _ in 0..ROUNDS {
-            [x[00], x[04], x[08], x[12]] = Self::qr(x[00], x[04], x[08], x[12]);
-            [x[01], x[05], x[09], x[13]] = Self::qr(x[01], x[05], x[09], x[13]);
-            [x[02], x[06], x[10], x[14]] = Self::qr(x[02], x[06], x[10], x[14]);
-            [x[03], x[07], x[11], x[15]] = Self::qr(x[03], x[07], x[11], x[15]);
+            [x[0], x[4], x[8], x[12]] = Self::qr(x[0], x[4], x[8], x[12]);
+            [x[1], x[5], x[9], x[13]] = Self::qr(x[1], x[5], x[9], x[13]);
+            [x[2], x[6], x[10], x[14]] = Self::qr(x[2], x[6], x[10], x[14]);
+            [x[3], x[7], x[11], x[15]] = Self::qr(x[3], x[7], x[11], x[15]);
 
-            [x[00], x[05], x[10], x[15]] = Self::qr(x[00], x[05], x[10], x[15]);
-            [x[01], x[06], x[11], x[12]] = Self::qr(x[01], x[06], x[11], x[12]);
-            [x[02], x[07], x[08], x[13]] = Self::qr(x[02], x[07], x[08], x[13]);
-            [x[03], x[04], x[09], x[14]] = Self::qr(x[03], x[04], x[09], x[14]);
+            [x[0], x[5], x[10], x[15]] = Self::qr(x[0], x[5], x[10], x[15]);
+            [x[1], x[6], x[11], x[12]] = Self::qr(x[1], x[6], x[11], x[12]);
+            [x[2], x[7], x[8], x[13]] = Self::qr(x[2], x[7], x[8], x[13]);
+            [x[3], x[4], x[9], x[14]] = Self::qr(x[3], x[4], x[9], x[14]);
         }
 
         self.x = x;
         x.map(|x| x.value())
+    }
+}
+
+impl<const ROUNDS: usize> Default for ChaCha<ROUNDS> {
+    fn default() -> Self {
+        Self::new(crate::_internal::default_seed32())
+    }
+}
+
+impl<const ROUNDS: usize> crate::Seed for ChaCha<ROUNDS> {
+    type Seed = u32;
+
+    #[inline]
+    fn from_seed(seed: Self::Seed) -> Self {
+        Self::new(seed)
     }
 }
 
