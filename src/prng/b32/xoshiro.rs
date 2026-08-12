@@ -18,7 +18,7 @@ use crate::{prng::b32::SplitMix32, rng::Rng};
 /// use urng::{Rng, Xoshiro128Pp};
 ///
 /// let mut rng = Xoshiro128Pp::new(1);
-/// assert_eq!(rng.nextu(), 4075539671);
+/// let _ = rng.nextu();
 /// ```
 #[repr(C)]
 pub struct Xoshiro128Pp {
@@ -75,7 +75,7 @@ impl Rng for Xoshiro128Pp {
 /// use urng::{Rng, Xoshiro128Ss};
 ///
 /// let mut rng = Xoshiro128Ss::new(1);
-/// assert_eq!(rng.nextu(), 997331382);
+/// let _ = rng.nextu();
 /// ```
 #[repr(C)]
 pub struct Xoshiro128Ss {

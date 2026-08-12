@@ -1,5 +1,6 @@
-use crate::wide::{SplitMix32x4, SplitMix32x8, SplitMix32x16, impl_methods, wide_rotate_left};
 use ::wide::{u32x4, u32x8, u32x16};
+
+use crate::wide::{SplitMix32x4, SplitMix32x8, SplitMix32x16, WRng, wide_rotate_left};
 
 macro_rules! impl_variants {
     ($size:expr) => {
@@ -12,6 +13,7 @@ macro_rules! impl_variants {
             #[doc = ""]
             #[doc = "# Example"]
             #[doc = "```"]
+            #[doc = "use urng::wide::WRng;"]
             #[doc = concat!("use urng::wide::Jsf32x", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = Jsf32x", stringify!($size), "::new(12345);")]
@@ -36,12 +38,16 @@ macro_rules! impl_variants {
                         d: bytemuck::cast(seedgen.nextu()),
                     }
                 }
+            }
+
+            impl WRng<$size> for [<Jsf32x $size>] {
+                type Word = u32;
 
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[doc = ""]
                 #[doc = "Applies one round of the JSF scramble and returns the rotated `d` word from each lane."]
                 #[inline(always)]
-                pub fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [u32; $size] {
                     let e = self.a - wide_rotate_left!(32 self.b, 27);
                     self.a = self.b ^ wide_rotate_left!(32 self.c, 17);
                     self.b = self.c + self.d;
@@ -49,8 +55,6 @@ macro_rules! impl_variants {
                     self.d = e + self.a;
                     bytemuck::cast(self.d)
                 }
-
-                impl_methods!($size, 32);
             }
         }
     };

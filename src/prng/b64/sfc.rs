@@ -18,7 +18,7 @@ use crate::rng::Rng;
 /// use urng::{Rng, Sfc64};
 ///
 /// let mut rng = Sfc64::new(1);
-/// let _ = Rng::nextu(&mut rng);
+/// let _ = rng.nextu();
 /// ```
 #[repr(C, align(64))]
 pub struct Sfc64 {

@@ -4,10 +4,10 @@ use thousands::Separable;
 
 use urng::wide::{
     Jsf32x4, Jsf32x8, Jsf32x16, Pcg32x4, Pcg32x8, Pcg32x16, Sfc32x4, Sfc32x8, Sfc32x16,
-    SplitMix32x4, SplitMix32x8, SplitMix32x16, Xoroshiro64Ssx4, Xoroshiro64Ssx8, Xoroshiro64Ssx16,
-    Xorshift32x4, Xorshift32x8, Xorshift32x16, Xorshift128x4, Xorshift128x8, Xorshift128x16,
-    Xorwowx4, Xorwowx8, Xorwowx16, Xoshiro128Ppx4, Xoshiro128Ppx8, Xoshiro128Ppx16, Xoshiro128Ssx4,
-    Xoshiro128Ssx8, Xoshiro128Ssx16,
+    SplitMix32x4, SplitMix32x8, SplitMix32x16, WRng, Xoroshiro64Ssx4, Xoroshiro64Ssx8,
+    Xoroshiro64Ssx16, Xorshift32x4, Xorshift32x8, Xorshift32x16, Xorshift128x4, Xorshift128x8,
+    Xorshift128x16, Xorwowx4, Xorwowx8, Xorwowx16, Xoshiro128Ppx4, Xoshiro128Ppx8, Xoshiro128Ppx16,
+    Xoshiro128Ssx4, Xoshiro128Ssx8, Xoshiro128Ssx16,
 };
 
 const N: usize = 100_000_000;

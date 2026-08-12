@@ -1,7 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![allow(ambiguous_glob_reexports)]
 
-/// A 32/64-bit random number generator trait.
 mod rng;
 pub use crate::rng::*;
 
@@ -10,22 +9,18 @@ mod rngv;
 #[cfg(feature = "simd")]
 pub use crate::rngv::*;
 
-/// Stateful pseudo-random number generators (32/64-bit).
 mod prng;
 pub use crate::prng::*;
 
-/// Counter-based random number generators (32/64-bit).
 mod cbrng;
 pub use crate::cbrng::*;
 
-/// Cipher-based random number generators (32-bit).
 mod crng;
 pub use crate::crng::*;
 
 #[cfg(feature = "rand")]
 mod rand;
 
-/// C-compatible ABI wrappers (32/64-bit).
 #[cfg(feature = "cabi")]
 pub mod cabi;
 #[cfg(feature = "cabi")]

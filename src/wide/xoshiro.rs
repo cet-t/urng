@@ -1,6 +1,9 @@
-use crate::wide::{impl_methods, wide_rotate_left};
-use crate::{Rng, SplitMix32};
+#![allow(dead_code)]
+
 use ::wide::{u32x4, u32x8, u32x16};
+
+use crate::wide::{WRng, wide_rotate_left};
+use crate::{Rng, SplitMix32};
 
 macro_rules! impl_variants {
     ($name:ident, $scrambler:tt, $size:expr) => {
@@ -13,12 +16,12 @@ macro_rules! impl_variants {
             #[doc = ""]
             #[doc = "# Example"]
             #[doc = "```"]
+            #[doc = "use urng::wide::WRng;"]
             #[doc = concat!("use urng::wide::", stringify!($name), "x", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = ", stringify!($name), "x", stringify!($size), "::new(1);")]
             #[doc = concat!("let _ = rng.nextu();")]
             #[doc = "```"]
-            #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<$name x $size>] {
                 s0: [<u32x $size>],
@@ -27,7 +30,6 @@ macro_rules! impl_variants {
                 s3: [<u32x $size>],
             }
 
-            #[allow(dead_code)]
             impl [<$name x $size>] {
                 #[doc = "Creates a new generator, seeding the four state words of every lane from `seed`."]
                 pub fn new(seed: u32) -> Self {
@@ -40,11 +42,16 @@ macro_rules! impl_variants {
                     }
                 }
 
+            }
+
+            impl WRng<$size> for [<$name x $size>] {
+                type Word = u32;
+
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[doc = ""]
                 #[doc = "Applies the xoshiro128 state update and the selected (`++` or `**`) scrambler."]
                 #[inline(always)]
-                pub fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [u32; $size] {
                     let res = impl_variants!(@scramble $scrambler, self.s0, self.s1, self.s3);
                     let t = self.s1 << 9;
 
@@ -57,8 +64,6 @@ macro_rules! impl_variants {
 
                     bytemuck::cast(res)
                 }
-
-                impl_methods!($size, 32);
             }
         }
     };

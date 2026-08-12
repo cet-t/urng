@@ -2,6 +2,16 @@ use wrapn::wu64;
 
 use crate::{Rng, SplitMix64};
 
+/// A WyHash generator.
+///
+/// # Examples
+///
+/// ```
+/// use urng::{Rng, WyHash64};
+///
+/// let mut rng = WyHash64::new(0);
+/// let _ = rng.nextu();
+/// ```
 pub struct WyHash64 {
     s: wu64,
 }

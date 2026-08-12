@@ -1,6 +1,6 @@
 use ::wide::{u32x4, u32x8, u32x16};
 
-use crate::wide::impl_methods;
+use crate::wide::WRng;
 
 macro_rules! impl_variants {
     ($size:expr) => {
@@ -13,6 +13,7 @@ macro_rules! impl_variants {
             #[doc = ""]
             #[doc = "# Example"]
             #[doc = "```"]
+            #[doc = "use urng::wide::WRng;"]
             #[doc = concat!("use urng::wide::SplitMix32x", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = SplitMix32x", stringify!($size), "::new(1);")]
@@ -46,18 +47,20 @@ macro_rules! impl_variants {
                     z = (z ^ (z >> 13)) * [<u32x $size>]::splat(0xC2B2AE35);
                     z ^ (z >> 16)
                 }
+            }
+
+            impl WRng<$size> for [<SplitMix32x $size>] {
+                type Word = u32;
 
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[doc = ""]
                 #[doc = "Advances the shared counter by `0x9E3779B9` and applies the two-multiply finalizer."]
                 #[inline(always)]
-                pub fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [u32; $size] {
                     self.state += [<u32x $size>]::splat(0x9E3779B9);
                     let z = Self::compute(self.state);
                     bytemuck::cast(z)
                 }
-
-                impl_methods!($size, 32);
             }
         }
     };

@@ -1,6 +1,7 @@
-use crate::wide::{impl_methods, wide_rotate_left};
-use crate::{Rng, SplitMix64};
 use ::wide::{u64x4, u64x8};
+
+use crate::wide::{WRng, wide_rotate_left};
+use crate::{Rng, SplitMix64};
 
 macro_rules! impl_squares32_variants {
     ($size:expr, $lanes:expr) => {
@@ -13,6 +14,7 @@ macro_rules! impl_squares32_variants {
             #[doc = ""]
             #[doc = "# Example"]
             #[doc = "```"]
+            #[doc = "use urng::wide::WRng;"]
             #[doc = concat!("use urng::wide::Squares32x", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = Squares32x", stringify!($size), "::new(0);")]
@@ -54,16 +56,19 @@ macro_rules! impl_squares32_variants {
                     out.map(|x| x as u32)
                 }
 
+            }
+
+            impl WRng<$size> for [<Squares32x $size>] {
+                type Word = u32;
+
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[inline(always)]
-                pub fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [u32; $size] {
                     let y = self.c * self.k;
                     let z = y + self.k;
                     self.c += [<u64x $lanes>]::splat($lanes as u64);
                     bytemuck::cast(Self::compute_yz(y, z))
                 }
-
-                impl_methods!($size, 32);
             }
         }
     };
@@ -80,7 +85,7 @@ impl_squares32_variants!(8, 8);
 ///
 /// # Example
 /// ```
-/// use urng::wide::Squares32x16;
+/// use urng::wide::{Squares32x16, WRng};
 ///
 /// let mut rng = Squares32x16::new(0);
 /// let v = rng.nextu();
@@ -102,16 +107,18 @@ impl Squares32x16 {
             hi: Squares32x8::with_counter(seed, 8),
         }
     }
+}
+
+impl WRng<16> for Squares32x16 {
+    type Word = u32;
 
     #[doc = "Generates the next 16 `u32` values by combining both `Squares32x8` lane-groups."]
     #[inline(always)]
-    pub fn nextu(&mut self) -> [u32; 16] {
+    fn nextu(&mut self) -> [u32; 16] {
         let lo = self.lo.nextu();
         let hi = self.hi.nextu();
         std::array::from_fn(|i| if i < 8 { lo[i] } else { hi[i - 8] })
     }
-
-    impl_methods!(16, 32);
 }
 
 #[cfg(test)]

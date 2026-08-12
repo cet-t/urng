@@ -41,7 +41,7 @@ impl Xoroshiro128Pp {
                         $s[0] ^= self.s[0];
                         $s[1] ^= self.s[1];
                     }
-                    self.nextu();
+                    let _ = self.nextu();
                 }
             };
         }
@@ -66,7 +66,7 @@ impl Xoroshiro128Pp {
                             $s[0] ^= self.s[0];
                             $s[1] ^= self.s[1];
                         }
-                        self.nextu();
+                        let _ = self.nextu();
                     }
 
                     self.s = $s;
@@ -136,7 +136,7 @@ impl Xoroshiro128Ss {
                         $s[0] ^= self.s[0];
                         $s[1] ^= self.s[1];
                     }
-                    self.nextu();
+                    let _ = self.nextu();
                 }
             };
         }
@@ -160,7 +160,7 @@ impl Xoroshiro128Ss {
                             $s[0] ^= self.s[0];
                             $s[1] ^= self.s[1];
                         }
-                        self.nextu();
+                        let _ = self.nextu();
                     }
 
                     self.s = $s;

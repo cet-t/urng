@@ -1,6 +1,7 @@
-use crate::wide::{impl_methods, wide_rotate_right};
-use crate::{Rng, SplitMix32};
 use ::wide::{u32x4, u32x8, u32x16};
+
+use crate::wide::{WRng, wide_rotate_right};
+use crate::{Rng, SplitMix32};
 
 macro_rules! impl_variants {
     ($size:expr) => {
@@ -12,6 +13,7 @@ macro_rules! impl_variants {
             #[doc = ""]
             #[doc = "# Example"]
             #[doc = "```"]
+            #[doc = "use urng::wide::WRng;"]
             #[doc = concat!("use urng::wide::Sfc32x", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = Sfc32x", stringify!($size), "::new(1);")]
@@ -57,11 +59,16 @@ macro_rules! impl_variants {
                     tmp
                 }
 
+            }
+
+            impl WRng<$size> for [<Sfc32x $size>] {
+                type Word = u32;
+
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[doc = ""]
                 #[doc = "Mixes the state, advances the counter, and returns the previous `a + b + counter` sum."]
                 #[inline(always)]
-                pub fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [u32; $size] {
                     let tmp = self.a + self.b + self.counter;
                     let result = Self::compute(
                         tmp,
@@ -72,8 +79,6 @@ macro_rules! impl_variants {
                     );
                     bytemuck::cast(result)
                 }
-
-                impl_methods!($size, 32);
             }
         }
     };

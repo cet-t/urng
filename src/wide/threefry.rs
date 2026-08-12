@@ -1,6 +1,7 @@
-use crate::wide::impl_methods;
-use crate::{Rng, SplitMix32};
 use ::wide::{u32x4, u32x8, u32x16};
+
+use crate::wide::WRng;
+use crate::{Rng, SplitMix32};
 
 const THREEFRY32_C240: u32 = 0x1BD11BDA;
 
@@ -15,6 +16,7 @@ macro_rules! impl_threefry32x2_variants {
             #[doc = ""]
             #[doc = "# Example"]
             #[doc = "```"]
+            #[doc = "use urng::wide::WRng;"]
             #[doc = concat!("use urng::wide::Threefry32x2x", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = Threefry32x2x", stringify!($size), "::new(1);")]
@@ -99,9 +101,14 @@ macro_rules! impl_threefry32x2_variants {
                     self.pos = 0;
                 }
 
+            }
+
+            impl WRng<$size> for [<Threefry32x2x $size>] {
+                type Word = u32;
+
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane, refilling as needed."]
                 #[inline(always)]
-                pub fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [u32; $size] {
                     if self.pos >= 2 {
                         self.refill();
                     }
@@ -109,8 +116,6 @@ macro_rules! impl_threefry32x2_variants {
                     self.pos += 1;
                     bytemuck::cast(out)
                 }
-
-                impl_methods!($size, 32);
             }
         }
     };
@@ -130,6 +135,7 @@ macro_rules! impl_threefry32x4_variants {
             #[doc = ""]
             #[doc = "# Example"]
             #[doc = "```"]
+            #[doc = "use urng::wide::WRng;"]
             #[doc = concat!("use urng::wide::Threefry32x4x", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = Threefry32x4x", stringify!($size), "::new(1);")]
@@ -250,9 +256,14 @@ macro_rules! impl_threefry32x4_variants {
                     self.pos = 0;
                 }
 
+            }
+
+            impl WRng<$size> for [<Threefry32x4x $size>] {
+                type Word = u32;
+
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane, refilling as needed."]
                 #[inline(always)]
-                pub fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [u32; $size] {
                     if self.pos >= 4 {
                         self.refill();
                     }
@@ -265,8 +276,6 @@ macro_rules! impl_threefry32x4_variants {
                     self.pos += 1;
                     bytemuck::cast(out)
                 }
-
-                impl_methods!($size, 32);
             }
         }
     };

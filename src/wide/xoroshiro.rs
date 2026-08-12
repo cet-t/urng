@@ -1,6 +1,7 @@
-use crate::wide::{impl_methods, wide_rotate_left};
-use crate::{Rng, SplitMix32};
 use ::wide::{u32x4, u32x8, u32x16};
+
+use crate::wide::{WRng, wide_rotate_left};
+use crate::{Rng, SplitMix32};
 
 macro_rules! impl_variants {
     ($size:expr) => {
@@ -12,6 +13,7 @@ macro_rules! impl_variants {
             #[doc = ""]
             #[doc = "# Example"]
             #[doc = "```"]
+            #[doc = "use urng::wide::WRng;"]
             #[doc = concat!("use urng::wide::Xoroshiro64Ssx", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = Xoroshiro64Ssx", stringify!($size), "::new(1);")]
@@ -35,11 +37,16 @@ macro_rules! impl_variants {
                     }
                 }
 
+            }
+
+            impl WRng<$size> for [<Xoroshiro64Ssx $size>] {
+                type Word = u32;
+
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[doc = ""]
                 #[doc = "Applies the Xoroshiro64** scramble: `rotl(s0 * 0x9E3779BB, 5) * 5`."]
                 #[inline(always)]
-                pub fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [u32; $size] {
                     let s0 = self.s0;
                     let mut s1 = self.s1;
                     let result = wide_rotate_left!(32 (s0 * 0x9E3779BBu32), 5) * 5u32;
@@ -50,8 +57,6 @@ macro_rules! impl_variants {
 
                     bytemuck::cast(result)
                 }
-
-                impl_methods!($size, 32);
             }
         }
     };

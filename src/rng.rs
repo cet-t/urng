@@ -1,3 +1,5 @@
+//! A 32/64-bit random number generator trait.
+
 use crate::_internal::{i2f_bits, randi_wide, u2f_01};
 
 mod sealed {
@@ -21,13 +23,20 @@ pub trait Word: sealed::Sealed + Copy {
     type Int: Copy;
 
     /// Maps the word uniformly onto `[0, 1)`.
+    #[must_use]
     fn to_f01(self) -> Self::Float;
+
     /// Maps the word uniformly onto the inclusive integer range `[min, max]`.
+    #[must_use]
     fn to_randi(self, min: Self::Int, max: Self::Int) -> Self::Int;
+
     /// Maps the word uniformly onto the half-open float range `[min, max)`.
+    #[must_use]
     fn to_randf(self, min: Self::Float, max: Self::Float) -> Self::Float;
+
     /// Maps the word uniformly onto a slice index in `[0, len)` (Lemire's
     /// multiply-shift). Equivalent to `to_randi(0, len as Int - 1) as usize`.
+    #[must_use]
     fn to_index(self, len: usize) -> usize;
 }
 
@@ -77,15 +86,18 @@ pub trait Rng {
     type Word: Word;
 
     /// Generates the next raw word in `[0, 2^BITS)`.
+    #[must_use]
     fn nextu(&mut self) -> Self::Word;
 
     /// Generates the next float in `[0, 1)`.
+    #[must_use]
     #[inline(always)]
     fn nextf(&mut self) -> <Self::Word as Word>::Float {
         self.nextu().to_f01()
     }
 
     /// Generates an integer uniformly in the inclusive range `[min, max]`.
+    #[must_use]
     #[inline(always)]
     fn randi(
         &mut self,
@@ -96,6 +108,7 @@ pub trait Rng {
     }
 
     /// Generates a float uniformly in the half-open range `[min, max)`.
+    #[must_use]
     #[inline(always)]
     fn randf(
         &mut self,
@@ -110,6 +123,8 @@ pub trait Rng {
 pub trait Seed {
     /// The seed type (`u32` or `u64`, matching the generator's word width).
     type Seed;
+
     /// Builds `Self` from a seed.
+    #[must_use]
     fn from_seed(seed: Self::Seed) -> Self;
 }

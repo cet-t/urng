@@ -1,6 +1,7 @@
-use crate::wide::impl_methods;
-use crate::{Rng, SplitMix64};
 use ::wide::{u64x4, u64x8};
+
+use crate::wide::WRng;
+use crate::{Rng, SplitMix64};
 
 macro_rules! impl_pcg32_variants {
     ($size:expr, $lanes:expr) => {
@@ -12,6 +13,7 @@ macro_rules! impl_pcg32_variants {
             #[doc = ""]
             #[doc = "# Example"]
             #[doc = "```"]
+            #[doc = "use urng::wide::WRng;"]
             #[doc = concat!("use urng::wide::Pcg32x", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = Pcg32x", stringify!($size), "::new(0);")]
@@ -46,13 +48,16 @@ macro_rules! impl_pcg32_variants {
                     std::array::from_fn(|i| (xorshifted[i] as u32).rotate_right(rot[i] as u32))
                 }
 
+            }
+
+            impl WRng<$size> for [<Pcg32x $size>] {
+                type Word = u32;
+
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[inline(always)]
-                pub fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [u32; $size] {
                     bytemuck::cast(Self::step(&mut self.state, self.inc))
                 }
-
-                impl_methods!($size, 32);
             }
         }
     };
@@ -68,7 +73,7 @@ impl_pcg32_variants!(8, 8);
 ///
 /// # Example
 /// ```
-/// use urng::wide::Pcg32x16;
+/// use urng::wide::{Pcg32x16, WRng};
 ///
 /// let mut rng = Pcg32x16::new(0);
 /// let v = rng.nextu();
@@ -90,16 +95,18 @@ impl Pcg32x16 {
             hi: Pcg32x8::new(SplitMix64::compute(seed ^ 0x9E3779B97F4A7C15)),
         }
     }
+}
+
+impl WRng<16> for Pcg32x16 {
+    type Word = u32;
 
     #[doc = "Generates the next 16 `u32` values by combining both `Pcg32x8` lane-groups."]
     #[inline(always)]
-    pub fn nextu(&mut self) -> [u32; 16] {
+    fn nextu(&mut self) -> [u32; 16] {
         let lo = self.lo.nextu();
         let hi = self.hi.nextu();
         std::array::from_fn(|i| if i < 8 { lo[i] } else { hi[i - 8] })
     }
-
-    impl_methods!(16, 32);
 }
 
 #[cfg(test)]

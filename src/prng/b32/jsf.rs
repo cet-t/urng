@@ -14,6 +14,7 @@ use crate::{Rng32V256, Rng32V512};
 /// use urng::{Rng, Jsf32};
 ///
 /// let mut rng = Jsf32::new(12345);
+/// let _ = rng.nextu();
 /// ```
 #[repr(C, align(64))]
 pub struct Jsf32 {
