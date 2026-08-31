@@ -17,3 +17,15 @@ pub trait Choice: Rng {
 }
 
 impl<R: Rng + ?Sized> Choice for R {}
+
+#[cfg(test)]
+mod tests {
+    use crate::Choice;
+
+    #[test]
+    fn it_works() {
+        let mut rng = crate::Sfc32::new(0);
+        let items: Vec<_> = (0..10).collect();
+        assert_eq!(rng.choice(&items), &items[3]);
+    }
+}

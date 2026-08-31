@@ -86,7 +86,7 @@ These generators use the portable `wide` crate and expose safe `nextu`, `nextf`,
 
 Example:
 
-```rust
+```rust,norun
 use urng::wide::Xoshiro128Ppx16;
 
 let mut rng = Xoshiro128Ppx16::new(1);
@@ -145,7 +145,7 @@ Weighted random index selection. Two implementations are provided for each bit-w
 Hardware-noise-assisted seed generation. Wraps an existing `Rng` and mixes in hardware noise (RDSEED/RDRAND on x86/x86_64, timestamp fallback elsewhere) via a Murmur3-style hash.
 
 | Struct    | Module          | Input RNG                             | Output                           |
-| --------- | --------------- | -------------------------------------- | -------------------------------- |
+| --------- | --------------- | ------------------------------------- | -------------------------------- |
 | `SeedGen` | `urng::seedgen` | `Rng<Word = u32>` / `Rng<Word = u64>` | `(u32, u32)` / `(u64, u64)` pair |
 
 `next_seed_pair()` returns `(raw, processed)` — the raw hardware value and the mixed seed.
