@@ -12,8 +12,7 @@ use crate::{prng::b32::SplitMix32, rng::Rng};
 /// A fast, high-quality 32-bit generator with a 128-bit state.
 /// Uses the ++ scrambler: `rotl(s[0] + s[3], 7) + s[0]`.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Xoshiro128Pp};
 ///
@@ -26,10 +25,9 @@ pub struct Xoshiro128Pp {
 }
 
 impl Xoshiro128Pp {
-    /// Creates a new `Xoshiro128Pp` instance seeded with the given value.
+    /// Creates a new `Xoshiro128Pp` instance with the given seed.
     ///
     /// The seed is expanded via `SplitMix32` to initialize all four state words.
-    ///
     pub const fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
@@ -69,8 +67,7 @@ impl Rng for Xoshiro128Pp {
 /// A fast, high-quality 32-bit generator with a 128-bit state.
 /// Uses the ** scrambler: `rotl(s[1] * 5, 7) * 9`.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Xoshiro128Ss};
 ///
@@ -83,7 +80,7 @@ pub struct Xoshiro128Ss {
 }
 
 impl Xoshiro128Ss {
-    /// Creates a new `Xoshiro128Ss` instance seeded with the given value.
+    /// Creates a new `Xoshiro128Ss` instance with the given seed.
     pub const fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
@@ -118,10 +115,18 @@ impl Rng for Xoshiro128Ss {
 
 // --- Xoshiro128++ x16 ---
 
-/// A xoshiro128++ random number generator using AVX-512 to process 16 lanes simultaneously.
+/// 16-way SIMD implementation of xoshiro128++ 32-bit RNG.
+/// This implementation uses AVX-512F instructions to generate 16 random numbers in parallel.
 ///
-/// State: four `__m512i` registers, each holding 16 × u32 values for s[0]..s[3].
-/// Requires AVX-512F support.
+/// # Example
+/// ```no_run
+/// use urng::Xoshiro128Ppx16;
+///
+/// unsafe {
+///     let mut rng = Xoshiro128Ppx16::new(1);
+///     let _ = rng.nextu();
+/// }
+/// ```
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Xoshiro128Ppx16 {
@@ -286,10 +291,18 @@ impl Xoshiro128Ppx16 {
 
 // --- Xoshiro128** x16 ---
 
-/// A xoshiro128** random number generator using AVX-512 to process 16 lanes simultaneously.
+/// 16-way SIMD implementation of xoshiro128** 32-bit RNG.
+/// This implementation uses AVX-512F instructions to generate 16 random numbers in parallel.
 ///
-/// State: four `__m512i` registers, each holding 16 × u32 values for s[0]..s[3].
-/// Requires AVX-512F support.
+/// # Example
+/// ```no_run
+/// use urng::Xoshiro128Ssx16;
+///
+/// unsafe {
+///     let mut rng = Xoshiro128Ssx16::new(1);
+///     let _ = rng.nextu();
+/// }
+/// ```
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Xoshiro128Ssx16 {

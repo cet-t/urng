@@ -6,13 +6,9 @@ use wrapn::{wrap, wu64};
 use crate::prng::b64::SplitMix64;
 use crate::rng::Rng;
 
-/// A xoshiro256++ random number generator.
+/// Xoshiro256++ 64-bit RNG implementation.
 ///
-/// This is an all-purpose generator with 256-bit state.
-/// It is particularly suitable for generating floating-point numbers.
-///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Xoshiro256Pp};
 ///
@@ -25,7 +21,7 @@ pub struct Xoshiro256Pp {
 }
 
 impl Xoshiro256Pp {
-    /// Creates a new `Xoshiro256Pp` instance seeded via `SplitMix64`.
+    /// Creates a new `Xoshiro256Pp` instance with the given seed.
     pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
@@ -120,13 +116,9 @@ impl Xoshiro256Ssx2 {
     }
 }
 
-/// A xoshiro256** random number generator.
+/// Xoshiro256** 64-bit RNG implementation.
 ///
-/// This is an all-purpose generator with 256-bit state.
-/// It is robust against linear artifacts and generally recommended for all purposes.
-///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Xoshiro256Ss};
 ///
@@ -139,8 +131,7 @@ pub struct Xoshiro256Ss {
 }
 
 impl Xoshiro256Ss {
-    /// Creates a new `Xoshiro256Ss` instance seeded via `SplitMix64`.
-    ///
+    /// Creates a new `Xoshiro256Ss` instance with the given seed.
     pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {

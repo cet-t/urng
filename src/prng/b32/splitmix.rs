@@ -5,13 +5,12 @@ use wrapn::{wrap, wu32};
 
 use crate::rng::Rng;
 
-/// A SplitMix32 pseudo-random number generator.
+/// SplitMix32 32-bit RNG implementation.
 ///
 /// Fast 32-bit finalizer-based PRNG commonly used to seed other generators.
 /// Uses a single 32-bit state word advanced by the golden-ratio constant.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, SplitMix32};
 ///
@@ -27,7 +26,7 @@ const A: u64 = 0xFF51_AFD7_ED55_8CCD;
 const B: u64 = 0xC4CE_B9FE_1A85_EC53;
 
 impl SplitMix32 {
-    /// Creates a new `SplitMix32` instance seeded with the given value.
+    /// Creates a new `SplitMix32` instance with the given seed.
     pub const fn new(seed: u32) -> Self {
         Self {
             state: wrap!(seed | 1),
@@ -68,10 +67,10 @@ pub const SPLITMIX32x16_PAR_CHUNK: usize = 8192;
 #[cfg(feature = "simd")]
 pub const SPLITMIX32_GAMMA: u32 = 0x9E37_79B9;
 
-/// AVX-512 implementation of SplitMix32 producing 16 values per step.
+/// 16-way SIMD implementation of SplitMix32 32-bit RNG.
+/// This implementation uses AVX-512F instructions to generate 16 random numbers in parallel.
 ///
-/// # Examples
-///
+/// # Example
 /// ```no_run
 /// use urng::{Rng32V512, SplitMix32x16};
 /// unsafe {
@@ -87,7 +86,7 @@ pub struct SplitMix32x16 {
 
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 impl SplitMix32x16 {
-    /// Creates a new `SplitMix32x16` instance.
+    /// Creates a new `SplitMix32x16` instance with the given seed.
     ///
     /// # Safety
     ///

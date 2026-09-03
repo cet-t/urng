@@ -159,6 +159,16 @@ pub const PHILOX32x16_SHIFT: usize = PHILOX32x16.trailing_zeros() as usize;
 /// A Philox 4x32x4 random number generator.
 ///
 /// This is a counter-based RNG suitable for parallel applications.
+///
+/// # Example
+/// ```no_run
+/// use urng::Philox32x4x4;
+///
+/// unsafe {
+///     let mut rng = Philox32x4x4::new(12345);
+///     let _ = rng.nextu();
+/// }
+/// ```
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Philox32x4x4 {

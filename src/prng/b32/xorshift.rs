@@ -9,8 +9,7 @@ use crate::rng::Rng;
 ///
 /// This generator uses a shift-register based algorithm.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Xorshift32};
 ///
@@ -23,7 +22,7 @@ pub struct Xorshift32 {
 }
 
 impl Xorshift32 {
-    /// Creates a new `Xorshift32` instance seeded with the given value.
+    /// Creates a new `Xorshift32` instance with the given seed.
     pub const fn new(seed: u32) -> Self {
         let mut sm = SplitMix32::new(seed);
         Self {
@@ -52,8 +51,7 @@ impl Rng for Xorshift32 {
 /// Produces 32-bit output from a 128-bit internal state.
 /// Period: 2^128 - 1.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Xorshift128};
 ///

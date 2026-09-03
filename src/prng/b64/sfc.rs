@@ -10,10 +10,9 @@ use crate::rng::Rng;
 
 // --- Sfc64 ---
 
-/// A 64-bit SFC random number generator.
+/// SFC (Small Fast Chaotic) 64-bit RNG implementation.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Sfc64};
 ///
@@ -29,7 +28,7 @@ pub struct Sfc64 {
 }
 
 impl Sfc64 {
-    /// Creates a new `Sfc64` instance.
+    /// Creates a new `Sfc64` instance with the given seed.
     pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
@@ -60,13 +59,12 @@ impl Rng for Sfc64 {
 
 /// A 4-way SIMD SFC64 generator using AVX2 256-bit intrinsics.
 ///
-/// # Examples
-///
+/// # Example
 /// ```no_run
 /// use urng::Sfc64x8;
 ///
 /// let mut rng = Sfc64x8::new(0);
-/// let _ = rng.nextu();
+/// let _ = unsafe { rng.nextu() };
 /// ```
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]

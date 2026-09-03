@@ -9,6 +9,7 @@ pub trait Choice: Rng {
         &choices[index]
     }
 
+    /// Returns a random mutable element from a slice.
     #[inline(always)]
     fn choice_mut<'a, T>(&mut self, choices: &'a mut [T]) -> &'a mut T {
         let index = self.nextu().to_index(choices.len());

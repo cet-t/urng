@@ -61,8 +61,7 @@ fn sfmt_recursion(
 
 /// A 32-bit Mersenne Twister (MT19937) random number generator.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Mt19937};
 ///
@@ -82,7 +81,7 @@ const MT32_UPPER_MASK: u32 = 0x80000000;
 const MT32_LOWER_MASK: u32 = 0x7FFFFFFF;
 
 impl Mt19937 {
-    /// Creates a new `Mt19937` instance seeded with the given value.
+    /// Creates a new `Mt19937` instance with the given seed.
     pub fn new(seed: u32) -> Self {
         let mut mt = [wrap!(0u32); MT32_N];
         let mut seedgen = SplitMix32::new(seed);
@@ -176,8 +175,7 @@ impl Rng for Mt19937 {
 
 /// A SIMD oriented Fast Mersenne Twister (SFMT) random number generator (32-bit version).
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Sfmt19937};
 ///
@@ -205,7 +203,7 @@ const SFMT_PARITY3: u32 = 0x00000000;
 const SFMT_PARITY4: u32 = 0x13c9e684;
 
 impl Sfmt19937 {
-    /// Creates a new `Sfmt19937` instance seeded with the given value.
+    /// Creates a new `Sfmt19937` instance with the given seed.
     pub fn new(seed: u32) -> Self {
         let mut seedgen = sm64_from_seed32!(seed);
 
@@ -372,8 +370,7 @@ macro_rules! define_sfmt_variant {
         pastey::paste! {
             /// A SIMD oriented Fast Mersenne Twister (SFMT) random number generator (32-bit version).
             ///
-            /// # Examples
-            ///
+            /// # Example
             #[doc = concat!(
                 "```\n",
                 "use urng::{Rng, ",
@@ -394,6 +391,7 @@ macro_rules! define_sfmt_variant {
             }
 
             impl [<Sfmt $mexp>] {
+                #[doc = concat!("Creates a new `", stringify!([<Sfmt $mexp>]), "` instance with the given seed.")]
                 pub fn new(seed: u32) -> Self {
                     let mut seedgen = sm64_from_seed32!(seed);
                     let mut raw_state = [0u32; $n * 4];

@@ -8,10 +8,9 @@ use crate::_internal::{i2f_bits, u2f_01};
 use crate::prng::b64::SplitMix64;
 use crate::rng::Rng;
 
-/// A 64-bit Self-made random number generator.
+/// CET 64-bit RNG implementation.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Cet64};
 ///
@@ -28,7 +27,7 @@ const SP2: u64 = 0xFFFFFFFFFFFFFF1B;
 const P1: u64 = 0x94D049BB133111EB;
 
 impl Cet64 {
-    /// Creates a new `Cet64` instance with a given seed.
+    /// Creates a new `Cet64` instance with the given seed.
     pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
@@ -55,10 +54,9 @@ impl Rng for Cet64 {
     }
 }
 
-/// A 64-bit Self-made random number generator.
+/// CET 256-bit-state 64-bit RNG implementation.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Cet256};
 ///
@@ -70,7 +68,7 @@ pub struct Cet256 {
 }
 
 impl Cet256 {
-    /// Creates a new `Cet256` instance with a given seed.
+    /// Creates a new `Cet256` instance with the given seed.
     pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {

@@ -2,13 +2,9 @@ use wrapn::{wrap, wu64};
 
 use crate::rng::Rng;
 
-/// A SplitMix64 random number generator.
+/// SplitMix64 64-bit RNG implementation.
 ///
-/// This is a fast generator with 64-bit state, often used for initializing
-/// other generators from a single seed.
-///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, SplitMix64};
 ///
@@ -21,7 +17,7 @@ pub struct SplitMix64 {
 }
 
 impl SplitMix64 {
-    /// Creates a new `SplitMix64` instance.
+    /// Creates a new `SplitMix64` instance with the given seed.
     pub const fn new(seed: u64) -> Self {
         Self { s: wrap!(seed | 1) }
     }

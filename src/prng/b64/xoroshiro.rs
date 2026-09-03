@@ -2,12 +2,9 @@ use wrapn::{wrap, wu64};
 
 use crate::{prng::b64::SplitMix64, rng::Rng};
 
-/// A xoshiro128++ random number generator.
+/// Xoroshiro128++ 64-bit RNG implementation.
 ///
-/// This is a fast 128-bit-state generator with good statistical quality.
-///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Xoroshiro128Pp};
 ///
@@ -20,7 +17,7 @@ pub struct Xoroshiro128Pp {
 }
 
 impl Xoroshiro128Pp {
-    /// Creates a new `Xoroshiro128Pp` instance.
+    /// Creates a new `Xoroshiro128Pp` instance with the given seed.
     pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed | 1);
         Self {
@@ -97,12 +94,9 @@ impl Rng for Xoroshiro128Pp {
     }
 }
 
-/// A xoshiro128** random number generator.
+/// Xoroshiro128** 64-bit RNG implementation.
 ///
-/// This is a fast 128-bit-state generator with good statistical properties.
-///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Xoroshiro128Ss};
 ///
@@ -115,7 +109,7 @@ pub struct Xoroshiro128Ss {
 }
 
 impl Xoroshiro128Ss {
-    /// Creates a new `Xoroshiro128Ss` instance.
+    /// Creates a new `Xoroshiro128Ss` instance with the given seed.
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {

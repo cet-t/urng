@@ -2,16 +2,15 @@ use wrapn::{wrap, wusize};
 
 use crate::{
     _internal::{i2f_bits, u2f_01},
-    SplitMix32, SplitMix64,
+    SplitMix32,
     rng::Rng,
 };
 
 // --- TwistedGFSR ---
 
-/// A Twisted Generalized Feedback Shift Register (TGFSR) generator.
+/// Twisted GFSR (Generalized Feedback Shift Register) 64-bit RNG implementation.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, TwistedGFSR};
 ///
@@ -29,7 +28,7 @@ const M_GFSR: usize = 7;
 const MAG01: [u32; 2] = [0x0, 0x8ebf_d028];
 
 impl TwistedGFSR {
-    /// Creates a new `TwistedGFSR` instance.
+    /// Creates a new `TwistedGFSR` instance with the given seed.
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix32::new(seed as u32);
         let seed = [0u32; N_GFSR].map(|_| seedgen.nextu_const());

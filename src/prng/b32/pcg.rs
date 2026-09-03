@@ -8,8 +8,7 @@ use crate::{_internal::sm64_from_seed32, Rng};
 ///
 /// This implementation uses the PCG-XSH-RR algorithm with 64-bit state and 32-bit output.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Pcg32};
 ///
@@ -23,7 +22,7 @@ pub struct Pcg32 {
 }
 
 impl Pcg32 {
-    /// Creates a new `Pcg32` instance seeded with the given value.
+    /// Creates a new `Pcg32` instance with the given seed.
     pub const fn new(seed: u32) -> Self {
         let mut seedgen = sm64_from_seed32!(seed);
         Pcg32 {
@@ -63,10 +62,10 @@ pub mod simd {
     pub const PCG32X8_PAR_CHUNK_BLOCKS: u64 = (PCG32X8_PAR_CHUNK / PCG32X8_LANE) as u64;
     pub const PCG32_MULT: u64 = 6364136223846793005;
 
-    /// AVX-512 implementation of PCG32 producing 8 values per step.
+    /// 8-way SIMD implementation of PCG (Permuted Congruential Generator) 32-bit RNG.
+    /// This implementation uses AVX-512F instructions to generate 8 random numbers in parallel.
     ///
-    /// # Examples
-    ///
+    /// # Example
     /// ```no_run
     /// use urng::Pcg32x8;
     ///

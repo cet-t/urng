@@ -1,3 +1,4 @@
+/// Error returned when attempting to shuffle an empty slice.
 #[derive(Debug)]
 pub struct SliceShuffleError(pub(crate) ());
 impl std::fmt::Display for SliceShuffleError {
@@ -7,6 +8,7 @@ impl std::fmt::Display for SliceShuffleError {
 }
 impl std::error::Error for SliceShuffleError {}
 
+/// Result type for shuffle operations, failing on an empty slice.
 pub type ShuffleResult<T> = std::result::Result<T, self::SliceShuffleError>;
 
 /// An iterator that yields references to the elements of a slice in a shuffled order.

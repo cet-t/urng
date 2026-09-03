@@ -5,12 +5,9 @@ use crate::rng::Rng;
 
 // --- Xorshift64 ---
 
-/// A 64-bit Xorshift random number generator.
+/// Xorshift 64-bit RNG implementation.
 ///
-/// This generator uses a shift-register based algorithm.
-///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Xorshift64};
 ///
@@ -23,7 +20,7 @@ pub struct Xorshift64 {
 }
 
 impl Xorshift64 {
-    /// Creates a new `Xorshift64` instance.
+    /// Creates a new `Xorshift64` instance with the given seed.
     pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {

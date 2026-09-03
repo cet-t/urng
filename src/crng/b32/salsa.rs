@@ -2,6 +2,15 @@ use wrapn::{wrap, wu32, wusize};
 
 use crate::{Rng, SplitMix32, impl_ring_rng32};
 
+/// Salsa stream cipher based RNG implementation, generic over the round count.
+///
+/// # Example
+/// ```
+/// use urng::{Rng, Salsa20};
+///
+/// let mut rng = Salsa20::new(12345);
+/// let _ = rng.nextu();
+/// ```
 pub struct Salsa<const ROUNDS: usize> {
     x: [wu32; 16],
 
@@ -10,6 +19,7 @@ pub struct Salsa<const ROUNDS: usize> {
 }
 
 impl<const ROUNDS: usize> Salsa<ROUNDS> {
+    /// Creates a new `Salsa` instance with the given seed.
     pub fn new(seed: u32) -> Self {
         let mut sg = SplitMix32::new(seed);
 

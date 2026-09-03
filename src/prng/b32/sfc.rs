@@ -2,10 +2,9 @@ use wrapn::{wrap, wu32};
 
 use crate::{Rng, SplitMix32};
 
-/// A SFC32 pseudo-random number generator.
+/// SFC (Small Fast Chaotic) 32-bit RNG implementation.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Sfc32};
 ///
@@ -21,6 +20,7 @@ pub struct Sfc32 {
 }
 
 impl Sfc32 {
+    /// Creates a new `Sfc32` instance with the given seed.
     pub const fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
@@ -58,10 +58,10 @@ pub mod simd {
 
     pub(crate) const SFC32X4: usize = 4;
 
-    /// A SFC32 pseudo-random number generator.
+    /// 4-way SIMD implementation of SFC (Small Fast Chaotic) 32-bit RNG.
+    /// This implementation uses SSE2 instructions to generate 4 random numbers in parallel.
     ///
-    /// # Examples
-    ///
+    /// # Example
     /// ```
     /// use urng::Sfc32x4;
     ///
@@ -77,6 +77,7 @@ pub mod simd {
     }
 
     impl Sfc32x4 {
+        /// Creates a new `Sfc32x4` instance with the given seed.
         pub fn new(seed: u32) -> Self {
             let mut seedgen = SplitMix32::new(seed);
             let mut a = [0u32; SFC32X4];
@@ -155,10 +156,10 @@ pub mod simd {
 
     pub(crate) const SFC32X8: usize = 8;
 
-    /// A SFC32 pseudo-random number generator.
+    /// 8-way SIMD implementation of SFC (Small Fast Chaotic) 32-bit RNG.
+    /// This implementation uses AVX2 instructions to generate 8 random numbers in parallel.
     ///
-    /// # Examples
-    ///
+    /// # Example
     /// ```no_run
     /// use urng::Sfc32x8;
     ///
@@ -174,7 +175,6 @@ pub mod simd {
     }
 
     impl Sfc32x8 {
-        ///
         /// # Safety
         ///
         /// The caller must ensure the CPU supports the `avx2` target feature.
@@ -247,10 +247,10 @@ pub mod simd {
 
     pub(crate) const SFC32X16: usize = 16;
 
-    /// A SFC32 pseudo-random number generator.
+    /// 16-way SIMD implementation of SFC (Small Fast Chaotic) 32-bit RNG.
+    /// This implementation uses AVX-512F instructions to generate 16 random numbers in parallel.
     ///
-    /// # Examples
-    ///
+    /// # Example
     /// ```no_run
     /// use urng::Sfc32x16;
     ///

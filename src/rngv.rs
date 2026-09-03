@@ -2,6 +2,7 @@ use std::arch::x86_64::*;
 
 use crate::_internal::FSCALE32;
 
+/// 8-way SIMD (AVX2) counterpart of [`crate::Rng`], producing 8 `u32` lanes per call.
 pub trait Rng32V256 {
     /// Generates the next random `__m256i` value containing 8 `u32` integers in the range [0, 2^32).
     ///
@@ -68,6 +69,7 @@ pub trait Rng32V256 {
     }
 }
 
+/// 16-way SIMD (AVX-512) counterpart of [`crate::Rng`], producing 16 `u32` lanes per call.
 pub trait Rng32V512 {
     /// Generates the next random `__m512i` value containing 16 `u32` integers in the range [0, 2^32).
     ///

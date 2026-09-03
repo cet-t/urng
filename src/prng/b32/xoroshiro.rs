@@ -8,11 +8,23 @@ use crate::_internal::{i2f_bits, u2f_01};
 use crate::prng::b32::SplitMix32;
 use crate::rng::Rng;
 
+/// A xoroshiro64** random number generator.
+///
+/// A fast, high-quality 32-bit generator with a 64-bit state.
+///
+/// # Example
+/// ```
+/// use urng::{Rng, Xoroshiro64Ss};
+///
+/// let mut rng = Xoroshiro64Ss::new(12345);
+/// let _ = rng.nextu();
+/// ```
 pub struct Xoroshiro64Ss {
     s: [wu32; 2],
 }
 
 impl Xoroshiro64Ss {
+    /// Creates a new `Xoroshiro64Ss` instance with the given seed.
     pub const fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
 
@@ -42,6 +54,16 @@ impl Rng for Xoroshiro64Ss {
 #[cfg(feature = "simd")]
 pub(crate) const XOROSHIRO64SSX8: usize = 8;
 
+/// 8-way SIMD implementation of xoroshiro64** 32-bit RNG.
+/// This implementation uses AVX2 instructions to generate 8 random numbers in parallel.
+///
+/// # Example
+/// ```ignore
+/// use urng::Xoroshiro64Ssx8;
+///
+/// let mut rng = unsafe { Xoroshiro64Ssx8::new(12345) };
+/// let _ = rng.nextu();
+/// ```
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Xoroshiro64Ssx8 {
@@ -52,8 +74,6 @@ pub struct Xoroshiro64Ssx8 {
 #[cfg(feature = "simd")]
 #[allow(dead_code)]
 impl Xoroshiro64Ssx8 {
-    /// Initializes the generator with a given seed, filling the state arrays with values derived from the seed.
-    ///
     /// # Safety
     /// This function requires AVX2 support. Ensure that the CPU supports it and that the code is compiled with the appropriate target features.
     #[target_feature(enable = "avx2")]
@@ -132,6 +152,16 @@ impl Xoroshiro64Ssx8 {
 #[cfg(feature = "simd")]
 pub(crate) const XOROSHIRO64SSX16: usize = 16;
 
+/// 16-way SIMD implementation of xoroshiro64** 32-bit RNG.
+/// This implementation uses AVX-512F instructions to generate 16 random numbers in parallel.
+///
+/// # Example
+/// ```no_run
+/// use urng::Xoroshiro64Ssx16;
+///
+/// let mut rng = unsafe { Xoroshiro64Ssx16::new(12345) };
+/// let _ = rng.nextu();
+/// ```
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]
 pub struct Xoroshiro64Ssx16 {
@@ -142,8 +172,6 @@ pub struct Xoroshiro64Ssx16 {
 #[cfg(feature = "simd")]
 #[allow(dead_code)]
 impl Xoroshiro64Ssx16 {
-    /// Initializes the generator with a given seed, filling the state arrays with values derived from the seed.
-    ///
     /// # Safety
     /// This function requires AVX-512F support. Ensure that the CPU supports it and that the code is compiled with the appropriate target features.
     #[target_feature(enable = "avx512f")]

@@ -59,10 +59,9 @@ fn sfmt_recursion(
 
 // --- Mt1993764 ---
 
-/// A 64-bit Mersenne Twister (MT19937-64) random number generator.
+/// Mersenne Twister (MT19937-64) 64-bit RNG implementation.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Mt1993764};
 ///
@@ -82,8 +81,7 @@ const UPPER_MASK: u64 = 0xFFFFFFFF80000000;
 const LOWER_MASK: u64 = 0x7FFFFFFF;
 
 impl Mt1993764 {
-    /// Creates a new `Mt1993764` instance seeded via `SplitMix64`.
-    ///
+    /// Creates a new `Mt1993764` instance with the given seed.
     pub fn new(seed: u64) -> Self {
         let mut mt = wrap![0; N];
         let mut seedgen = SplitMix64::new(seed);
@@ -170,10 +168,9 @@ impl Rng for Mt1993764 {
 
 // --- Sfmt1993764 ---
 
-/// A SIMD oriented Fast Mersenne Twister (SFMT) random number generator.
+/// SIMD-oriented Fast Mersenne Twister (SFMT) 64-bit RNG implementation.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Sfmt1993764};
 ///
@@ -201,10 +198,7 @@ const SFMT_PARITY3: u32 = 0x00000000;
 const SFMT_PARITY4: u32 = 0x13c9e684;
 
 impl Sfmt1993764 {
-    /// Creates a new `Sfmt1993764` instance seeded via `SplitMix64`.
-    ///
-    /// The state is period-certified after initialisation.
-    ///
+    /// Creates a new `Sfmt1993764` instance with the given seed.
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
 

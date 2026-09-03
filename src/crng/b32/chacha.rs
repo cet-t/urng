@@ -2,6 +2,15 @@ use wrapn::{wrap, wu32, wusize};
 
 use crate::{Rng, SplitMix32, impl_ring_rng32};
 
+/// ChaCha stream cipher based RNG implementation, generic over the round count.
+///
+/// # Example
+/// ```
+/// use urng::{Rng, ChaCha20};
+///
+/// let mut rng = ChaCha20::new(12345);
+/// let _ = rng.nextu();
+/// ```
 pub struct ChaCha<const ROUNDS: usize> {
     x: [wu32; 16],
 
@@ -10,6 +19,7 @@ pub struct ChaCha<const ROUNDS: usize> {
 }
 
 impl<const ROUNDS: usize> ChaCha<ROUNDS> {
+    /// Creates a new `ChaCha` instance with the given seed.
     pub fn new(seed: u32) -> Self {
         let mut sg = SplitMix32::new(seed);
         let x = [0_u32; 16].map(|_| wrap!(sg.nextu()));

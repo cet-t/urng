@@ -2,10 +2,9 @@ use wrapn::{wrap, wu64};
 
 use crate::{Rng, SplitMix64};
 
-/// A WyHash generator.
+/// Wyhash 64-bit RNG implementation.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, WyHash64};
 ///
@@ -17,6 +16,7 @@ pub struct WyHash64 {
 }
 
 impl WyHash64 {
+    /// Creates a new `WyHash64` instance with the given seed.
     pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {

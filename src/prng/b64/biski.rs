@@ -7,10 +7,9 @@ use wrapn::{wrap, wu64};
 use crate::_internal::{i2f_bits, u2f_01};
 use crate::{prng::b64::SplitMix64, rng::Rng};
 
-/// A [Biski64](https://github.com/danielcota/biski64) random number generator.
+/// Biski64 64-bit RNG implementation.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Biski64};
 ///
@@ -25,7 +24,7 @@ pub struct Biski64 {
 }
 
 impl Biski64 {
-    /// Creates a new `Biski64` instance seeded via `SplitMix64`.
+    /// Creates a new `Biski64` instance with the given seed.
     pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
@@ -55,13 +54,12 @@ impl Rng for Biski64 {
 
 /// A 4-way SIMD Biski64 generator using AVX512 512-bit intrinsics.
 ///
-/// # Examples
-///
+/// # Example
 /// ```no_run
 /// use urng::Biski64x8;
 ///
 /// let mut rng = Biski64x8::new(0);
-/// let _ = rng.nextu();
+/// let _ = unsafe { rng.nextu() };
 /// ```
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]

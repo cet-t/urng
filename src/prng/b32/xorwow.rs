@@ -8,8 +8,7 @@ use crate::{Rng, SplitMix32};
 /// It has a state of 192 bits (5 x 32-bit state + 32-bit counter).
 /// This is the default generator used in NVIDIA cuRAND.
 ///
-/// # Examples
-///
+/// # Example
 /// ```
 /// use urng::{Rng, Xorwow};
 ///
@@ -23,7 +22,7 @@ pub struct Xorwow {
 }
 
 impl Xorwow {
-    /// Creates a new `Xorwow` instance seeded with the given value.
+    /// Creates a new `Xorwow` instance with the given seed.
     pub const fn new(seed: u32) -> Self {
         let mut sm = SplitMix32::new(seed);
         Self {
