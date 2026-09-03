@@ -29,10 +29,10 @@ const P1: u64 = 0x94D049BB133111EB;
 
 impl Cet64 {
     /// Creates a new `Cet64` instance with a given seed.
-    pub fn new(seed: u64) -> Self {
+    pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
-            s: seedgen.nextu().into(),
+            s: wrap!(seedgen.nextu_const()),
         }
     }
 }
@@ -71,14 +71,14 @@ pub struct Cet256 {
 
 impl Cet256 {
     /// Creates a new `Cet256` instance with a given seed.
-    pub fn new(seed: u64) -> Self {
+    pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
             s: wrap![
-                seedgen.nextu(),
-                seedgen.nextu(),
-                seedgen.nextu(),
-                seedgen.nextu(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
             ],
         }
     }

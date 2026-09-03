@@ -24,10 +24,10 @@ pub struct Xorshift32 {
 
 impl Xorshift32 {
     /// Creates a new `Xorshift32` instance seeded with the given value.
-    pub fn new(seed: u32) -> Self {
+    pub const fn new(seed: u32) -> Self {
         let mut sm = SplitMix32::new(seed);
         Self {
-            a: sm.nextu().into(),
+            a: wrap!(sm.nextu_const()),
         }
     }
 }
@@ -69,10 +69,15 @@ impl Xorshift128 {
     /// Creates a new `Xorshift128` instance.
     ///
     /// Each seed element is OR-ed with 1 to prevent an all-zero state.
-    pub fn new(seed: u32) -> Self {
+    pub const fn new(seed: u32) -> Self {
         let mut sm = SplitMix32::new(seed);
         Self {
-            x: wrap![sm.nextu(), sm.nextu(), sm.nextu(), sm.nextu()],
+            x: wrap![
+                sm.nextu_const(),
+                sm.nextu_const(),
+                sm.nextu_const(),
+                sm.nextu_const()
+            ],
         }
     }
 }

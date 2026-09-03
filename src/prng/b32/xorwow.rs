@@ -24,11 +24,17 @@ pub struct Xorwow {
 
 impl Xorwow {
     /// Creates a new `Xorwow` instance seeded with the given value.
-    pub fn new(seed: u32) -> Self {
+    pub const fn new(seed: u32) -> Self {
         let mut sm = SplitMix32::new(seed);
         Self {
-            x: wrap![sm.nextu(), sm.nextu(), sm.nextu(), sm.nextu(), sm.nextu()],
-            c: wrap!(sm.nextu()),
+            x: wrap![
+                sm.nextu_const(),
+                sm.nextu_const(),
+                sm.nextu_const(),
+                sm.nextu_const(),
+                sm.nextu_const()
+            ],
+            c: wrap!(sm.nextu_const()),
         }
     }
 }

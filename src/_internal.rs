@@ -118,10 +118,9 @@ pub(crate) use u2f_01;
 
 macro_rules! sm64_from_seed32 {
     ($seed:expr) => {{
-        use $crate::Rng;
-
         let mut s = $crate::SplitMix32::new($seed);
-        let sg = $crate::SplitMix64::new(((s.nextu() as u64) << 32) | (s.nextu() as u64));
+        let sg =
+            $crate::SplitMix64::new(((s.nextu_const() as u64) << 32) | (s.nextu_const() as u64));
         sg
     }};
 }

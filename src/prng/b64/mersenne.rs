@@ -85,9 +85,9 @@ impl Mt1993764 {
     /// Creates a new `Mt1993764` instance seeded via `SplitMix64`.
     ///
     pub fn new(seed: u64) -> Self {
-        let mut mt = [wrap!(0); N];
+        let mut mt = wrap![0; N];
         let mut seedgen = SplitMix64::new(seed);
-        mt[0] = seedgen.nextu().into();
+        mt[0] = wrap!(seedgen.nextu());
         for i in 1..N {
             let prev = mt[i - 1];
             mt[i] = (prev ^ (prev >> 62)) * 6364136223846793005u64 + (i as u64);

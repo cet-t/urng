@@ -1,11 +1,6 @@
-#[cfg(feature = "simd")]
-use std::arch::x86_64::*;
+use wrapn::{wrap, wu32};
 
-use wrapn::wu32;
-
-#[cfg(feature = "simd")]
-use crate::_internal::{i2f_bits, u2f_01};
-use crate::{prng::b32::SplitMix32, rng::Rng};
+use crate::{Rng, SplitMix32};
 
 /// A SFC32 pseudo-random number generator.
 ///
@@ -19,20 +14,20 @@ use crate::{prng::b32::SplitMix32, rng::Rng};
 /// ```
 #[repr(C, align(64))]
 pub struct Sfc32 {
-    pub a: wu32,
-    pub b: wu32,
-    pub c: wu32,
-    pub counter: wu32,
+    pub(crate) a: wu32,
+    pub(crate) b: wu32,
+    pub(crate) c: wu32,
+    pub(crate) counter: wu32,
 }
 
 impl Sfc32 {
-    pub fn new(seed: u32) -> Self {
+    pub const fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
-            a: seedgen.nextu().into(),
-            b: seedgen.nextu().into(),
-            c: seedgen.nextu().into(),
-            counter: 1.into(),
+            a: wrap!(seedgen.nextu_const()),
+            b: wrap!(seedgen.nextu_const()),
+            c: wrap!(seedgen.nextu_const()),
+            counter: wrap!(1),
         }
     }
 }
@@ -53,311 +48,312 @@ impl Rng for Sfc32 {
 }
 
 #[cfg(feature = "simd")]
-pub(crate) const SFC32X4: usize = 4;
-
-/// A SFC32 pseudo-random number generator.
-///
-/// # Examples
-///
-/// ```
-/// use urng::Sfc32x4;
-///
-/// let mut rng = Sfc32x4::new(1);
-/// let _ = rng.nextu();
-/// ```
-#[cfg(feature = "simd")]
-#[repr(C, align(64))]
-pub struct Sfc32x4 {
-    pub(crate) a: __m128i,
-    pub(crate) b: __m128i,
-    pub(crate) c: __m128i,
-    pub(crate) counter: __m128i,
-}
+pub use simd::*;
 
 #[cfg(feature = "simd")]
-impl Sfc32x4 {
-    pub fn new(seed: u32) -> Self {
-        let mut seedgen = SplitMix32::new(seed);
-        let mut a = [0u32; SFC32X4];
-        let mut b = [0u32; SFC32X4];
-        let mut c = [0u32; SFC32X4];
-        for i in 0..SFC32X4 {
-            a[i] = seedgen.nextu();
-            b[i] = seedgen.nextu();
-            c[i] = seedgen.nextu();
+pub mod simd {
+    use std::arch::x86_64::*;
+
+    use crate::{Rng, SplitMix32, i2f_bits, u2f_01};
+
+    pub(crate) const SFC32X4: usize = 4;
+
+    /// A SFC32 pseudo-random number generator.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use urng::Sfc32x4;
+    ///
+    /// let mut rng = Sfc32x4::new(1);
+    /// let _ = rng.nextu();
+    /// ```
+    #[repr(C, align(64))]
+    pub struct Sfc32x4 {
+        pub(crate) a: __m128i,
+        pub(crate) b: __m128i,
+        pub(crate) c: __m128i,
+        pub(crate) counter: __m128i,
+    }
+
+    impl Sfc32x4 {
+        pub fn new(seed: u32) -> Self {
+            let mut seedgen = SplitMix32::new(seed);
+            let mut a = [0u32; SFC32X4];
+            let mut b = [0u32; SFC32X4];
+            let mut c = [0u32; SFC32X4];
+            for i in 0..SFC32X4 {
+                a[i] = seedgen.nextu();
+                b[i] = seedgen.nextu();
+                c[i] = seedgen.nextu();
+            }
+
+            unsafe {
+                Self {
+                    a: _mm_loadu_si128(a.as_ptr() as *const _),
+                    b: _mm_loadu_si128(b.as_ptr() as *const _),
+                    c: _mm_loadu_si128(c.as_ptr() as *const _),
+                    counter: _mm_set1_epi32(1),
+                }
+            }
         }
 
-        unsafe {
-            Self {
-                a: _mm_loadu_si128(a.as_ptr() as *const _),
-                b: _mm_loadu_si128(b.as_ptr() as *const _),
-                c: _mm_loadu_si128(c.as_ptr() as *const _),
-                counter: _mm_set1_epi32(1),
+        #[inline(always)]
+        pub(crate) fn nextuv(&mut self) -> __m128i {
+            unsafe {
+                let tmp = _mm_add_epi32(_mm_add_epi32(self.a, self.b), self.counter);
+                self.counter = _mm_add_epi32(self.counter, _mm_set1_epi32(1));
+                self.a = _mm_xor_si128(self.b, _mm_srli_epi32(self.b, 9));
+                self.b = _mm_add_epi32(self.c, _mm_slli_epi32(self.c, 3));
+                self.c = _mm_add_epi32(
+                    _mm_or_si128(_mm_slli_epi32(self.c, 21), _mm_srli_epi32(self.c, 11)),
+                    tmp,
+                );
+                tmp
             }
+        }
+
+        #[inline(always)]
+        pub(crate) fn nextfv(&mut self) -> __m128 {
+            unsafe { crate::_internal::simd_f01::u32x4(self.nextuv()) }
+        }
+
+        #[inline(always)]
+        pub(crate) fn randiv(&mut self, v_range: __m128i, v_min: __m128i) -> __m128i {
+            unsafe {
+                let uv = self.nextuv();
+                let hi = _mm_set1_epi64x((0xffff_ffffu64 << 32) as i64);
+                let res_even = _mm_srli_epi64(_mm_mul_epu32(uv, v_range), 32);
+                let prod_odd = _mm_and_si128(
+                    _mm_mul_epu32(_mm_srli_epi64(uv, 32), _mm_srli_epi64(v_range, 32)),
+                    hi,
+                );
+                _mm_add_epi32(_mm_or_si128(res_even, prod_odd), v_min)
+            }
+        }
+
+        #[inline(always)]
+        pub(crate) fn randfv(&mut self, v_mult: __m128, v_min: __m128) -> __m128 {
+            unsafe {
+                _mm_add_ps(
+                    _mm_mul_ps(crate::_internal::simd_f01::u32x4(self.nextuv()), v_mult),
+                    v_min,
+                )
+            }
+        }
+
+        #[inline(always)]
+        pub fn nextu(&mut self) -> [u32; SFC32X4] {
+            unsafe { std::mem::transmute(self.nextuv()) }
+        }
+
+        #[inline(always)]
+        pub fn nextf(&mut self) -> [f32; SFC32X4] {
+            self.nextu().map(|x| u2f_01!(f32, 32, x))
         }
     }
 
-    #[inline(always)]
-    pub(crate) fn nextuv(&mut self) -> __m128i {
-        unsafe {
-            let tmp = _mm_add_epi32(_mm_add_epi32(self.a, self.b), self.counter);
-            self.counter = _mm_add_epi32(self.counter, _mm_set1_epi32(1));
-            self.a = _mm_xor_si128(self.b, _mm_srli_epi32(self.b, 9));
-            self.b = _mm_add_epi32(self.c, _mm_slli_epi32(self.c, 3));
-            self.c = _mm_add_epi32(
-                _mm_or_si128(_mm_slli_epi32(self.c, 21), _mm_srli_epi32(self.c, 11)),
-                tmp,
-            );
+    pub(crate) const SFC32X8: usize = 8;
+
+    /// A SFC32 pseudo-random number generator.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use urng::Sfc32x8;
+    ///
+    /// let mut rng = unsafe { Sfc32x8::new(1) };
+    /// let _ = rng.nextu();
+    /// ```
+    #[repr(C, align(64))]
+    pub struct Sfc32x8 {
+        pub(crate) a: __m256i,
+        pub(crate) b: __m256i,
+        pub(crate) c: __m256i,
+        pub(crate) counter: __m256i,
+    }
+
+    impl Sfc32x8 {
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure the CPU supports the `avx2` target feature.
+        #[target_feature(enable = "avx2")]
+        pub fn new(seed: u32) -> Self {
+            let mut seedgen = SplitMix32::new(seed);
+            let mut a = [0u32; SFC32X8];
+            let mut b = [0u32; SFC32X8];
+            let mut c = [0u32; SFC32X8];
+            for i in 0..SFC32X8 {
+                a[i] = seedgen.nextu();
+                b[i] = seedgen.nextu();
+                c[i] = seedgen.nextu();
+            }
+            unsafe {
+                Self {
+                    a: _mm256_loadu_si256(a.as_ptr() as *const _),
+                    b: _mm256_loadu_si256(b.as_ptr() as *const _),
+                    c: _mm256_loadu_si256(c.as_ptr() as *const _),
+                    counter: _mm256_set1_epi32(1),
+                }
+            }
+        }
+
+        #[inline]
+        #[target_feature(enable = "avx2")]
+        pub(crate) unsafe fn nextuv(&mut self) -> __m256i {
+            let tmp = _mm256_add_epi32(_mm256_add_epi32(self.a, self.b), self.counter);
+            self.counter = _mm256_add_epi32(self.counter, _mm256_set1_epi32(1));
+            self.a = _mm256_xor_si256(self.b, _mm256_srli_epi32(self.b, 9));
+            self.b = _mm256_add_epi32(self.c, _mm256_slli_epi32(self.c, 3));
+            self.c = _mm256_add_epi32(unsafe { _mm256_rol_epi32(self.c, 21) }, tmp);
             tmp
         }
-    }
 
-    #[inline(always)]
-    pub(crate) fn nextfv(&mut self) -> __m128 {
-        unsafe { crate::_internal::simd_f01::u32x4(self.nextuv()) }
-    }
+        #[inline]
+        #[target_feature(enable = "avx2")]
+        pub(crate) unsafe fn nextfv(&mut self) -> __m256 {
+            unsafe { crate::_internal::simd_f01::u32x8(self.nextuv()) }
+        }
 
-    #[inline(always)]
-    pub(crate) fn randiv(&mut self, v_range: __m128i, v_min: __m128i) -> __m128i {
-        unsafe {
-            let uv = self.nextuv();
-            let hi = _mm_set1_epi64x((0xffff_ffffu64 << 32) as i64);
-            let res_even = _mm_srli_epi64(_mm_mul_epu32(uv, v_range), 32);
-            let prod_odd = _mm_and_si128(
-                _mm_mul_epu32(_mm_srli_epi64(uv, 32), _mm_srli_epi64(v_range, 32)),
-                hi,
-            );
-            _mm_add_epi32(_mm_or_si128(res_even, prod_odd), v_min)
+        #[inline]
+        #[target_feature(enable = "avx2")]
+        pub(crate) unsafe fn randiv(&mut self, v_range: __m256i, v_min: __m256i) -> __m256i {
+            const MERGE_MASK: u8 = 0xAA;
+            let v_u32 = unsafe { self.nextuv() };
+            let res_even = _mm256_srli_epi64(_mm256_mul_epu32(v_u32, v_range), 32);
+            let prod_odd = _mm256_mul_epu32(_mm256_srli_epi64(v_u32, 32), v_range);
+            let merged = unsafe { _mm256_mask_blend_epi32(MERGE_MASK, res_even, prod_odd) };
+            _mm256_add_epi32(merged, v_min)
+        }
+
+        #[inline]
+        #[target_feature(enable = "avx2")]
+        pub(crate) unsafe fn randfv(&mut self, v_mult: __m256, v_min: __m256) -> __m256 {
+            let base = unsafe { crate::_internal::simd_f01::u32x8(self.nextuv()) };
+            _mm256_add_ps(_mm256_mul_ps(base, v_mult), v_min)
+        }
+
+        #[inline(always)]
+        pub fn nextu(&mut self) -> [u32; SFC32X8] {
+            unsafe { std::mem::transmute(self.nextuv()) }
+        }
+
+        #[inline(always)]
+        pub fn nextf(&mut self) -> [f32; SFC32X8] {
+            self.nextu().map(|x| u2f_01!(f32, 32, x))
         }
     }
 
-    #[inline(always)]
-    pub(crate) fn randfv(&mut self, v_mult: __m128, v_min: __m128) -> __m128 {
-        unsafe {
-            _mm_add_ps(
-                _mm_mul_ps(crate::_internal::simd_f01::u32x4(self.nextuv()), v_mult),
-                v_min,
-            )
-        }
-    }
+    pub(crate) const SFC32X16: usize = 16;
 
-    #[inline(always)]
-    pub fn nextu(&mut self) -> [u32; SFC32X4] {
-        unsafe { std::mem::transmute(self.nextuv()) }
-    }
-
-    #[inline(always)]
-    pub fn nextf(&mut self) -> [f32; SFC32X4] {
-        self.nextu().map(|x| u2f_01!(f32, 32, x))
-    }
-}
-
-#[cfg(feature = "simd")]
-pub(crate) const SFC32X8: usize = 8;
-
-/// A SFC32 pseudo-random number generator.
-///
-/// # Examples
-///
-/// ```no_run
-/// use urng::Sfc32x8;
-///
-/// let mut rng = unsafe { Sfc32x8::new(1) };
-/// let _ = rng.nextu();
-/// ```
-#[cfg(feature = "simd")]
-#[repr(C, align(64))]
-pub struct Sfc32x8 {
-    pub(crate) a: __m256i,
-    pub(crate) b: __m256i,
-    pub(crate) c: __m256i,
-    pub(crate) counter: __m256i,
-}
-
-#[cfg(feature = "simd")]
-#[allow(dead_code)]
-impl Sfc32x8 {
+    /// A SFC32 pseudo-random number generator.
     ///
-    /// # Safety
+    /// # Examples
     ///
-    /// The caller must ensure the CPU supports the `avx2` target feature.
-    #[target_feature(enable = "avx2")]
-    pub unsafe fn new(seed: u32) -> Self {
-        let mut seedgen = SplitMix32::new(seed);
-        let mut a = [0u32; SFC32X8];
-        let mut b = [0u32; SFC32X8];
-        let mut c = [0u32; SFC32X8];
-        for i in 0..SFC32X8 {
-            a[i] = seedgen.nextu();
-            b[i] = seedgen.nextu();
-            c[i] = seedgen.nextu();
-        }
-        unsafe {
-            Self {
-                a: _mm256_loadu_si256(a.as_ptr() as *const _),
-                b: _mm256_loadu_si256(b.as_ptr() as *const _),
-                c: _mm256_loadu_si256(c.as_ptr() as *const _),
-                counter: _mm256_set1_epi32(1),
+    /// ```no_run
+    /// use urng::Sfc32x16;
+    ///
+    /// let mut rng = unsafe { Sfc32x16::new(1) };
+    /// let _ = rng.nextu();
+    /// ```
+    #[repr(C, align(64))]
+    pub struct Sfc32x16 {
+        pub(crate) a: __m512i,
+        pub(crate) b: __m512i,
+        pub(crate) c: __m512i,
+        pub(crate) counter: __m512i,
+    }
+
+    impl Sfc32x16 {
+        /// # Safety
+        ///
+        /// The caller must ensure the CPU supports the `avx512f` target feature.
+        #[target_feature(enable = "avx512f")]
+        pub fn new(seed: u32) -> Self {
+            let mut seedgen = SplitMix32::new(seed);
+            let mut a = [0u32; SFC32X16];
+            let mut b = [0u32; SFC32X16];
+            let mut c = [0u32; SFC32X16];
+            for i in 0..SFC32X16 {
+                a[i] = seedgen.nextu();
+                b[i] = seedgen.nextu();
+                c[i] = seedgen.nextu();
+            }
+            unsafe {
+                Self {
+                    a: _mm512_loadu_si512(a.as_ptr() as *const _),
+                    b: _mm512_loadu_si512(b.as_ptr() as *const _),
+                    c: _mm512_loadu_si512(c.as_ptr() as *const _),
+                    counter: _mm512_set1_epi32(1),
+                }
             }
         }
-    }
 
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    pub(crate) unsafe fn nextuv(&mut self) -> __m256i {
-        let tmp = _mm256_add_epi32(_mm256_add_epi32(self.a, self.b), self.counter);
-        self.counter = _mm256_add_epi32(self.counter, _mm256_set1_epi32(1));
-        self.a = _mm256_xor_si256(self.b, _mm256_srli_epi32(self.b, 9));
-        self.b = _mm256_add_epi32(self.c, _mm256_slli_epi32(self.c, 3));
-        self.c = _mm256_add_epi32(unsafe { _mm256_rol_epi32(self.c, 21) }, tmp);
-        tmp
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    pub(crate) unsafe fn nextfv(&mut self) -> __m256 {
-        unsafe { crate::_internal::simd_f01::u32x8(self.nextuv()) }
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    pub(crate) unsafe fn randiv(&mut self, v_range: __m256i, v_min: __m256i) -> __m256i {
-        const MERGE_MASK: u8 = 0xAA;
-        let v_u32 = unsafe { self.nextuv() };
-        let res_even = _mm256_srli_epi64(_mm256_mul_epu32(v_u32, v_range), 32);
-        let prod_odd = _mm256_mul_epu32(_mm256_srli_epi64(v_u32, 32), v_range);
-        let merged = unsafe { _mm256_mask_blend_epi32(MERGE_MASK, res_even, prod_odd) };
-        _mm256_add_epi32(merged, v_min)
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    pub(crate) unsafe fn randfv(&mut self, v_mult: __m256, v_min: __m256) -> __m256 {
-        let base = unsafe { crate::_internal::simd_f01::u32x8(self.nextuv()) };
-        _mm256_add_ps(_mm256_mul_ps(base, v_mult), v_min)
-    }
-
-    #[inline(always)]
-    pub fn nextu(&mut self) -> [u32; SFC32X8] {
-        unsafe { std::mem::transmute(self.nextuv()) }
-    }
-
-    #[inline(always)]
-    pub fn nextf(&mut self) -> [f32; SFC32X8] {
-        self.nextu().map(|x| u2f_01!(f32, 32, x))
-    }
-}
-
-#[cfg(feature = "simd")]
-pub(crate) const SFC32X16: usize = 16;
-
-/// A SFC32 pseudo-random number generator.
-///
-/// # Examples
-///
-/// ```no_run
-/// use urng::Sfc32x16;
-///
-/// let mut rng = unsafe { Sfc32x16::new(1) };
-/// let _ = rng.nextu();
-/// ```
-#[cfg(feature = "simd")]
-#[repr(C, align(64))]
-pub struct Sfc32x16 {
-    pub(crate) a: __m512i,
-    pub(crate) b: __m512i,
-    pub(crate) c: __m512i,
-    pub(crate) counter: __m512i,
-}
-
-#[cfg(feature = "simd")]
-#[allow(dead_code)]
-impl Sfc32x16 {
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure the CPU supports the `avx512f` target feature.
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn new(seed: u32) -> Self {
-        let mut seedgen = SplitMix32::new(seed);
-        let mut a = [0u32; SFC32X16];
-        let mut b = [0u32; SFC32X16];
-        let mut c = [0u32; SFC32X16];
-        for i in 0..SFC32X16 {
-            a[i] = seedgen.nextu();
-            b[i] = seedgen.nextu();
-            c[i] = seedgen.nextu();
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub(crate) unsafe fn nextuv(&mut self) -> __m512i {
+            let tmp = _mm512_add_epi32(_mm512_add_epi32(self.a, self.b), self.counter);
+            self.counter = _mm512_add_epi32(self.counter, _mm512_set1_epi32(1));
+            self.a = _mm512_xor_si512(self.b, _mm512_srli_epi32(self.b, 9));
+            self.b = _mm512_add_epi32(self.c, _mm512_slli_epi32(self.c, 3));
+            self.c = _mm512_add_epi32(_mm512_rol_epi32(self.c, 21), tmp);
+            tmp
         }
-        unsafe {
-            Self {
-                a: _mm512_loadu_si512(a.as_ptr() as *const _),
-                b: _mm512_loadu_si512(b.as_ptr() as *const _),
-                c: _mm512_loadu_si512(c.as_ptr() as *const _),
-                counter: _mm512_set1_epi32(1),
-            }
+
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub(crate) unsafe fn nextfv(&mut self) -> __m512 {
+            unsafe { crate::_internal::simd_f01::u32x16(self.nextuv()) }
         }
-    }
 
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub(crate) unsafe fn nextuv(&mut self) -> __m512i {
-        let tmp = _mm512_add_epi32(_mm512_add_epi32(self.a, self.b), self.counter);
-        self.counter = _mm512_add_epi32(self.counter, _mm512_set1_epi32(1));
-        self.a = _mm512_xor_si512(self.b, _mm512_srli_epi32(self.b, 9));
-        self.b = _mm512_add_epi32(self.c, _mm512_slli_epi32(self.c, 3));
-        self.c = _mm512_add_epi32(_mm512_rol_epi32(self.c, 21), tmp);
-        tmp
-    }
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub(crate) unsafe fn randiv(&mut self, v_range: __m512i, v_min: __m512i) -> __m512i {
+            const MERGE_MASK: u16 = 0xAAAA;
+            let v_u32 = unsafe { self.nextuv() };
+            let prod_even = _mm512_mul_epu32(v_u32, v_range);
+            let res_even = _mm512_srli_epi64(prod_even, 32);
+            let v_u32_shifted = _mm512_srli_epi64(v_u32, 32);
+            let prod_odd = _mm512_mul_epu32(v_u32_shifted, v_range);
+            let merged = _mm512_mask_blend_epi32(MERGE_MASK, res_even, prod_odd);
+            _mm512_add_epi32(merged, v_min)
+        }
 
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub(crate) unsafe fn nextfv(&mut self) -> __m512 {
-        unsafe { crate::_internal::simd_f01::u32x16(self.nextuv()) }
-    }
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub(crate) unsafe fn randfv(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
+            let base = unsafe { crate::_internal::simd_f01::u32x16(self.nextuv()) };
+            _mm512_add_ps(_mm512_mul_ps(base, v_mult), v_min)
+        }
 
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub(crate) unsafe fn randiv(&mut self, v_range: __m512i, v_min: __m512i) -> __m512i {
-        const MERGE_MASK: u16 = 0xAAAA;
-        let v_u32 = unsafe { self.nextuv() };
-        let prod_even = _mm512_mul_epu32(v_u32, v_range);
-        let res_even = _mm512_srli_epi64(prod_even, 32);
-        let v_u32_shifted = _mm512_srli_epi64(v_u32, 32);
-        let prod_odd = _mm512_mul_epu32(v_u32_shifted, v_range);
-        let merged = _mm512_mask_blend_epi32(MERGE_MASK, res_even, prod_odd);
-        _mm512_add_epi32(merged, v_min)
-    }
+        #[inline(always)]
+        pub fn nextu(&mut self) -> [u32; SFC32X16] {
+            unsafe { std::mem::transmute(self.nextuv()) }
+        }
 
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub(crate) unsafe fn randfv(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
-        let base = unsafe { crate::_internal::simd_f01::u32x16(self.nextuv()) };
-        _mm512_add_ps(_mm512_mul_ps(base, v_mult), v_min)
-    }
-
-    #[inline(always)]
-    pub fn nextu(&mut self) -> [u32; SFC32X16] {
-        unsafe { std::mem::transmute(self.nextuv()) }
-    }
-
-    pub fn nextf(&mut self) -> [f32; SFC32X16] {
-        self.nextu().map(|x| u2f_01!(f32, 32, x))
+        pub fn nextf(&mut self) -> [f32; SFC32X16] {
+            self.nextu().map(|x| u2f_01!(f32, 32, x))
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "simd")]
+    use std::arch::x86_64::*;
+
     use super::*;
     use crate::safe_test;
-    #[cfg(any(target_feature = "avx2", target_feature = "avx512f"))]
+    #[cfg(feature = "simd")]
     use crate::unsafe_test;
 
     safe_test!(Sfc32);
     #[cfg(feature = "simd")]
     safe_test!(Sfc32x4);
-    #[cfg(all(feature = "simd", target_feature = "avx2"))]
+    #[cfg(feature = "simd")]
     unsafe_test!(Sfc32x8);
-    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    #[cfg(feature = "simd")]
     unsafe_test!(Sfc32x16);
 
     #[cfg(feature = "simd")]

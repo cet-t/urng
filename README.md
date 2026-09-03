@@ -87,7 +87,7 @@ These generators use the portable `wide` crate and expose safe `nextu`, `nextf`,
 Example:
 
 ```rust,norun
-use urng::wide::Xoshiro128Ppx16;
+use urng::wide::{WRng, Xoshiro128Ppx16};
 
 let mut rng = Xoshiro128Ppx16::new(1);
 let values: [u32; 16] = rng.nextu();

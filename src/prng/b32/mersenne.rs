@@ -86,14 +86,14 @@ impl Mt19937 {
     pub fn new(seed: u32) -> Self {
         let mut mt = [wrap!(0u32); MT32_N];
         let mut seedgen = SplitMix32::new(seed);
-        mt[0] = seedgen.nextu().into();
+        mt[0] = wrap!(seedgen.nextu());
         for i in 1..MT32_N {
             let prev = mt[i - 1];
             mt[i] = (prev ^ (prev >> 30)) * 1812433253u32 + i as u32;
         }
         Self {
             mt,
-            mti: MT32_N.into(),
+            mti: wrap!(MT32_N),
         }
     }
 
@@ -168,7 +168,7 @@ impl Rng for Mt19937 {
         y ^= (y << 7) & 0x9D2C5680;
         y ^= (y << 15) & 0xEFC60000;
         y ^= y >> 18;
-        *y.raw()
+        y.value()
     }
 }
 

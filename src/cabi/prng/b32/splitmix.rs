@@ -81,9 +81,8 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use super::*;
-    use crate::dispatch_simd;
     use crate::prng::b32::{
-        SPLITMIX32_GAMMA, SPLITMIX32x16, SPLITMIX32x16_PAR_CHUNK, SplitMix32Simd, SplitMix32x16,
+        SPLITMIX32_GAMMA, SPLITMIX32x16, SPLITMIX32x16_PAR_CHUNK, SplitMix32x16,
     };
     use rayon::iter::{IndexedParallelIterator, ParallelIterator};
     use rayon::slice::ParallelSliceMut;
@@ -167,42 +166,5 @@ mod simd {
                 _mm512_set1_epi32((count as u32).wrapping_mul(SPLITMIX32_GAMMA) as i32),
             );
         }
-    }
-
-    /// Creates a new `SplitMix32Simd` instance, dispatching to AVX-512 or scalar implementation.
-    /// The caller is responsible for freeing the memory using `splitmix32simd_free`.
-    #[unsafe(no_mangle)]
-    pub extern "C" fn splitmix32simd_new(seed: u32) -> *mut SplitMix32Simd {
-        dispatch_simd!(SplitMix32Simd, splitmix32_new, splitmix32x16_new, seed)
-    }
-
-    /// Frees the memory of a `SplitMix32Simd` instance.
-    #[unsafe(no_mangle)]
-    pub extern "C" fn splitmix32simd_free(ptr: *mut SplitMix32Simd) {
-        dispatch_simd!(
-            SplitMix32x16,
-            SplitMix32,
-            splitmix32_free,
-            splitmix32x16_free,
-            ptr
-        )
-    }
-
-    /// Fills the output buffer with the next random `u32` values using the best available implementation.
-    #[unsafe(no_mangle)]
-    pub extern "C" fn splitmix32simd_next_u32s(
-        ptr: *mut SplitMix32Simd,
-        out: *mut u32,
-        count: usize,
-    ) {
-        dispatch_simd!(
-            SplitMix32x16,
-            SplitMix32,
-            splitmix32_next_u32s,
-            splitmix32x16_next_u32s,
-            ptr,
-            out,
-            count
-        )
     }
 } // mod simd

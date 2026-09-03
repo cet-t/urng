@@ -77,9 +77,9 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use super::*;
-    use crate::dispatch_simd;
+    
     use crate::prng::b32::{
-        PCG32_MULT, PCG32X8_LANE, PCG32X8_PAR_CHUNK, PCG32X8_PAR_CHUNK_BLOCKS, Pcg32Simd, Pcg32x8,
+        PCG32_MULT, PCG32X8_LANE, PCG32X8_PAR_CHUNK, PCG32X8_PAR_CHUNK_BLOCKS, Pcg32x8,
     };
     use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
     use rayon::slice::ParallelSliceMut;
@@ -500,10 +500,12 @@ mod simd {
         if count == 0 {
             return;
         }
+
+        let rng = unsafe { &mut *ptr };
+        let mut state0 = [0u64; PCG32X8_LANE];
+        let mut inc0 = [0u64; PCG32X8_LANE];
+
         unsafe {
-            let rng = &mut *ptr;
-            let mut state0 = [0u64; PCG32X8_LANE];
-            let mut inc0 = [0u64; PCG32X8_LANE];
             _mm512_storeu_si512(state0.as_mut_ptr() as *mut _, rng.state);
             _mm512_storeu_si512(inc0.as_mut_ptr() as *mut _, rng.inc);
 
@@ -530,90 +532,10 @@ mod simd {
                         min,
                     )
                 });
-
-            let num_blocks = count.div_ceil(PCG32X8_LANE) as u64;
-            state0 = pcg32x8_advance_states(state0, inc0, num_blocks);
-            rng.state = _mm512_loadu_si512(state0.as_ptr() as *const _);
         }
-    }
 
-    /// Creates a new `Pcg32Simd` instance, dispatching to AVX-512 or scalar implementation.
-    /// The caller is responsible for freeing the memory using `pcg32simd_free`.
-    #[unsafe(no_mangle)]
-    pub extern "C" fn pcg32simd_new(seed: u32) -> *mut Pcg32Simd {
-        dispatch_simd!(Pcg32Simd, pcg32_new, pcg32x8_new, seed)
-    }
-    /// Frees the memory of a `Pcg32Simd` instance.
-    #[unsafe(no_mangle)]
-    pub extern "C" fn pcg32simd_free(ptr: *mut Pcg32Simd) {
-        dispatch_simd!(Pcg32x8, Pcg32, pcg32_free, pcg32x8_free, ptr)
-    }
-    /// Fills the output buffer with the next random `u32` values using the best available implementation.
-    #[unsafe(no_mangle)]
-    pub extern "C" fn pcg32simd_next_u32s(ptr: *mut Pcg32Simd, out: *mut u32, count: usize) {
-        dispatch_simd!(
-            Pcg32x8,
-            Pcg32,
-            pcg32_next_u32s,
-            pcg32x8_next_u32s,
-            ptr,
-            out,
-            count
-        )
-    }
-    /// Fills the output buffer with the next random `f32` values in the range [0, 1).
-    #[unsafe(no_mangle)]
-    pub extern "C" fn pcg32simd_next_f32s(ptr: *mut Pcg32Simd, out: *mut f32, count: usize) {
-        dispatch_simd!(
-            Pcg32x8,
-            Pcg32,
-            pcg32_next_f32s,
-            pcg32x8_next_f32s,
-            ptr,
-            out,
-            count
-        )
-    }
-    /// Fills the output buffer with random `i32` values in the range [min, max].
-    #[unsafe(no_mangle)]
-    pub extern "C" fn pcg32simd_rand_i32s(
-        ptr: *mut Pcg32Simd,
-        out: *mut i32,
-        count: usize,
-        min: i32,
-        max: i32,
-    ) {
-        dispatch_simd!(
-            Pcg32x8,
-            Pcg32,
-            pcg32_rand_i32s,
-            pcg32x8_rand_i32s,
-            ptr,
-            out,
-            count,
-            min,
-            max
-        )
-    }
-    /// Fills the output buffer with random `f32` values in the range [min, max).
-    #[unsafe(no_mangle)]
-    pub extern "C" fn pcg32simd_rand_f32s(
-        ptr: *mut Pcg32Simd,
-        out: *mut f32,
-        count: usize,
-        min: f32,
-        max: f32,
-    ) {
-        dispatch_simd!(
-            Pcg32x8,
-            Pcg32,
-            pcg32_rand_f32s,
-            pcg32x8_rand_f32s,
-            ptr,
-            out,
-            count,
-            min,
-            max
-        )
+        let num_blocks = count.div_ceil(PCG32X8_LANE) as u64;
+        state0 = pcg32x8_advance_states(state0, inc0, num_blocks);
+        rng.state = unsafe { _mm512_loadu_si512(state0.as_ptr() as *const _) };
     }
 } // mod simd

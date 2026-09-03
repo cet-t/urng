@@ -13,11 +13,11 @@ pub struct Xoroshiro64Ss {
 }
 
 impl Xoroshiro64Ss {
-    pub fn new(seed: u32) -> Self {
+    pub const fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
 
         Self {
-            s: wrap![seedgen.nextu(), seedgen.nextu()],
+            s: wrap![seedgen.nextu_const(), seedgen.nextu_const()],
         }
     }
 }

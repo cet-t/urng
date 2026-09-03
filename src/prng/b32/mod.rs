@@ -23,13 +23,13 @@ pub use mersenne::{
 };
 pub use pcg::Pcg32;
 #[cfg(feature = "simd")]
-pub use pcg::{Pcg32Simd, Pcg32x8};
+pub use pcg::Pcg32x8;
 pub use sfc::Sfc32;
 #[cfg(feature = "simd")]
 pub use sfc::{Sfc32x4, Sfc32x8, Sfc32x16};
 pub use splitmix::SplitMix32;
 #[cfg(feature = "simd")]
-pub use splitmix::{SplitMix32Simd, SplitMix32x16};
+pub use splitmix::SplitMix32x16;
 pub use xoroshiro::Xoroshiro64Ss;
 #[cfg(feature = "simd")]
 pub use xoroshiro::Xoroshiro64Ssx16;

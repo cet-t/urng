@@ -1,7 +1,7 @@
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use std::arch::x86_64::*;
 
-use wrapn::wu64;
+use wrapn::{wrap, wu64};
 
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 use crate::_internal::{i2f_bits, u2f_01};
@@ -30,13 +30,13 @@ pub struct Sfc64 {
 
 impl Sfc64 {
     /// Creates a new `Sfc64` instance.
-    pub fn new(seed: u64) -> Self {
+    pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
-            a: seedgen.nextu().into(),
-            b: seedgen.nextu().into(),
-            c: seedgen.nextu().into(),
-            counter: 1.into(),
+            a: wrap!(seedgen.nextu_const()),
+            b: wrap!(seedgen.nextu_const()),
+            c: wrap!(seedgen.nextu_const()),
+            counter: wrap!(1),
         }
     }
 }
@@ -65,10 +65,8 @@ impl Rng for Sfc64 {
 /// ```no_run
 /// use urng::Sfc64x8;
 ///
-/// unsafe {
-///     let mut rng = Sfc64x8::new(0);
-///     let _ = rng.nextu();
-/// }
+/// let mut rng = Sfc64x8::new(0);
+/// let _ = rng.nextu();
 /// ```
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]

@@ -1,7 +1,7 @@
 #[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
-use wrapn::wu64;
+use wrapn::{wrap, wu64};
 
 #[cfg(feature = "simd")]
 use crate::_internal::{i2f_bits, u2f_01};
@@ -26,12 +26,12 @@ pub struct Biski64 {
 
 impl Biski64 {
     /// Creates a new `Biski64` instance seeded via `SplitMix64`.
-    pub fn new(seed: u64) -> Self {
+    pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
-            fast_loop: seedgen.nextu().into(),
-            mix: seedgen.nextu().into(),
-            loop_mix: seedgen.nextu().into(),
+            fast_loop: wrap!(seedgen.nextu_const()),
+            mix: wrap!(seedgen.nextu_const()),
+            loop_mix: wrap!(seedgen.nextu_const()),
         }
     }
 }
@@ -60,10 +60,8 @@ impl Rng for Biski64 {
 /// ```no_run
 /// use urng::Biski64x8;
 ///
-/// unsafe {
-///     let mut rng = Biski64x8::new(0);
-///     let _ = rng.nextu();
-/// }
+/// let mut rng = Biski64x8::new(0);
+/// let _ = rng.nextu();
 /// ```
 #[cfg(all(feature = "simd", target_arch = "x86_64"))]
 #[repr(C, align(64))]

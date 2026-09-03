@@ -1,8 +1,8 @@
-use wrapn::wusize;
+use wrapn::{wrap, wusize};
 
 use crate::{
     _internal::{i2f_bits, u2f_01},
-    SplitMix64,
+    SplitMix32, SplitMix64,
     rng::Rng,
 };
 
@@ -31,14 +31,11 @@ const MAG01: [u32; 2] = [0x0, 0x8ebf_d028];
 impl TwistedGFSR {
     /// Creates a new `TwistedGFSR` instance.
     pub fn new(seed: u64) -> Self {
-        let mut seedgen = SplitMix64::new(seed);
-        let mut seeds = [0u32; N_GFSR];
-        for s in seeds.iter_mut() {
-            *s = seedgen.nextu() as u32;
-        }
+        let mut seedgen = SplitMix32::new(seed as u32);
+        let seed = [0u32; N_GFSR].map(|_| seedgen.nextu_const());
         Self {
-            seed: seeds,
-            index: N_GFSR.into(),
+            seed,
+            index: wrap!(N_GFSR),
         }
     }
 

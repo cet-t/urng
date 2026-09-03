@@ -30,14 +30,14 @@ impl Xoshiro128Pp {
     ///
     /// The seed is expanded via `SplitMix32` to initialize all four state words.
     ///
-    pub fn new(seed: u32) -> Self {
+    pub const fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
             s: wrap![
-                seedgen.nextu(),
-                seedgen.nextu(),
-                seedgen.nextu(),
-                seedgen.nextu()
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const()
             ],
         }
     }
@@ -84,14 +84,14 @@ pub struct Xoshiro128Ss {
 
 impl Xoshiro128Ss {
     /// Creates a new `Xoshiro128Ss` instance seeded with the given value.
-    pub fn new(seed: u32) -> Self {
+    pub const fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
             s: wrap![
-                seedgen.nextu(),
-                seedgen.nextu(),
-                seedgen.nextu(),
-                seedgen.nextu()
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const()
             ],
         }
     }

@@ -1,11 +1,6 @@
-#[cfg(all(feature = "simd", target_arch = "x86_64"))]
-use std::arch::x86_64::*;
-
-use wrapn::wu32;
+use wrapn::{wrap, wu32};
 
 use crate::{Rng, SplitMix32};
-#[cfg(feature = "simd")]
-use crate::{Rng32V256, Rng32V512};
 
 /// JSF (Jenkins Small Fast) 32-bit RNG implementation.
 ///
@@ -26,13 +21,13 @@ pub struct Jsf32 {
 
 impl Jsf32 {
     /// Creates a new `Jsf32` instance with the given seed.
-    pub fn new(seed: u32) -> Self {
+    pub const fn new(seed: u32) -> Self {
         let mut seedgen = SplitMix32::new(seed);
         Self {
-            a: 0xf1ea5eed.into(),
-            b: seedgen.nextu().into(),
-            c: seedgen.nextu().into(),
-            d: seedgen.nextu().into(),
+            a: wrap!(0xf1ea5eed),
+            b: wrap!(seedgen.nextu_const()),
+            c: wrap!(seedgen.nextu_const()),
+            d: wrap!(seedgen.nextu_const()),
         }
     }
 }
@@ -52,118 +47,133 @@ impl Rng for Jsf32 {
 }
 
 #[cfg(feature = "simd")]
-#[repr(C, align(64))]
-pub struct Jsf32x8 {
-    pub(crate) a: __m256i,
-    pub(crate) b: __m256i,
-    pub(crate) c: __m256i,
-    pub(crate) d: __m256i,
-}
+pub use simd::*;
 
 #[cfg(feature = "simd")]
-pub(crate) const JSF32X8: usize = 8;
+pub mod simd {
+    #[cfg(target_arch = "x86_64")]
+    use std::arch::x86_64::*;
 
-#[cfg(feature = "simd")]
-impl Jsf32x8 {
-    /// # Safety
-    #[target_feature(enable = "avx2")]
-    pub fn new(seed: u32) -> Self {
-        let mut seedgen = SplitMix32::new(seed);
-        let mut sv = [[0u32; JSF32X8]; 3];
-        for vals in sv.iter_mut() {
-            for v in vals.iter_mut() {
-                *v = seedgen.nextu();
-            }
-        }
-        let a = [0xf1ea5eedu32; JSF32X8];
-        unsafe {
-            Self {
-                a: _mm256_loadu_si256(a.as_ptr() as *const __m256i),
-                b: _mm256_loadu_si256(sv[0].as_ptr() as *const __m256i),
-                c: _mm256_loadu_si256(sv[1].as_ptr() as *const __m256i),
-                d: _mm256_loadu_si256(sv[2].as_ptr() as *const __m256i),
-            }
-        }
-    }
-}
+    use crate::{Rng, Rng32V256, Rng32V512, SplitMix32};
 
-#[cfg(feature = "simd")]
-impl Rng32V256 for Jsf32x8 {
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    unsafe fn nextuv(&mut self) -> __m256i {
-        let e = _mm256_sub_epi32(self.a, unsafe { _mm256_rol_epi32(self.b, 27) });
-        self.a = _mm256_xor_si256(self.b, unsafe { _mm256_rol_epi32(self.c, 17) });
-        self.b = _mm256_add_epi32(self.c, self.d);
-        self.c = _mm256_add_epi32(self.d, e);
-        self.d = _mm256_add_epi32(e, self.a);
-        self.d
+    /// 8-way SIMD implementation of JSF (Jenkins Small Fast) 32-bit RNG.
+    /// This implementation uses AVX2 instructions to generate 8 random numbers in parallel.
+    ///
+    /// # Example
+    /// ```no_run
+    /// use urng::{Rng32V256, Jsf32x8};
+    ///
+    /// let mut rng = unsafe { Jsf32x8::new(12345) };
+    /// let _ = rng.nextu();
+    /// ```
+    #[repr(C, align(64))]
+    pub struct Jsf32x8 {
+        pub(crate) a: __m256i,
+        pub(crate) b: __m256i,
+        pub(crate) c: __m256i,
+        pub(crate) d: __m256i,
     }
 
-    #[inline(always)]
-    fn nextu(&mut self) -> [u32; JSF32X8] {
-        unsafe { std::mem::transmute(self.nextuv()) }
-    }
-}
+    pub(crate) const JSF32X8: usize = 8;
 
-/// 16-way SIMD implementation of JSF (Jenkins Small Fast) 32-bit RNG.
-/// This implementation uses AVX-512 instructions to generate 16 random numbers in parallel.
-///
-/// # Example
-/// ```no_run
-/// use urng::Rng32V512;
-/// use urng::Jsf32x16;
-///
-/// let mut rng = unsafe { Jsf32x16::new(12345) };
-/// let _ = unsafe { rng.nextu() };
-/// ```
-#[cfg(feature = "simd")]
-#[repr(C, align(64))]
-pub struct Jsf32x16 {
-    pub(crate) a: __m512i,
-    pub(crate) b: __m512i,
-    pub(crate) c: __m512i,
-    pub(crate) d: __m512i,
-}
-
-#[cfg(feature = "simd")]
-pub(crate) const JSF32X16: usize = 16;
-
-#[cfg(feature = "simd")]
-impl Jsf32x16 {
-    /// # Safety
-    #[target_feature(enable = "avx512f")]
-    pub fn new(seed: u32) -> Self {
-        let mut seedgen = SplitMix32::new(seed);
-        let mut sv = [[0u32; JSF32X16]; 3];
-        for vals in sv.iter_mut() {
-            for v in vals.iter_mut() {
-                *v = seedgen.nextu();
+    impl Jsf32x8 {
+        /// # Safety
+        #[target_feature(enable = "avx2")]
+        pub fn new(seed: u32) -> Self {
+            let mut seedgen = SplitMix32::new(seed);
+            let mut sv = [[0u32; JSF32X8]; 3];
+            for vals in sv.iter_mut() {
+                for v in vals.iter_mut() {
+                    *v = seedgen.nextu();
+                }
             }
-        }
-        const A: [u32; JSF32X16] = [0xf1ea5eedu32; JSF32X16];
-        unsafe {
-            Self {
-                a: _mm512_loadu_si512(A.as_ptr() as *const __m512i),
-                b: _mm512_loadu_si512(sv[0].as_ptr() as *const __m512i),
-                c: _mm512_loadu_si512(sv[1].as_ptr() as *const __m512i),
-                d: _mm512_loadu_si512(sv[2].as_ptr() as *const __m512i),
+            let a = [0xf1ea5eedu32; JSF32X8];
+            unsafe {
+                Self {
+                    a: _mm256_loadu_si256(a.as_ptr() as *const __m256i),
+                    b: _mm256_loadu_si256(sv[0].as_ptr() as *const __m256i),
+                    c: _mm256_loadu_si256(sv[1].as_ptr() as *const __m256i),
+                    d: _mm256_loadu_si256(sv[2].as_ptr() as *const __m256i),
+                }
             }
         }
     }
-}
 
-#[cfg(feature = "simd")]
-impl Rng32V512 for Jsf32x16 {
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    unsafe fn nextuv(&mut self) -> __m512i {
-        let e = _mm512_sub_epi32(self.a, _mm512_rol_epi32(self.b, 27));
-        self.a = _mm512_xor_si512(self.b, _mm512_rol_epi32(self.c, 17));
-        self.b = _mm512_add_epi32(self.c, self.d);
-        self.c = _mm512_add_epi32(self.d, e);
-        self.d = _mm512_add_epi32(e, self.a);
-        self.d
+    impl Rng32V256 for Jsf32x8 {
+        #[inline]
+        #[target_feature(enable = "avx2")]
+        unsafe fn nextuv(&mut self) -> __m256i {
+            let e = _mm256_sub_epi32(self.a, unsafe { _mm256_rol_epi32(self.b, 27) });
+            self.a = _mm256_xor_si256(self.b, unsafe { _mm256_rol_epi32(self.c, 17) });
+            self.b = _mm256_add_epi32(self.c, self.d);
+            self.c = _mm256_add_epi32(self.d, e);
+            self.d = _mm256_add_epi32(e, self.a);
+            self.d
+        }
+
+        #[inline(always)]
+        fn nextu(&mut self) -> [u32; JSF32X8] {
+            unsafe { std::mem::transmute(self.nextuv()) }
+        }
+    }
+
+    /// 16-way SIMD implementation of JSF (Jenkins Small Fast) 32-bit RNG.
+    /// This implementation uses AVX-512 instructions to generate 16 random numbers in parallel.
+    ///
+    /// # Example
+    /// ```no_run
+    /// use urng::Rng32V512;
+    /// use urng::Jsf32x16;
+    ///
+    /// unsafe {
+    ///     let mut rng = Jsf32x16::new(12345);
+    ///     let _ = rng.nextu();
+    /// }
+    /// ```
+    #[repr(C, align(64))]
+    pub struct Jsf32x16 {
+        pub(crate) a: __m512i,
+        pub(crate) b: __m512i,
+        pub(crate) c: __m512i,
+        pub(crate) d: __m512i,
+    }
+
+    pub(crate) const JSF32X16: usize = 16;
+
+    impl Jsf32x16 {
+        /// # Safety
+        #[target_feature(enable = "avx512f")]
+        pub fn new(seed: u32) -> Self {
+            let mut seedgen = SplitMix32::new(seed);
+            let mut sv = [[0u32; JSF32X16]; 3];
+            for vals in sv.iter_mut() {
+                for v in vals.iter_mut() {
+                    *v = seedgen.nextu();
+                }
+            }
+            const A: [u32; JSF32X16] = [0xf1ea5eedu32; JSF32X16];
+            unsafe {
+                Self {
+                    a: _mm512_loadu_si512(A.as_ptr() as *const __m512i),
+                    b: _mm512_loadu_si512(sv[0].as_ptr() as *const __m512i),
+                    c: _mm512_loadu_si512(sv[1].as_ptr() as *const __m512i),
+                    d: _mm512_loadu_si512(sv[2].as_ptr() as *const __m512i),
+                }
+            }
+        }
+    }
+
+    impl Rng32V512 for Jsf32x16 {
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        unsafe fn nextuv(&mut self) -> __m512i {
+            let e = _mm512_sub_epi32(self.a, _mm512_rol_epi32(self.b, 27));
+            self.a = _mm512_xor_si512(self.b, _mm512_rol_epi32(self.c, 17));
+            self.b = _mm512_add_epi32(self.c, self.d);
+            self.c = _mm512_add_epi32(self.d, e);
+            self.d = _mm512_add_epi32(e, self.a);
+            self.d
+        }
     }
 }
 

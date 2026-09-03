@@ -26,15 +26,14 @@ pub struct Xoshiro256Pp {
 
 impl Xoshiro256Pp {
     /// Creates a new `Xoshiro256Pp` instance seeded via `SplitMix64`.
-    ///
-    pub fn new(seed: u64) -> Self {
+    pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
             s: wrap![
-                seedgen.nextu(),
-                seedgen.nextu(),
-                seedgen.nextu(),
-                seedgen.nextu(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
             ],
         }
     }
@@ -142,14 +141,14 @@ pub struct Xoshiro256Ss {
 impl Xoshiro256Ss {
     /// Creates a new `Xoshiro256Ss` instance seeded via `SplitMix64`.
     ///
-    pub fn new(seed: u64) -> Self {
+    pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
             s: wrap![
-                seedgen.nextu(),
-                seedgen.nextu(),
-                seedgen.nextu(),
-                seedgen.nextu(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
+                seedgen.nextu_const(),
             ],
         }
     }

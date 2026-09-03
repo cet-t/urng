@@ -1,4 +1,4 @@
-use wrapn::wu64;
+use wrapn::{wrap, wu64};
 
 use crate::{Rng, SplitMix64};
 
@@ -17,10 +17,10 @@ pub struct WyHash64 {
 }
 
 impl WyHash64 {
-    pub fn new(seed: u64) -> Self {
+    pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
-            s: seedgen.nextu().into(),
+            s: wrap!(seedgen.nextu_const()),
         }
     }
 }

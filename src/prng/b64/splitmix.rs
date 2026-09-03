@@ -22,16 +22,22 @@ pub struct SplitMix64 {
 
 impl SplitMix64 {
     /// Creates a new `SplitMix64` instance.
-    pub fn new(seed: u64) -> Self {
+    pub const fn new(seed: u64) -> Self {
         Self { s: wrap!(seed | 1) }
     }
 
     /// Computes the SplitMix64 output for a given raw state word (pure, stateless).
     #[inline]
-    pub(crate) fn compute(mut z: u64) -> u64 {
+    pub(crate) const fn compute(mut z: u64) -> u64 {
         z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
         z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
         z ^ (z >> 31)
+    }
+
+    #[inline(always)]
+    pub(crate) const fn nextu_const(&mut self) -> u64 {
+        self.s.0.0 = self.s.0.0.wrapping_add(0x9E3779B97F4A7C15);
+        Self::compute(self.s.0.0)
     }
 }
 

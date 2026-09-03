@@ -723,12 +723,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "paste"
-version = "1.0.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
-
-[[package]]
 name = "pastey"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1320,11 +1314,11 @@ dependencies = [
 
 [[package]]
 name = "wrapn"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71c6cd260db02b513f2b70c439d99dbc2b95c6a1117763fd8d66cd7d9f862242"
+checksum = "bb0499b4ba6742b04da43dd20d70f9ac9642e4f3e0a5b988b04dbbbd2e162dcd"
 dependencies = [
- "paste",
+ "pastey",
 ]
 
 [[package]]

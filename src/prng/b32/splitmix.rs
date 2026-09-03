@@ -28,10 +28,20 @@ const B: u64 = 0xC4CE_B9FE_1A85_EC53;
 
 impl SplitMix32 {
     /// Creates a new `SplitMix32` instance seeded with the given value.
-    pub fn new(seed: u32) -> Self {
+    pub const fn new(seed: u32) -> Self {
         Self {
             state: wrap!(seed | 1),
         }
+    }
+
+    #[inline(always)]
+    pub(crate) const fn nextu_const(&mut self) -> u32 {
+        self.state.0.0 = self.state.0.0.wrapping_add(0x9E3779B9);
+
+        let mut z = self.state.0.0 as u64;
+        z = (z ^ (z >> 16)).wrapping_mul(A);
+        z = (z ^ (z >> 16)).wrapping_mul(B);
+        (z ^ (z >> 16)) as u32
     }
 }
 
@@ -63,8 +73,7 @@ pub const SPLITMIX32_GAMMA: u32 = 0x9E37_79B9;
 /// # Examples
 ///
 /// ```no_run
-/// use urng::SplitMix32x16;
-///
+/// use urng::{Rng32V512, SplitMix32x16};
 /// unsafe {
 ///     let mut rng = SplitMix32x16::new(1);
 ///     let _ = rng.nextu();
@@ -112,38 +121,20 @@ impl SplitMix32x16 {
         z = _mm512_add_epi32(z, c2);
         _mm512_xor_si512(z, _mm512_srli_epi32(z, 16))
     }
+}
 
-    /// Generates the next 16 random `u32` values.
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure the CPU supports the `avx512f` target feature.
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
+impl crate::Rng32V512 for SplitMix32x16 {
     #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextu(&mut self) -> [u32; SPLITMIX32x16] {
+    unsafe fn nextuv(&mut self) -> __m512i {
         let v = unsafe { Self::compute(self.state) };
         self.state = _mm512_add_epi32(
             self.state,
             _mm512_set1_epi32(SPLITMIX32_GAMMA.wrapping_mul(SPLITMIX32x16 as u32) as i32),
         );
-        unsafe { std::mem::transmute(v) }
+        v
     }
 }
-
-// -- SplitMix32Simd --
-
-/// Opaque handle for the SplitMix32 RNG.
-/// Dispatched at runtime to AVX-512 (`SplitMix32x16`) or scalar (`SplitMix32`) implementation.
-///
-/// # Examples
-///
-/// ```
-/// use urng::SplitMix32Simd;
-///
-/// let _ = core::mem::size_of::<SplitMix32Simd>();
-/// ```
-#[cfg(feature = "simd")]
-#[repr(C)]
-pub struct SplitMix32Simd([u8; 0]);
 
 #[cfg(test)]
 mod tests {

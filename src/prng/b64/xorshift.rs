@@ -1,4 +1,4 @@
-use wrapn::wu64;
+use wrapn::{wrap, wu64};
 
 use crate::prng::b64::SplitMix64;
 use crate::rng::Rng;
@@ -24,10 +24,10 @@ pub struct Xorshift64 {
 
 impl Xorshift64 {
     /// Creates a new `Xorshift64` instance.
-    pub fn new(seed: u64) -> Self {
+    pub const fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         Self {
-            a: seedgen.nextu().into(),
+            a: wrap!(seedgen.nextu_const()),
         }
     }
 }
