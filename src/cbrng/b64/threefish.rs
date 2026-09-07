@@ -55,6 +55,7 @@ const THREEFISH_R_256: [[u32; 2]; 8] = [
 /// let _ = rng.nextu();
 /// ```
 #[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Threefish256 {
     c: [wu64; 4],
     k: [wu64; 5],

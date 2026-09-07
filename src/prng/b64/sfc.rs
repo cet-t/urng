@@ -20,6 +20,7 @@ use crate::rng::Rng;
 /// let _ = rng.nextu();
 /// ```
 #[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Sfc64 {
     a: wu64,
     b: wu64,

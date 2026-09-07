@@ -12,6 +12,7 @@ use crate::{Rng, SplitMix32};
 /// let _ = rng.nextu();
 /// ```
 #[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Jsf32 {
     pub(crate) a: wu32,
     pub(crate) b: wu32,

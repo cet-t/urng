@@ -69,6 +69,7 @@ fn sfmt_recursion(
 /// let _ = rng.nextu();
 /// ```
 #[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Mt1993764 {
     mt: [wu64; N],
     mti: wusize,
@@ -178,6 +179,7 @@ impl Rng for Mt1993764 {
 /// let _ = rng.nextu();
 /// ```
 #[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Sfmt1993764 {
     state: [u32x4; SFMT_N],
     idx: wusize,

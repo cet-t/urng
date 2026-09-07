@@ -25,7 +25,8 @@ use crate::rng::Rng;
 /// let mut rng = Philox32::new(1);
 /// let _: u32 = rng.nextu();
 /// ```
-#[repr(C)]
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Philox32 {
     pub(crate) c: [wu32; 4],
     pub(crate) k: [wu32; 2],

@@ -14,7 +14,8 @@ use crate::rng::Rng;
 /// let mut rng = Xorshift64::new(1);
 /// let _ = rng.nextu();
 /// ```
-#[repr(C)]
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Xorshift64 {
     a: wu64,
 }

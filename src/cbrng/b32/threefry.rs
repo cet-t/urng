@@ -22,6 +22,7 @@ const THREEFRY32_C240: u32 = 0x1BD11BDA;
 /// let _: u32 = rng.nextu();
 /// ```
 #[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Threefry32x4 {
     pub(crate) c: [wu32; 4],
     pub(crate) k: [wu32; 5],
@@ -178,6 +179,8 @@ crate::_internal::impl_ring_rng32!(Threefry32x4, 4, next_raw);
 /// let mut rng = Threefry32x2::new(1);
 /// let _: u32 = rng.nextu();
 /// ```
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Threefry32x2 {
     pub(crate) c: [wu32; 2],
     pub(crate) k: [wu32; 3],

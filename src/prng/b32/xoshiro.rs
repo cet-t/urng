@@ -20,6 +20,7 @@ use crate::{prng::b32::SplitMix32, rng::Rng};
 /// let _ = rng.nextu();
 /// ```
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct Xoshiro128Pp {
     s: [wu32; 4],
 }
@@ -75,6 +76,7 @@ impl Rng for Xoshiro128Pp {
 /// let _ = rng.nextu();
 /// ```
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct Xoshiro128Ss {
     s: [wu32; 4],
 }

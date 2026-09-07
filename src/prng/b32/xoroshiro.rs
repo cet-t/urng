@@ -19,6 +19,8 @@ use crate::rng::Rng;
 /// let mut rng = Xoroshiro64Ss::new(12345);
 /// let _ = rng.nextu();
 /// ```
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct Xoroshiro64Ss {
     s: [wu32; 2],
 }

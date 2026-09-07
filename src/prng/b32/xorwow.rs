@@ -16,6 +16,7 @@ use crate::{Rng, SplitMix32};
 /// let _ = rng.nextu();
 /// ```
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct Xorwow {
     x: [wu32; 5],
     c: wu32,

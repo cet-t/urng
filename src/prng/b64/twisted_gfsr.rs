@@ -18,6 +18,7 @@ use crate::{
 /// let _ = rng.nextu();
 /// ```
 #[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct TwistedGFSR {
     seed: [u32; N_GFSR],
     index: wusize,

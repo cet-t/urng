@@ -16,6 +16,7 @@ use crate::{_internal::sm64_from_seed32, Rng};
 /// let _ = rng.nextu();
 /// ```
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct Pcg32 {
     state: wu64,
     inc: wu64,

@@ -15,7 +15,8 @@ use crate::rng::Rng;
 /// let mut rng = Xoshiro256Pp::new(1);
 /// let _ = rng.nextu();
 /// ```
-#[repr(C)]
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Xoshiro256Pp {
     s: [wu64; 4],
 }
@@ -125,7 +126,8 @@ impl Xoshiro256Ssx2 {
 /// let mut rng = Xoshiro256Ss::new(1);
 /// let _ = rng.nextu();
 /// ```
-#[repr(C)]
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Xoshiro256Ss {
     s: [wu64; 4],
 }

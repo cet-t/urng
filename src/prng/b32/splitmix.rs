@@ -18,6 +18,7 @@ use crate::rng::Rng;
 /// let _ = rng.nextu();
 /// ```
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct SplitMix32 {
     state: wu32,
 }

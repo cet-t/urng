@@ -11,6 +11,8 @@ use crate::{Rng, SplitMix32, impl_ring_rng32};
 /// let mut rng = ChaCha20::new(12345);
 /// let _ = rng.nextu();
 /// ```
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct ChaCha<const ROUNDS: usize> {
     x: [wu32; 16],
 

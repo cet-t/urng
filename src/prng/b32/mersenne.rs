@@ -69,6 +69,7 @@ fn sfmt_recursion(
 /// let _ = rng.nextu();
 /// ```
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct Mt19937 {
     mt: [wu32; MT32_N],
     mti: wusize,

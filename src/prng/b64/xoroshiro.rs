@@ -11,7 +11,8 @@ use crate::{prng::b64::SplitMix64, rng::Rng};
 /// let mut rng = Xoroshiro128Pp::new(1);
 /// let _ = rng.nextu();
 /// ```
-#[repr(C)]
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Xoroshiro128Pp {
     s: [wu64; 2],
 }
@@ -103,7 +104,8 @@ impl Rng for Xoroshiro128Pp {
 /// let mut rng = Xoroshiro128Ss::new(1);
 /// let _ = rng.nextu();
 /// ```
-#[repr(C)]
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Xoroshiro128Ss {
     s: [wu64; 2],
 }

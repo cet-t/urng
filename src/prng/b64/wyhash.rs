@@ -11,6 +11,8 @@ use crate::{Rng, SplitMix64};
 /// let mut rng = WyHash64::new(0);
 /// let _ = rng.nextu();
 /// ```
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct WyHash64 {
     s: wu64,
 }

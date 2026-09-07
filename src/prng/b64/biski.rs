@@ -17,6 +17,7 @@ use crate::{prng::b64::SplitMix64, rng::Rng};
 /// let _ = rng.nextu();
 /// ```
 #[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Biski64 {
     fast_loop: wu64,
     mix: wu64,

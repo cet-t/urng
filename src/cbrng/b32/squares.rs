@@ -19,6 +19,8 @@ use crate::{_internal::sm64_from_seed32, rng::Rng};
 /// let mut rng = Squares32::new(1);
 /// let _ = rng.nextu();
 /// ```
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Squares32 {
     pub(crate) c: wu64,
     pub(crate) k: wu64,

@@ -12,6 +12,7 @@ use crate::rng::Rng;
 /// let _ = rng.nextu();
 /// ```
 #[repr(align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct SplitMix64 {
     pub(crate) s: wu64,
 }

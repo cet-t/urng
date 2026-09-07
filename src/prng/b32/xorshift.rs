@@ -17,6 +17,7 @@ use crate::rng::Rng;
 /// let _ = rng.nextu();
 /// ```
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct Xorshift32 {
     a: wu32,
 }
@@ -59,6 +60,7 @@ impl Rng for Xorshift32 {
 /// let _ = rng.nextu();
 /// ```
 #[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct Xorshift128 {
     x: [wu32; 4],
 }

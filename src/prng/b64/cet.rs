@@ -17,7 +17,8 @@ use crate::rng::Rng;
 /// let mut rng = Cet64::new(1);
 /// let _ = rng.nextu();
 /// ```
-#[repr(C)]
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Cet64 {
     s: wu64,
 }
@@ -63,6 +64,8 @@ impl Rng for Cet64 {
 /// let mut rng = Cet256::new(1);
 /// let _ = rng.nextu();
 /// ```
+#[repr(C, align(64))]
+#[derive(Debug, Clone, Copy)]
 pub struct Cet256 {
     s: [wu64; 4],
 }
