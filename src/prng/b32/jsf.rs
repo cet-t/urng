@@ -55,17 +55,17 @@ pub mod simd {
     #[cfg(target_arch = "x86_64")]
     use std::arch::x86_64::*;
 
-    use crate::{Rng, Rng32V256, Rng32V512, SplitMix32};
+    use crate::{Rng, SplitMix32, VRng};
 
     /// 8-way SIMD implementation of JSF (Jenkins Small Fast) 32-bit RNG.
     /// This implementation uses AVX2 instructions to generate 8 random numbers in parallel.
     ///
     /// # Example
     /// ```no_run
-    /// use urng::{Rng32V256, Jsf32x8};
+    /// use urng::{VRng, Jsf32x8};
     ///
     /// let mut rng = unsafe { Jsf32x8::new(12345) };
-    /// let _ = rng.nextu();
+    /// let _ = rng.nextuv();
     /// ```
     #[repr(C, align(64))]
     pub struct Jsf32x8 {
@@ -88,10 +88,9 @@ pub mod simd {
                     *v = seedgen.nextu();
                 }
             }
-            let a = [0xf1ea5eedu32; JSF32X8];
             unsafe {
                 Self {
-                    a: _mm256_loadu_si256(a.as_ptr() as *const __m256i),
+                    a: _mm256_set1_epi32(0xf1ea5eed_u32 as i32),
                     b: _mm256_loadu_si256(sv[0].as_ptr() as *const __m256i),
                     c: _mm256_loadu_si256(sv[1].as_ptr() as *const __m256i),
                     d: _mm256_loadu_si256(sv[2].as_ptr() as *const __m256i),
@@ -100,21 +99,19 @@ pub mod simd {
         }
     }
 
-    impl Rng32V256 for Jsf32x8 {
-        #[inline]
-        #[target_feature(enable = "avx2")]
-        unsafe fn nextuv(&mut self) -> __m256i {
-            let e = _mm256_sub_epi32(self.a, unsafe { _mm256_rol_epi32(self.b, 27) });
-            self.a = _mm256_xor_si256(self.b, unsafe { _mm256_rol_epi32(self.c, 17) });
-            self.b = _mm256_add_epi32(self.c, self.d);
-            self.c = _mm256_add_epi32(self.d, e);
-            self.d = _mm256_add_epi32(e, self.a);
-            self.d
-        }
+    impl VRng for Jsf32x8 {
+        type Word = __m256i;
 
-        #[inline(always)]
-        fn nextu(&mut self) -> [u32; JSF32X8] {
-            unsafe { std::mem::transmute(self.nextuv()) }
+        #[inline]
+        fn nextuv(&mut self) -> __m256i {
+            unsafe {
+                let e = _mm256_sub_epi32(self.a, _mm256_rol_epi32(self.b, 27));
+                self.a = _mm256_xor_si256(self.b, _mm256_rol_epi32(self.c, 17));
+                self.b = _mm256_add_epi32(self.c, self.d);
+                self.c = _mm256_add_epi32(self.d, e);
+                self.d = _mm256_add_epi32(e, self.a);
+                self.d
+            }
         }
     }
 
@@ -123,12 +120,11 @@ pub mod simd {
     ///
     /// # Example
     /// ```no_run
-    /// use urng::Rng32V512;
-    /// use urng::Jsf32x16;
+    /// use urng::{VRng, Jsf32x16};
     ///
     /// unsafe {
     ///     let mut rng = Jsf32x16::new(12345);
-    ///     let _ = rng.nextu();
+    ///     let _ = rng.nextuv();
     /// }
     /// ```
     #[repr(C, align(64))]
@@ -164,16 +160,18 @@ pub mod simd {
         }
     }
 
-    impl Rng32V512 for Jsf32x16 {
-        #[inline]
-        #[target_feature(enable = "avx512f")]
-        unsafe fn nextuv(&mut self) -> __m512i {
-            let e = _mm512_sub_epi32(self.a, _mm512_rol_epi32(self.b, 27));
-            self.a = _mm512_xor_si512(self.b, _mm512_rol_epi32(self.c, 17));
-            self.b = _mm512_add_epi32(self.c, self.d);
-            self.c = _mm512_add_epi32(self.d, e);
-            self.d = _mm512_add_epi32(e, self.a);
-            self.d
+    impl VRng for Jsf32x16 {
+        type Word = __m512i;
+
+        fn nextuv(&mut self) -> __m512i {
+            unsafe {
+                let e = _mm512_sub_epi32(self.a, _mm512_rol_epi32(self.b, 27));
+                self.a = _mm512_xor_si512(self.b, _mm512_rol_epi32(self.c, 17));
+                self.b = _mm512_add_epi32(self.c, self.d);
+                self.c = _mm512_add_epi32(self.d, e);
+                self.d = _mm512_add_epi32(e, self.a);
+                self.d
+            }
         }
     }
 }

@@ -93,7 +93,8 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use crate::_internal::chunk_seed32;
-    use crate::Rng32V512;
+    #[cfg(target_arch = "x86_64")]
+    use crate::VRng;
     use crate::prng::b32::jsf::{JSF32X16, Jsf32x16};
     use rayon::prelude::*;
     #[cfg(target_arch = "x86_64")]

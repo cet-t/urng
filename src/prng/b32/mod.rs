@@ -42,7 +42,7 @@ pub use xoshiro::{Xoshiro128Ppx16, Xoshiro128Ssx16};
 #[cfg(all(feature = "cabi", feature = "simd"))]
 pub(crate) use pcg::{PCG32_MULT, PCG32X8_LANE, PCG32X8_PAR_CHUNK, PCG32X8_PAR_CHUNK_BLOCKS};
 #[cfg(all(feature = "cabi", feature = "simd"))]
-pub(crate) use splitmix::{SPLITMIX32_GAMMA, SPLITMIX32x16, SPLITMIX32x16_PAR_CHUNK};
+pub(crate) use splitmix::{SPLITMIX32_GAMMA, SPLITMIX32X16, SPLITMIX32X16_PAR_CHUNK};
 
 crate::impl_default_from_seed32!(
     Jsf32,

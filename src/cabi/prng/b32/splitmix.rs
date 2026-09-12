@@ -82,7 +82,7 @@ pub use simd::*;
 mod simd {
     use super::*;
     use crate::prng::b32::{
-        SPLITMIX32_GAMMA, SPLITMIX32x16, SPLITMIX32x16_PAR_CHUNK, SplitMix32x16,
+        SPLITMIX32_GAMMA, SPLITMIX32X16, SPLITMIX32X16_PAR_CHUNK, SplitMix32x16,
     };
     use rayon::iter::{IndexedParallelIterator, ParallelIterator};
     use rayon::slice::ParallelSliceMut;
@@ -109,12 +109,12 @@ mod simd {
     #[target_feature(enable = "avx512f")]
     #[allow(unsafe_op_in_unsafe_fn)]
     unsafe fn splitmix32x16_next_u32s_chunk(chunk_idx: usize, chunk: &mut [u32], state0: __m512i) {
-        let offset = ((chunk_idx * SPLITMIX32x16_PAR_CHUNK) as u32).wrapping_mul(SPLITMIX32_GAMMA);
+        let offset = ((chunk_idx * SPLITMIX32X16_PAR_CHUNK) as u32).wrapping_mul(SPLITMIX32_GAMMA);
         let mut state = _mm512_add_epi32(state0, _mm512_set1_epi32(offset as i32));
-        let step = _mm512_set1_epi32(SPLITMIX32_GAMMA.wrapping_mul(SPLITMIX32x16 as u32) as i32);
+        let step = _mm512_set1_epi32(SPLITMIX32_GAMMA.wrapping_mul(SPLITMIX32X16 as u32) as i32);
 
         let is_aligned = (chunk.as_ptr() as usize) & 63 == 0;
-        let mut chunks16 = chunk.chunks_exact_mut(SPLITMIX32x16);
+        let mut chunks16 = chunk.chunks_exact_mut(SPLITMIX32X16);
 
         if is_aligned {
             for dst in chunks16.by_ref() {
@@ -133,7 +133,7 @@ mod simd {
         let rem = chunks16.into_remainder();
         if !rem.is_empty() {
             let v = SplitMix32x16::compute(state);
-            let mut tmp = [0u32; SPLITMIX32x16];
+            let mut tmp = [0u32; SPLITMIX32X16];
             _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
             rem.copy_from_slice(&tmp[..rem.len()]);
         }
@@ -155,7 +155,7 @@ mod simd {
             let state0 = rng.state;
 
             buffer
-                .par_chunks_mut(SPLITMIX32x16_PAR_CHUNK)
+                .par_chunks_mut(SPLITMIX32X16_PAR_CHUNK)
                 .enumerate()
                 .for_each(|(chunk_idx, chunk)| {
                     splitmix32x16_next_u32s_chunk(chunk_idx, chunk, state0);
