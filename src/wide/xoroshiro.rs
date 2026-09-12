@@ -13,7 +13,7 @@ macro_rules! impl_variants {
             #[doc = ""]
             #[doc = "# Example"]
             #[doc = "```"]
-            #[doc = "use urng::wide::WRng;"]
+            #[doc = "use urng::wide::RngW;"]
             #[doc = concat!("use urng::wide::Xoroshiro64Ssx", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = Xoroshiro64Ssx", stringify!($size), "::new(1);")]

@@ -13,7 +13,7 @@ macro_rules! impl_pcg32_variants {
             #[doc = ""]
             #[doc = "# Example"]
             #[doc = "```"]
-            #[doc = "use urng::wide::WRng;"]
+            #[doc = "use urng::wide::RngW;"]
             #[doc = concat!("use urng::wide::Pcg32x", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = Pcg32x", stringify!($size), "::new(0);")]
@@ -73,7 +73,7 @@ impl_pcg32_variants!(8, 8);
 ///
 /// # Example
 /// ```
-/// use urng::wide::{Pcg32x16, WRng};
+/// use urng::wide::{Pcg32x16, RngW};
 ///
 /// let mut rng = Pcg32x16::new(0);
 /// let v = rng.nextu();

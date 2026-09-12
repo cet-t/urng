@@ -14,7 +14,7 @@ macro_rules! impl_squares32_variants {
             #[doc = ""]
             #[doc = "# Example"]
             #[doc = "```"]
-            #[doc = "use urng::wide::WRng;"]
+            #[doc = "use urng::wide::RngW;"]
             #[doc = concat!("use urng::wide::Squares32x", stringify!($size), ";")]
             #[doc = ""]
             #[doc = concat!("let mut rng = Squares32x", stringify!($size), "::new(0);")]

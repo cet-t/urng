@@ -65,7 +65,7 @@ pub mod simd {
     use std::arch::x86_64::*;
 
     #[cfg(target_arch = "x86_64")]
-    use crate::VRng;
+    use crate::RngV;
 
     pub const SPLITMIX32X16: usize = 16;
     pub const SPLITMIX32X16_PAR_CHUNK: usize = 8192;
@@ -76,7 +76,7 @@ pub mod simd {
     ///
     /// # Example
     /// ```no_run
-    /// use urng::{VRng, SplitMix32x16};
+    /// use urng::{RngV, SplitMix32x16};
     /// unsafe {
     ///     let mut rng = SplitMix32x16::new(1);
     ///     let _ = rng.nextuv();
@@ -127,7 +127,7 @@ pub mod simd {
     }
 
     #[cfg(all(feature = "simd", target_arch = "x86_64"))]
-    impl VRng for SplitMix32x16 {
+    impl RngV for SplitMix32x16 {
         type Word = __m512i;
 
         fn nextuv(&mut self) -> __m512i {

@@ -9,7 +9,7 @@ mod sealed {
     impl Sealed for __m512i {}
 }
 
-pub trait VWord: sealed::Sealed + Copy + Sized {
+pub trait WordV: sealed::Sealed + Copy + Sized {
     type Int;
     type Float;
 
@@ -23,7 +23,7 @@ pub trait VWord: sealed::Sealed + Copy + Sized {
     fn to_randf(self, min: Self::Float, scale: Self::Float) -> Self::Float;
 }
 
-impl VWord for __m128i {
+impl WordV for __m128i {
     type Int = Self;
     type Float = __m128;
 
@@ -58,7 +58,7 @@ impl VWord for __m128i {
     }
 }
 
-impl VWord for __m256i {
+impl WordV for __m256i {
     type Int = Self;
     type Float = __m256;
 
@@ -88,7 +88,7 @@ impl VWord for __m256i {
     }
 }
 
-impl VWord for __m512i {
+impl WordV for __m512i {
     type Int = Self;
     type Float = __m512;
 
@@ -120,28 +120,28 @@ impl VWord for __m512i {
     }
 }
 
-pub trait VRng {
-    type Word: VWord;
+pub trait RngV {
+    type Word: WordV;
 
     fn nextuv(&mut self) -> Self::Word;
 
-    fn nextfv(&mut self, scale: <Self::Word as VWord>::Float) -> <Self::Word as VWord>::Float {
+    fn nextfv(&mut self, scale: <Self::Word as WordV>::Float) -> <Self::Word as WordV>::Float {
         self.nextuv().to_f01(scale)
     }
 
     fn randiv(
         &mut self,
-        min: <Self::Word as VWord>::Int,
-        max: <Self::Word as VWord>::Int,
-    ) -> <Self::Word as VWord>::Int {
+        min: <Self::Word as WordV>::Int,
+        max: <Self::Word as WordV>::Int,
+    ) -> <Self::Word as WordV>::Int {
         self.nextuv().to_randi(min, max)
     }
 
     fn randfv(
         &mut self,
-        min: <Self::Word as VWord>::Float,
-        max: <Self::Word as VWord>::Float,
-    ) -> <Self::Word as VWord>::Float {
+        min: <Self::Word as WordV>::Float,
+        max: <Self::Word as WordV>::Float,
+    ) -> <Self::Word as WordV>::Float {
         self.nextuv().to_randf(min, max)
     }
 }

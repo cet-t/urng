@@ -55,14 +55,14 @@ pub mod simd {
     #[cfg(target_arch = "x86_64")]
     use std::arch::x86_64::*;
 
-    use crate::{Rng, SplitMix32, VRng};
+    use crate::{Rng, RngV, SplitMix32};
 
     /// 8-way SIMD implementation of JSF (Jenkins Small Fast) 32-bit RNG.
     /// This implementation uses AVX2 instructions to generate 8 random numbers in parallel.
     ///
     /// # Example
     /// ```no_run
-    /// use urng::{VRng, Jsf32x8};
+    /// use urng::{RngV, Jsf32x8};
     ///
     /// let mut rng = unsafe { Jsf32x8::new(12345) };
     /// let _ = rng.nextuv();
@@ -99,7 +99,7 @@ pub mod simd {
         }
     }
 
-    impl VRng for Jsf32x8 {
+    impl RngV for Jsf32x8 {
         type Word = __m256i;
 
         #[inline]
@@ -120,7 +120,7 @@ pub mod simd {
     ///
     /// # Example
     /// ```no_run
-    /// use urng::{VRng, Jsf32x16};
+    /// use urng::{RngV, Jsf32x16};
     ///
     /// unsafe {
     ///     let mut rng = Jsf32x16::new(12345);
@@ -160,7 +160,7 @@ pub mod simd {
         }
     }
 
-    impl VRng for Jsf32x16 {
+    impl RngV for Jsf32x16 {
         type Word = __m512i;
 
         fn nextuv(&mut self) -> __m512i {
