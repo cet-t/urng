@@ -255,12 +255,10 @@ impl Xoroshiro64Ssx16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::safe_test;
 
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-    use crate::unsafe_test;
 
-    safe_test!(Xoroshiro64Ss);
+    crate::safe_test! { Xoroshiro64Ss }
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-    unsafe_test!(Xoroshiro64Ssx16);
+    crate::unsafe_test! { Xoroshiro64Ssx16 }
 }

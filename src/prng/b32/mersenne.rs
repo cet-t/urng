@@ -706,19 +706,20 @@ define_sfmt_variant!(
 
 #[cfg(test)]
 mod tests {
-    use crate::safe_test;
 
     use super::*;
 
-    safe_test!(Mt19937);
-    safe_test!(Sfmt19937);
-    safe_test!(Sfmt607);
-    safe_test!(Sfmt1279);
-    safe_test!(Sfmt2281);
-    safe_test!(Sfmt4253);
-    safe_test!(Sfmt11213);
-    safe_test!(Sfmt44497);
-    safe_test!(Sfmt86243);
-    safe_test!(Sfmt132049);
-    safe_test!(Sfmt216091);
+    crate::safe_test! {
+        Mt19937,
+        Sfmt19937,
+        Sfmt607,
+        Sfmt1279,
+        Sfmt2281,
+        Sfmt4253,
+        Sfmt11213,
+        Sfmt44497,
+        Sfmt86243,
+        Sfmt132049,
+        Sfmt216091
+    }
 }

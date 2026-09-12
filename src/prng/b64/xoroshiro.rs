@@ -190,6 +190,8 @@ impl Rng for Xoroshiro128Ss {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Xoroshiro128Pp);
-    crate::safe_test!(Xoroshiro128Ss);
+    crate::safe_test! {
+        Xoroshiro128Pp,
+        Xoroshiro128Ss
+    }
 }

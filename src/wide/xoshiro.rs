@@ -2,7 +2,7 @@
 
 use ::wide::{u32x4, u32x8, u32x16};
 
-use crate::wide::{WRng, wide_rotate_left};
+use crate::wide::{RngW, wide_rotate_left};
 use crate::{Rng, SplitMix32};
 
 macro_rules! impl_variants {
@@ -44,14 +44,14 @@ macro_rules! impl_variants {
 
             }
 
-            impl WRng<$size> for [<$name x $size>] {
+            impl RngW<$size> for [<$name x $size>] {
                 type Word = u32;
 
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[doc = ""]
                 #[doc = "Applies the xoshiro128 state update and the selected (`++` or `**`) scrambler."]
                 #[inline(always)]
-                fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [Self::Word; $size] {
                     let res = impl_variants!(@scramble $scrambler, self.s0, self.s1, self.s3);
                     let t = self.s1 << 9;
 
@@ -85,10 +85,12 @@ impl_variants!(Xoshiro128Ss, ss; 4, 8, 16);
 mod tests {
     use super::*;
 
-    crate::safe_test!(Xoshiro128Ppx4);
-    crate::safe_test!(Xoshiro128Ppx8);
-    crate::safe_test!(Xoshiro128Ppx16);
-    crate::safe_test!(Xoshiro128Ssx4);
-    crate::safe_test!(Xoshiro128Ssx8);
-    crate::safe_test!(Xoshiro128Ssx16);
+    crate::safe_test! {
+        Xoshiro128Ppx4,
+        Xoshiro128Ppx8,
+        Xoshiro128Ppx16,
+        Xoshiro128Ssx4,
+        Xoshiro128Ssx8,
+        Xoshiro128Ssx16
+    }
 }

@@ -289,6 +289,8 @@ crate::_internal::impl_ring_rng32!(Threefry32x2, 2, next_raw);
 mod tests {
     use super::*;
 
-    crate::safe_test!(Threefry32x4);
-    crate::safe_test!(Threefry32x2);
+    crate::safe_test! {
+        Threefry32x4,
+        Threefry32x2
+    }
 }

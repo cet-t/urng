@@ -1,6 +1,6 @@
 use ::wide::{u32x4, u32x8, u32x16};
 
-use crate::wide::WRng;
+use crate::wide::RngW;
 use crate::{Rng, SplitMix32};
 
 const THREEFRY32_C240: u32 = 0x1BD11BDA;
@@ -103,12 +103,12 @@ macro_rules! impl_threefry32x2_variants {
 
             }
 
-            impl WRng<$size> for [<Threefry32x2x $size>] {
+            impl RngW<$size> for [<Threefry32x2x $size>] {
                 type Word = u32;
 
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane, refilling as needed."]
                 #[inline(always)]
-                fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [Self::Word; $size] {
                     if self.pos >= 2 {
                         self.refill();
                     }
@@ -258,7 +258,7 @@ macro_rules! impl_threefry32x4_variants {
 
             }
 
-            impl WRng<$size> for [<Threefry32x4x $size>] {
+            impl RngW<$size> for [<Threefry32x4x $size>] {
                 type Word = u32;
 
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane, refilling as needed."]
@@ -291,10 +291,12 @@ impl_threefry32x4_variants!(4, 8, 16);
 mod tests {
     use super::*;
 
-    crate::safe_test!(Threefry32x2x4);
-    crate::safe_test!(Threefry32x2x8);
-    crate::safe_test!(Threefry32x2x16);
-    crate::safe_test!(Threefry32x4x4);
-    crate::safe_test!(Threefry32x4x8);
-    crate::safe_test!(Threefry32x4x16);
+    crate::safe_test! {
+        Threefry32x2x4,
+        Threefry32x2x8,
+        Threefry32x2x16,
+        Threefry32x4x4,
+        Threefry32x4x8,
+        Threefry32x4x16
+    }
 }

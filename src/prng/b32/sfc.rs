@@ -345,17 +345,16 @@ mod tests {
     use std::arch::x86_64::*;
 
     use super::*;
-    use crate::safe_test;
     #[cfg(feature = "simd")]
-    use crate::unsafe_test;
 
-    safe_test!(Sfc32);
+    crate::safe_test! { Sfc32 }
     #[cfg(feature = "simd")]
-    safe_test!(Sfc32x4);
+    crate::safe_test! { Sfc32x4 }
     #[cfg(feature = "simd")]
-    unsafe_test!(Sfc32x8);
-    #[cfg(feature = "simd")]
-    unsafe_test!(Sfc32x16);
+    crate::unsafe_test! {
+        Sfc32x8,
+        Sfc32x16
+    }
 
     #[cfg(feature = "simd")]
     fn scalar_lanes(seed: u32) -> [Sfc32; SFC32X4] {

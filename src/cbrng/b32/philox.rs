@@ -316,7 +316,7 @@ impl Philox32x4x4 {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Philox32);
+    crate::safe_test! { Philox32 }
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-    crate::unsafe_test!(Philox32x4x4);
+    crate::unsafe_test! { Philox32x4x4 }
 }

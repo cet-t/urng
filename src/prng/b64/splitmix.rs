@@ -52,5 +52,5 @@ impl Rng for SplitMix64 {
 mod tests {
     use super::*;
 
-    crate::safe_test!(SplitMix64);
+    crate::safe_test! { SplitMix64 }
 }

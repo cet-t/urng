@@ -95,8 +95,9 @@ impl_ring_rng32!(ChaCha20, 16, next_raw);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::safe_test;
 
-    safe_test!(ChaCha8);
-    safe_test!(ChaCha20);
+    crate::safe_test! {
+        ChaCha8,
+        ChaCha20
+    }
 }

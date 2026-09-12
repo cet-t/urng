@@ -10,9 +10,9 @@ use crate::rng::Word;
 /// exactly one place. `WIDTH` is a named const generic (bind it as
 /// `WRng<WIDTH = 8>`), so it reads at call sites the same way an associated
 /// item would.
-pub trait WRng<const WIDTH: usize> {
+pub trait RngW<const WIDTH: usize> {
     /// The unsigned output word this generator produces, per lane.
-    type Word: Word;
+    type Word: crate::rng::Word;
 
     /// Generates the next block of `WIDTH` raw words, each in `[0, 2^BITS)`.
     #[must_use]
@@ -21,8 +21,8 @@ pub trait WRng<const WIDTH: usize> {
     /// Generates `WIDTH` floats in `[0, 1)`.
     #[must_use]
     #[inline(always)]
-    fn nextf(&mut self) -> [<Self::Word as Word>::Float; WIDTH] {
-        self.nextu().map(Word::to_f01)
+    fn nextf(&mut self) -> [<Self::Word as crate::rng::Word>::Float; WIDTH] {
+        self.nextu().map(<Self::Word as crate::rng::Word>::to_f01)
     }
 
     /// Generates `WIDTH` integers uniformly in the inclusive range `[min, max]`.
@@ -30,9 +30,9 @@ pub trait WRng<const WIDTH: usize> {
     #[inline(always)]
     fn randi(
         &mut self,
-        min: <Self::Word as Word>::Int,
-        max: <Self::Word as Word>::Int,
-    ) -> [<Self::Word as Word>::Int; WIDTH] {
+        min: <Self::Word as crate::rng::Word>::Int,
+        max: <Self::Word as crate::rng::Word>::Int,
+    ) -> [<Self::Word as crate::rng::Word>::Int; WIDTH] {
         self.nextu().map(|w| w.to_randi(min, max))
     }
 
@@ -41,9 +41,9 @@ pub trait WRng<const WIDTH: usize> {
     #[inline(always)]
     fn randf(
         &mut self,
-        min: <Self::Word as Word>::Float,
-        max: <Self::Word as Word>::Float,
-    ) -> [<Self::Word as Word>::Float; WIDTH] {
+        min: <Self::Word as crate::rng::Word>::Float,
+        max: <Self::Word as crate::rng::Word>::Float,
+    ) -> [<Self::Word as crate::rng::Word>::Float; WIDTH] {
         self.nextu().map(|w| w.to_randf(min, max))
     }
 }
@@ -51,7 +51,7 @@ pub trait WRng<const WIDTH: usize> {
 #[cfg(test)]
 mod tests {
     use crate::Seed;
-    use crate::wide::{Jsf32x4, Pcg32x4, WRng};
+    use crate::wide::{Jsf32x4, Pcg32x4, RngW};
 
     #[test]
     fn seed_and_default_are_wired() {

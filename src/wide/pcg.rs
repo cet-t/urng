@@ -1,6 +1,6 @@
 use ::wide::{u64x4, u64x8};
 
-use crate::wide::WRng;
+use crate::wide::RngW;
 use crate::{Rng, SplitMix64};
 
 macro_rules! impl_pcg32_variants {
@@ -50,12 +50,12 @@ macro_rules! impl_pcg32_variants {
 
             }
 
-            impl WRng<$size> for [<Pcg32x $size>] {
+            impl RngW<$size> for [<Pcg32x $size>] {
                 type Word = u32;
 
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[inline(always)]
-                fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [Self::Word; $size] {
                     bytemuck::cast(Self::step(&mut self.state, self.inc))
                 }
             }
@@ -97,7 +97,7 @@ impl Pcg32x16 {
     }
 }
 
-impl WRng<16> for Pcg32x16 {
+impl RngW<16> for Pcg32x16 {
     type Word = u32;
 
     #[doc = "Generates the next 16 `u32` values by combining both `Pcg32x8` lane-groups."]
@@ -113,7 +113,9 @@ impl WRng<16> for Pcg32x16 {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Pcg32x4, Pcg32x4::new(0));
-    crate::safe_test!(Pcg32x8, Pcg32x8::new(0));
-    crate::safe_test!(Pcg32x16, Pcg32x16::new(0));
+    crate::safe_test! {
+        Pcg32x4,
+        Pcg32x8,
+        Pcg32x16
+    }
 }

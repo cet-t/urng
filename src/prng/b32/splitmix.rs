@@ -147,5 +147,5 @@ pub mod simd {
 mod tests {
     use super::*;
 
-    crate::safe_test!(SplitMix32);
+    crate::safe_test! { SplitMix32 }
 }

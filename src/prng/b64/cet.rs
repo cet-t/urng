@@ -329,19 +329,18 @@ pub mod simd {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Cet64);
-    crate::safe_test!(Cet256);
+    crate::safe_test! {
+        Cet64,
+        Cet256
+    }
 
     #[cfg(all(
         feature = "simd",
         target_feature = "avx512f",
         target_feature = "avx512dq"
     ))]
-    crate::unsafe_test!(Cet64x8);
-    #[cfg(all(
-        feature = "simd",
-        target_feature = "avx512f",
-        target_feature = "avx512dq"
-    ))]
-    crate::unsafe_test!(Cet256x2);
+    crate::unsafe_test! {
+        Cet64x8,
+        Cet256x2
+    }
 }

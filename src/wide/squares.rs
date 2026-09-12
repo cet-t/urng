@@ -1,10 +1,10 @@
 use ::wide::{u64x4, u64x8};
 
-use crate::wide::{WRng, wide_rotate_left};
+use crate::wide::{RngW, wide_rotate_left};
 use crate::{Rng, SplitMix64};
 
 macro_rules! impl_squares32_variants {
-    ($size:expr, $lanes:expr) => {
+    ($size:expr) => {
         ::pastey::paste! {
             #[doc = concat!("Squares32 producing ", stringify!($size), " values per call via `wide` SIMD vectors.")]
             #[doc = ""]
@@ -23,8 +23,8 @@ macro_rules! impl_squares32_variants {
             #[allow(dead_code)]
             #[repr(C, align(64))]
             pub struct [<Squares32x $size>] {
-                c: [<u64x $lanes>],
-                k: [<u64x $lanes>],
+                c: [<u64x $size>],
+                k: [<u64x $size>],
             }
 
             #[allow(dead_code)]
@@ -38,94 +38,53 @@ macro_rules! impl_squares32_variants {
                 fn with_counter(seed: u64, counter: u64) -> Self {
                     let mut seedgen = SplitMix64::new(seed | 1);
                     Self {
-                        c: [<u64x $lanes>]::from(std::array::from_fn(|i| counter + i as u64)),
-                        k: [<u64x $lanes>]::from([0u64; $lanes].map(|_| seedgen.nextu())),
+                        c: [<u64x $size>]::from(std::array::from_fn(|i| counter + i as u64)),
+                        k: [<u64x $size>]::from([0u64; $size].map(|_| seedgen.nextu())),
                     }
                 }
 
                 #[doc = "Four-round middle-square computation producing the high `u32` of the final mix."]
                 #[inline(always)]
-                fn compute_yz(y: [<u64x $lanes>], z: [<u64x $lanes>]) -> [u32; $lanes] {
+                fn compute_yz(y: [<u64x $size>], z: [<u64x $size>]) -> [u32; $size] {
                     let mut x = y * y + y;
                     x = wide_rotate_left!(64 x, 32);
                     x = x * x + z;
                     x = wide_rotate_left!(64 x, 32);
                     x = x * x + y;
                     x = wide_rotate_left!(64 x, 32);
-                    let out: [u64; $lanes] = ((x * x + z) >> 32u64).to_array();
+                    let out: [u64; $size] = ((x * x + z) >> 32u64).to_array();
                     out.map(|x| x as u32)
                 }
 
             }
 
-            impl WRng<$size> for [<Squares32x $size>] {
+            impl RngW<$size> for [<Squares32x $size>] {
                 type Word = u32;
 
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[inline(always)]
-                fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [Self::Word; $size] {
                     let y = self.c * self.k;
                     let z = y + self.k;
-                    self.c += [<u64x $lanes>]::splat($lanes as u64);
+                    self.c += [<u64x $size>]::splat($size as u64);
                     bytemuck::cast(Self::compute_yz(y, z))
                 }
             }
         }
     };
+    ($($size:expr),+) => {
+        $(impl_squares32_variants!($size);)+
+    };
 }
 
-impl_squares32_variants!(4, 4);
-impl_squares32_variants!(8, 8);
-
-/// Squares32 producing 16 values per call by combining two [`Squares32x8`] streams.
-///
-/// Portable-SIMD counterpart of [`crate::cbrng::b32::Squares32`]. Each `nextu` call returns a
-/// `[u32; 16]` by drawing 8 values from each underlying `Squares32x8` lane-group (with
-/// counters offset by 8 to keep the two groups independent).
-///
-/// # Example
-/// ```
-/// use urng::wide::{Squares32x16, WRng};
-///
-/// let mut rng = Squares32x16::new(0);
-/// let v = rng.nextu();
-/// assert_eq!(v.len(), 16);
-/// ```
-#[allow(dead_code)]
-#[repr(C, align(64))]
-pub struct Squares32x16 {
-    lo: Squares32x8,
-    hi: Squares32x8,
-}
-
-#[allow(dead_code)]
-impl Squares32x16 {
-    /// Creates a new generator, seeding the lower and upper `Squares32x8` lane-groups from `seed`.
-    pub fn new(seed: u64) -> Self {
-        Self {
-            lo: Squares32x8::with_counter(seed, 0),
-            hi: Squares32x8::with_counter(seed, 8),
-        }
-    }
-}
-
-impl WRng<16> for Squares32x16 {
-    type Word = u32;
-
-    #[doc = "Generates the next 16 `u32` values by combining both `Squares32x8` lane-groups."]
-    #[inline(always)]
-    fn nextu(&mut self) -> [u32; 16] {
-        let lo = self.lo.nextu();
-        let hi = self.hi.nextu();
-        std::array::from_fn(|i| if i < 8 { lo[i] } else { hi[i - 8] })
-    }
-}
+impl_squares32_variants!(4, 8);
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    crate::safe_test!(Squares32x4, Squares32x4::new(0));
-    crate::safe_test!(Squares32x8, Squares32x8::new(0));
-    crate::safe_test!(Squares32x16, Squares32x16::new(0));
+    crate::safe_test! {
+        Squares32x4,
+        Squares32x8
+    }
 }

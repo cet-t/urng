@@ -101,6 +101,8 @@ impl Rng for Xorshift128 {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Xorshift32);
-    crate::safe_test!(Xorshift128);
+    crate::safe_test! {
+        Xorshift32,
+        Xorshift128
+    }
 }

@@ -1,6 +1,6 @@
 use ::wide::{u32x4, u32x8, u32x16};
 
-use crate::wide::WRng;
+use crate::wide::RngW;
 use crate::{Rng, SplitMix32};
 
 macro_rules! impl_xorshift32_variants {
@@ -37,14 +37,14 @@ macro_rules! impl_xorshift32_variants {
 
             }
 
-            impl WRng<$size> for [<Xorshift32x $size>] {
+            impl RngW<$size> for [<Xorshift32x $size>] {
                 type Word = u32;
 
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[doc = ""]
                 #[doc = "Applies the Xorshift32 scramble: `x ^= x << 13; x ^= x >> 17; x ^= x << 5`."]
                 #[inline(always)]
-                fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [Self::Word; $size] {
                     let x = self.a;
                     self.a = x ^ (x << 13);
                     self.a ^= self.a >> 17;
@@ -100,14 +100,14 @@ macro_rules! impl_xorshift128_variants {
 
             }
 
-            impl WRng<$size> for [<Xorshift128x $size>] {
+            impl RngW<$size> for [<Xorshift128x $size>] {
                 type Word = u32;
 
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[doc = ""]
                 #[doc = "Applies the Xorshift128 scramble over the 128-bit state."]
                 #[inline(always)]
-                fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [Self::Word; $size] {
                     let mut t = self.x3;
                     t ^= t << 11;
                     t ^= t >> 8;
@@ -171,14 +171,14 @@ macro_rules! impl_xorwow_variants {
 
             }
 
-            impl WRng<$size> for [<Xorwowx $size>] {
+            impl RngW<$size> for [<Xorwowx $size>] {
                 type Word = u32;
 
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[doc = ""]
                 #[doc = "Applies the Xorwow scramble and adds the advancing Weyl counter."]
                 #[inline(always)]
-                fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [Self::Word; $size] {
                     let mut t = self.x4;
                     let s = self.x0;
                     self.x4 = self.x3;
@@ -209,13 +209,15 @@ impl_xorwow_variants!(4, 8, 16);
 mod tests {
     use super::*;
 
-    crate::safe_test!(Xorshift32x4);
-    crate::safe_test!(Xorshift32x8);
-    crate::safe_test!(Xorshift32x16);
-    crate::safe_test!(Xorshift128x4);
-    crate::safe_test!(Xorshift128x8);
-    crate::safe_test!(Xorshift128x16);
-    crate::safe_test!(Xorwowx4);
-    crate::safe_test!(Xorwowx8);
-    crate::safe_test!(Xorwowx16);
+    crate::safe_test! {
+        Xorshift32x4,
+        Xorshift32x8,
+        Xorshift32x16,
+        Xorshift128x4,
+        Xorshift128x8,
+        Xorshift128x16,
+        Xorwowx4,
+        Xorwowx8,
+        Xorwowx16
+    }
 }

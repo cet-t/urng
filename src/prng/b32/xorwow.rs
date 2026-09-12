@@ -65,5 +65,5 @@ impl Rng for Xorwow {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Xorwow);
+    crate::safe_test! { Xorwow }
 }

@@ -92,5 +92,5 @@ impl Rng for TwistedGFSR {
 mod tests {
     use super::*;
 
-    crate::safe_test!(TwistedGFSR);
+    crate::safe_test! { TwistedGFSR }
 }

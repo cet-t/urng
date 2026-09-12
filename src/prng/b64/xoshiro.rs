@@ -178,6 +178,8 @@ pub mod simd {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Xoshiro256Pp);
-    crate::safe_test!(Xoshiro256Ss);
+    crate::safe_test! {
+        Xoshiro256Pp,
+        Xoshiro256Ss
+    }
 }

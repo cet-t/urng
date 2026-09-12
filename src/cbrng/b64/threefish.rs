@@ -195,5 +195,5 @@ impl Threefish256 {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Threefish256);
+    crate::safe_test! { Threefish256 }
 }

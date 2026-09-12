@@ -200,12 +200,12 @@ impl Squares32x8 {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Squares32);
+    crate::safe_test! { Squares32 }
 
     #[cfg(all(
         feature = "simd",
         target_feature = "avx512f",
         target_feature = "avx512dq"
     ))]
-    crate::unsafe_test!(Squares32x8);
+    crate::unsafe_test! { Squares32x8 }
 }

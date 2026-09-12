@@ -84,8 +84,9 @@ impl_ring_rng32!(Salsa20, 16, next_raw);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::safe_test;
 
-    safe_test!(Salsa8);
-    safe_test!(Salsa20);
+    crate::safe_test! {
+        Salsa8,
+        Salsa20
+    }
 }

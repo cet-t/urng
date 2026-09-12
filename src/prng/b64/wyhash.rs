@@ -45,5 +45,5 @@ impl Rng for WyHash64 {
 mod tests {
     use super::*;
 
-    crate::safe_test!(WyHash64);
+    crate::safe_test! { WyHash64 }
 }

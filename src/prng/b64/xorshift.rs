@@ -48,5 +48,5 @@ impl Rng for Xorshift64 {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Xorshift64);
+    crate::safe_test! { Xorshift64 }
 }

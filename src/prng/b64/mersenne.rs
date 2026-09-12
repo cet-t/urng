@@ -347,6 +347,8 @@ impl Rng for Sfmt1993764 {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Mt1993764);
-    crate::safe_test!(Sfmt1993764);
+    crate::safe_test! {
+        Mt1993764,
+        Sfmt1993764
+    }
 }

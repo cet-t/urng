@@ -1,6 +1,6 @@
 use ::wide::{u32x4, u32x8, u32x16};
 
-use crate::wide::{SplitMix32x4, SplitMix32x8, SplitMix32x16, WRng, wide_rotate_left};
+use crate::wide::{RngW, SplitMix32x4, SplitMix32x8, SplitMix32x16, wide_rotate_left};
 
 macro_rules! impl_variants {
     ($size:expr) => {
@@ -40,14 +40,14 @@ macro_rules! impl_variants {
                 }
             }
 
-            impl WRng<$size> for [<Jsf32x $size>] {
+            impl RngW<$size> for [<Jsf32x $size>] {
                 type Word = u32;
 
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[doc = ""]
                 #[doc = "Applies one round of the JSF scramble and returns the rotated `d` word from each lane."]
                 #[inline(always)]
-                fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [Self::Word; $size] {
                     let e = self.a - wide_rotate_left!(32 self.b, 27);
                     self.a = self.b ^ wide_rotate_left!(32 self.c, 17);
                     self.b = self.c + self.d;
@@ -69,7 +69,9 @@ impl_variants!(4, 8, 16);
 mod tests {
     use super::*;
 
-    crate::safe_test!(Jsf32x4);
-    crate::safe_test!(Jsf32x8);
-    crate::safe_test!(Jsf32x16);
+    crate::safe_test! {
+        Jsf32x4,
+        Jsf32x8,
+        Jsf32x16
+    }
 }

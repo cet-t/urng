@@ -98,5 +98,5 @@ impl_ring_rng64!(Philox64, 2, next_raw);
 mod tests {
     use super::*;
 
-    crate::safe_test!(Philox64);
+    crate::safe_test! { Philox64 }
 }

@@ -519,19 +519,8 @@ macro_rules! dispatch_simd {
 pub(crate) use dispatch_simd;
 
 macro_rules! safe_test {
-    ($name:ident, $ctor:expr $(,)?) => {
-        pastey::paste! {
-            #[test]
-            fn [<test_ $name:snake>]() {
-                let mut rng1 = $ctor;
-                let mut rng2 = $ctor;
-                assert_eq!(rng1.nextu(), rng2.nextu());
-                assert_eq!(rng1.nextf(), rng2.nextf());
-            }
-        }
-    };
-    ($name:ident) => {
-        pastey::paste! {
+    ($($name:ident),+) => {
+        $(pastey::paste! {
             #[test]
             fn [<test_ $name:snake>]() {
                 let mut rng1 = $name::new(0);
@@ -539,27 +528,14 @@ macro_rules! safe_test {
                 assert_eq!(rng1.nextu(), rng2.nextu());
                 assert_eq!(rng1.nextf(), rng2.nextf());
             }
-        }
+        })+
     };
 }
 pub(crate) use safe_test;
 
 macro_rules! unsafe_test {
-    ($name:ident, $ctor:expr $(,)?) => {
-        pastey::paste! {
-            #[test]
-            fn [<test_ $name:snake>]() {
-                unsafe {
-                    let mut rng1 = $ctor;
-                    let mut rng2 = $ctor;
-                    assert_eq!(rng1.nextu(), rng2.nextu());
-                    assert_eq!(rng1.nextf(), rng2.nextf());
-                }
-            }
-        }
-    };
-    ($name:ident) => {
-        pastey::paste! {
+    ($($name:ident),+) => {
+        $(pastey::paste! {
             #[test]
             fn [<test_ $name:snake>]() {
                 unsafe {
@@ -569,7 +545,7 @@ macro_rules! unsafe_test {
                     assert_eq!(rng1.nextf(), rng2.nextf());
                 }
             }
-        }
+        })+
     };
 }
 pub(crate) use unsafe_test;

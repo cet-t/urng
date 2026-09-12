@@ -1,6 +1,6 @@
 use ::wide::{u32x4, u32x8, u32x16};
 
-use crate::wide::{WRng, wide_rotate_left};
+use crate::wide::{RngW, wide_rotate_left};
 use crate::{Rng, SplitMix32};
 
 macro_rules! impl_variants {
@@ -39,14 +39,14 @@ macro_rules! impl_variants {
 
             }
 
-            impl WRng<$size> for [<Xoroshiro64Ssx $size>] {
+            impl RngW<$size> for [<Xoroshiro64Ssx $size>] {
                 type Word = u32;
 
                 #[doc = "Generates the next block of `u32` values, one per SIMD lane."]
                 #[doc = ""]
                 #[doc = "Applies the Xoroshiro64** scramble: `rotl(s0 * 0x9E3779BB, 5) * 5`."]
                 #[inline(always)]
-                fn nextu(&mut self) -> [u32; $size] {
+                fn nextu(&mut self) -> [Self::Word; $size] {
                     let s0 = self.s0;
                     let mut s1 = self.s1;
                     let result = wide_rotate_left!(32 (s0 * 0x9E3779BBu32), 5) * 5u32;
@@ -71,7 +71,9 @@ impl_variants!(4, 8, 16);
 mod tests {
     use super::*;
 
-    crate::safe_test!(Xoroshiro64Ssx4);
-    crate::safe_test!(Xoroshiro64Ssx8);
-    crate::safe_test!(Xoroshiro64Ssx16);
+    crate::safe_test! {
+        Xoroshiro64Ssx4,
+        Xoroshiro64Ssx8,
+        Xoroshiro64Ssx16
+    }
 }

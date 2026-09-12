@@ -180,9 +180,9 @@ pub mod simd {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Jsf32);
+    crate::safe_test! { Jsf32 }
     #[cfg(all(feature = "simd", target_feature = "avx2"))]
-    crate::unsafe_test!(Jsf32x8);
+    crate::unsafe_test! { Jsf32x8 }
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-    crate::unsafe_test!(Jsf32x16);
+    crate::unsafe_test! { Jsf32x16 }
 }

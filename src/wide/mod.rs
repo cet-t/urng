@@ -74,5 +74,4 @@ crate::impl_default_from_seed64! {
     Pcg32x16,
     Squares32x4,
     Squares32x8,
-    Squares32x16,
 }

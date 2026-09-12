@@ -3,15 +3,15 @@ use criterion::measurement::{Measurement, WallTime};
 use thousands::Separable;
 
 use urng::wide::{
-    Jsf32x4, Jsf32x8, Jsf32x16, Pcg32x4, Pcg32x8, Pcg32x16, Sfc32x4, Sfc32x8, Sfc32x16,
-    SplitMix32x4, SplitMix32x8, SplitMix32x16, WRng, Xoroshiro64Ssx4, Xoroshiro64Ssx8,
-    Xoroshiro64Ssx16, Xorshift32x4, Xorshift32x8, Xorshift32x16, Xorshift128x4, Xorshift128x8,
-    Xorshift128x16, Xorwowx4, Xorwowx8, Xorwowx16, Xoshiro128Ppx4, Xoshiro128Ppx8, Xoshiro128Ppx16,
-    Xoshiro128Ssx4, Xoshiro128Ssx8, Xoshiro128Ssx16,
+    Jsf32x4, Jsf32x8, Jsf32x16, Pcg32x4, Pcg32x8, Pcg32x16, RngW, Sfc32x4, Sfc32x8, Sfc32x16,
+    SplitMix32x4, SplitMix32x8, SplitMix32x16, Xoroshiro64Ssx4, Xoroshiro64Ssx8, Xoroshiro64Ssx16,
+    Xorshift32x4, Xorshift32x8, Xorshift32x16, Xorshift128x4, Xorshift128x8, Xorshift128x16,
+    Xorwowx4, Xorwowx8, Xorwowx16, Xoshiro128Ppx4, Xoshiro128Ppx8, Xoshiro128Ppx16, Xoshiro128Ssx4,
+    Xoshiro128Ssx8, Xoshiro128Ssx16,
 };
 
 const N: usize = 100_000_000;
-const G: f64 = 1_000_000_000f64;
+const G: f64 = 1e9;
 
 /// Number of timed runs per algorithm; best (max throughput) is reported.
 const RUNS: usize = 3;
@@ -20,7 +20,7 @@ const RUNS: usize = 3;
 const BAR_WIDTH: usize = 40;
 
 /// Unicode fractional block characters (1/8 increments).
-const BLOCKS: &[char] = &[' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
+const BLOCKS: [char; 9] = [' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
 
 /// Build a proportional bar string scaled to `max_gs`.
 fn make_bar(gs: f64, max_gs: f64) -> String {
@@ -28,9 +28,7 @@ fn make_bar(gs: f64, max_gs: f64) -> String {
     let full = total_eighths / 8;
     let frac = total_eighths % 8;
     let mut s = String::with_capacity(BAR_WIDTH + 4);
-    for _ in 0..full {
-        s.push('█');
-    }
+    s.push_str(&"█".repeat(full));
     if frac > 0 && full < BAR_WIDTH {
         s.push(BLOCKS[frac]);
     }
@@ -41,11 +39,11 @@ fn print_group(results: &[(&str, f64)], elem_bytes: usize, ceiling_gbps: f64) {
     let max_gs = results.iter().map(|(_, gs)| *gs).fold(0.0f64, f64::max);
     let hi = max_gs * 0.75;
     let mid = max_gs * 0.50;
-    for (name, gs) in results {
-        let bar = make_bar(*gs, max_gs);
-        let bar_colored = if *gs >= hi {
+    for &(name, gs) in results {
+        let bar = make_bar(gs, max_gs);
+        let bar_colored = if gs >= hi {
             bar.bright_green()
-        } else if *gs >= mid {
+        } else if gs >= mid {
             bar.bright_yellow()
         } else {
             bar.bright_red()
@@ -192,7 +190,7 @@ fn measure_write_ceiling(buf: &mut [u32]) -> f64 {
 /// Run correctness checks on a wide RNG: determinism, and value ranges for
 /// `nextu`, `nextf`, `randi`, `randf`.
 macro_rules! test_wide {
-    ($name:ident, $size:expr) => {{
+    ($($name:ident),+) => {$({
         let mut rng1 = $name::new(0);
         let mut rng2 = $name::new(0);
         assert_eq!(
@@ -243,18 +241,13 @@ macro_rules! test_wide {
             );
         }
 
-        println!(
-            "{} {} (x{})",
-            "[OK]".bright_green(),
-            stringify!($name),
-            $size
-        );
-    }};
+        // println!("{} {}", "[OK]".bright_green(), stringify!($name),);
+    })+ };
 }
 
 /// Benchmark `nextu` throughput of one wide RNG and record the result.
 macro_rules! bench_wide {
-    ($buf:ident, $results:ident, $size:expr, $name:ident) => {{
+    ($({$buf:ident, $results:ident, $size:expr, $name:ident}),+) => {$({
         let mut rng = $name::new(0);
         let gs = measure_wide(&mut $buf, $size, |p| {
             let arr = rng.nextu();
@@ -263,7 +256,7 @@ macro_rules! bench_wide {
             }
         });
         $results.push((stringify!($name), gs));
-    }};
+    })+};
 }
 
 fn main() {
@@ -275,37 +268,39 @@ fn main() {
     println!("{}", "─".repeat(72).bright_black());
 
     // --- Correctness ---
-    println!("{}", "Correctness".bright_yellow().bold());
-    test_wide!(SplitMix32x4, 4);
-    test_wide!(SplitMix32x8, 8);
-    test_wide!(SplitMix32x16, 16);
-    test_wide!(Sfc32x4, 4);
-    test_wide!(Sfc32x8, 8);
-    test_wide!(Sfc32x16, 16);
-    test_wide!(Jsf32x4, 4);
-    test_wide!(Jsf32x8, 8);
-    test_wide!(Jsf32x16, 16);
-    test_wide!(Pcg32x4, 4);
-    test_wide!(Pcg32x8, 8);
-    test_wide!(Pcg32x16, 16);
-    test_wide!(Xoroshiro64Ssx4, 4);
-    test_wide!(Xoroshiro64Ssx8, 8);
-    test_wide!(Xoroshiro64Ssx16, 16);
-    test_wide!(Xorshift32x4, 4);
-    test_wide!(Xorshift32x8, 8);
-    test_wide!(Xorshift32x16, 16);
-    test_wide!(Xorshift128x4, 4);
-    test_wide!(Xorshift128x8, 8);
-    test_wide!(Xorshift128x16, 16);
-    test_wide!(Xorwowx4, 4);
-    test_wide!(Xorwowx8, 8);
-    test_wide!(Xorwowx16, 16);
-    test_wide!(Xoshiro128Ppx4, 4);
-    test_wide!(Xoshiro128Ppx8, 8);
-    test_wide!(Xoshiro128Ppx16, 16);
-    test_wide!(Xoshiro128Ssx4, 4);
-    test_wide!(Xoshiro128Ssx8, 8);
-    test_wide!(Xoshiro128Ssx16, 16);
+    // println!("{}", "Correctness".bright_yellow().bold());
+    test_wide! {
+        SplitMix32x4,
+        SplitMix32x8,
+        SplitMix32x16,
+        Sfc32x4,
+        Sfc32x8,
+        Sfc32x16,
+        Jsf32x4,
+        Jsf32x8,
+        Jsf32x16,
+        Pcg32x4,
+        Pcg32x8,
+        Pcg32x16,
+        Xoroshiro64Ssx4,
+        Xoroshiro64Ssx8,
+        Xoroshiro64Ssx16,
+        Xorshift32x4,
+        Xorshift32x8,
+        Xorshift32x16,
+        Xorshift128x4,
+        Xorshift128x8,
+        Xorshift128x16,
+        Xorwowx4,
+        Xorwowx8,
+        Xorwowx16,
+        Xoshiro128Ppx4,
+        Xoshiro128Ppx8,
+        Xoshiro128Ppx16,
+        Xoshiro128Ssx4,
+        Xoshiro128Ssx8,
+        Xoshiro128Ssx16
+    }
 
     // --- Throughput ---
     println!("{}", "─".repeat(72).bright_black());
@@ -332,35 +327,37 @@ fn main() {
     println!("{}", "─".repeat(72).bright_black());
 
     let mut results = Vec::new();
-    bench_wide!(buf, results, 4, SplitMix32x4);
-    bench_wide!(buf, results, 8, SplitMix32x8);
-    bench_wide!(buf, results, 16, SplitMix32x16);
-    bench_wide!(buf, results, 4, Sfc32x4);
-    bench_wide!(buf, results, 8, Sfc32x8);
-    bench_wide!(buf, results, 16, Sfc32x16);
-    bench_wide!(buf, results, 4, Jsf32x4);
-    bench_wide!(buf, results, 8, Jsf32x8);
-    bench_wide!(buf, results, 16, Jsf32x16);
-    bench_wide!(buf, results, 4, Pcg32x4);
-    bench_wide!(buf, results, 8, Pcg32x8);
-    bench_wide!(buf, results, 16, Pcg32x16);
-    bench_wide!(buf, results, 4, Xoroshiro64Ssx4);
-    bench_wide!(buf, results, 8, Xoroshiro64Ssx8);
-    bench_wide!(buf, results, 16, Xoroshiro64Ssx16);
-    bench_wide!(buf, results, 4, Xorshift32x4);
-    bench_wide!(buf, results, 8, Xorshift32x8);
-    bench_wide!(buf, results, 16, Xorshift32x16);
-    bench_wide!(buf, results, 4, Xorshift128x4);
-    bench_wide!(buf, results, 8, Xorshift128x8);
-    bench_wide!(buf, results, 16, Xorshift128x16);
-    bench_wide!(buf, results, 4, Xorwowx4);
-    bench_wide!(buf, results, 8, Xorwowx8);
-    bench_wide!(buf, results, 16, Xorwowx16);
-    bench_wide!(buf, results, 4, Xoshiro128Ppx4);
-    bench_wide!(buf, results, 8, Xoshiro128Ppx8);
-    bench_wide!(buf, results, 16, Xoshiro128Ppx16);
-    bench_wide!(buf, results, 4, Xoshiro128Ssx4);
-    bench_wide!(buf, results, 8, Xoshiro128Ssx8);
-    bench_wide!(buf, results, 16, Xoshiro128Ssx16);
+    bench_wide! {
+        { buf, results, 4, SplitMix32x4 },
+        { buf, results, 8, SplitMix32x8 },
+        { buf, results, 16, SplitMix32x16 },
+        { buf, results, 4, Sfc32x4 },
+        { buf, results, 8, Sfc32x8 },
+        { buf, results, 16, Sfc32x16 },
+        { buf, results, 4, Jsf32x4 },
+        { buf, results, 8, Jsf32x8 },
+        { buf, results, 16, Jsf32x16 },
+        { buf, results, 4, Pcg32x4 },
+        { buf, results, 8, Pcg32x8 },
+        { buf, results, 16, Pcg32x16 },
+        { buf, results, 4, Xoroshiro64Ssx4 },
+        { buf, results, 8, Xoroshiro64Ssx8 },
+        { buf, results, 16, Xoroshiro64Ssx16 },
+        { buf, results, 4, Xorshift32x4 },
+        { buf, results, 8, Xorshift32x8 },
+        { buf, results, 16, Xorshift32x16 },
+        { buf, results, 4, Xorshift128x4 },
+        { buf, results, 8, Xorshift128x8 },
+        { buf, results, 16, Xorshift128x16 },
+        { buf, results, 4, Xorwowx4 },
+        { buf, results, 8, Xorwowx8 },
+        { buf, results, 16, Xorwowx16 },
+        { buf, results, 4, Xoshiro128Ppx4 },
+        { buf, results, 8, Xoshiro128Ppx8 },
+        { buf, results, 16, Xoshiro128Ppx16 },
+        { buf, results, 4, Xoshiro128Ssx4 },
+        { buf, results, 8, Xoshiro128Ssx8 },
+        { buf, results, 16, Xoshiro128Ssx16 }
+    }
     print_group(&results, 4, ceiling_gbps);
 }

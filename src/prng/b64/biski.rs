@@ -190,8 +190,8 @@ pub mod simd {
 mod tests {
     use super::*;
 
-    crate::safe_test!(Biski64);
+    crate::safe_test! { Biski64 }
 
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-    crate::unsafe_test!(Biski64x8);
+    crate::unsafe_test! { Biski64x8 }
 }
