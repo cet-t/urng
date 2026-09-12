@@ -105,7 +105,7 @@ impl Mt1993764 {
             let idx = self.mti;
             let available = N - idx.raw();
             let take = available.min(out.len() - written);
-            let src = &self.mt[idx.value()..(idx + take).value()];
+            let src = &self.mt[(*idx)..*(idx + take)];
             let dst = &mut out[written..written + take];
 
             for (d, &y) in dst.iter_mut().zip(src.iter()) {
@@ -114,7 +114,7 @@ impl Mt1993764 {
                 v ^= (v << 17) & 0x71D67FFFEDA60000;
                 v ^= (v << 37) & 0xFFF7EEE000000000;
                 v ^= v >> 43;
-                *d = v.value();
+                *d = *v;
             }
 
             self.mti += take;
@@ -157,13 +157,13 @@ impl Rng for Mt1993764 {
         if self.mti >= N {
             self.twist();
         }
-        let mut y = self.mt[self.mti.value()];
+        let mut y = self.mt[*self.mti];
         self.mti += 1;
         y ^= (y >> 29) & 0x5555555555555555;
         y ^= (y << 17) & 0x71D67FFFEDA60000;
         y ^= (y << 37) & 0xFFF7EEE000000000;
         y ^= y >> 43;
-        y.value()
+        *y
     }
 }
 
@@ -314,14 +314,14 @@ impl Sfmt1993764 {
 
             unsafe {
                 ptr::copy_nonoverlapping(
-                    (self.state.as_ptr() as *const u64).add(self.idx.value()),
+                    (self.state.as_ptr() as *const u64).add(*self.idx),
                     out.as_mut_ptr().add(written),
-                    take.value(),
+                    *take,
                 );
             }
 
             self.idx += take;
-            written += take.value();
+            written += *take;
         }
     }
 }
@@ -337,7 +337,7 @@ impl Rng for Sfmt1993764 {
         }
 
         let s: &[u64] = bytemuck::cast_slice(&self.state);
-        let val = s[self.idx.value()];
+        let val = s[*self.idx];
         self.idx += 1;
         val
     }

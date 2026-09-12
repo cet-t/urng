@@ -70,4 +70,4 @@ pastey = "0.2"
 rayon = { version = "1.10", optional = true }
 rand_core = { version = "0.10", optional = true }
 thiserror = { version = "2", optional = true }
-wrapn = "0.8.0"
+wrapn = "0.10.0"

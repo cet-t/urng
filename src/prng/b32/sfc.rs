@@ -44,7 +44,7 @@ impl Rng for Sfc32 {
         self.b = self.c + (self.c << 3);
         self.c = self.c.rotate_right(11);
         self.c += tmp;
-        tmp.value()
+        *tmp
     }
 }
 

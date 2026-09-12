@@ -1,6 +1,7 @@
+use std::slice::from_raw_parts_mut;
+
 use crate::prng::b32::Pcg32;
 use crate::rng::Rng;
-use std::slice::from_raw_parts_mut;
 
 /// Creates a new `Pcg32` instance.
 /// The caller is responsible for freeing the memory using `pcg32_free`.
@@ -77,7 +78,7 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use super::*;
-    
+
     use crate::prng::b32::{
         PCG32_MULT, PCG32X8_LANE, PCG32X8_PAR_CHUNK, PCG32X8_PAR_CHUNK_BLOCKS, Pcg32x8,
     };

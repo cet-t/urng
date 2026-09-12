@@ -3,7 +3,6 @@ use std::arch::x86_64::*;
 
 use wrapn::{wrap, wu32};
 
-#[cfg(feature = "simd")]
 use crate::_internal::{i2f_bits, u2f_01};
 use crate::prng::b32::SplitMix32;
 use crate::rng::Rng;
@@ -49,7 +48,7 @@ impl Rng for Xoroshiro64Ss {
         self.s[0] = s0.rotate_left(26) ^ s1 ^ (s1 << 9);
         self.s[1] = s1.rotate_left(13);
 
-        result.value()
+        *result
     }
 }
 

@@ -1,7 +1,9 @@
+use std::slice::from_raw_parts_mut;
+
+use rayon::prelude::*;
+
 use crate::prng::b64::{Cet64, Cet256, SplitMix64};
 use crate::rng::Rng;
-use rayon::prelude::*;
-use std::slice::from_raw_parts_mut;
 
 const STRIDE: u64 = 0x9E3779B97F4A7C15;
 

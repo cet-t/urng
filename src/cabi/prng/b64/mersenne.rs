@@ -1,6 +1,7 @@
+use std::slice::from_raw_parts_mut;
+
 use crate::prng::b64::{Mt1993764, Sfmt1993764};
 use crate::rng::Rng;
-use std::slice::from_raw_parts_mut;
 
 /// Creates a new heap-allocated `Mt1993764` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`mt1993764_free`].

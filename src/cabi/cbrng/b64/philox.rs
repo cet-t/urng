@@ -1,7 +1,11 @@
+use std::slice::from_raw_parts_mut;
+
+use rayon::prelude::*;
+use wrapn::{wrap, wu64};
+
 use crate::_internal::{fill_chunk_auto, prefer_nt};
 use crate::cbrng::b64::Philox64;
-use rayon::prelude::*;
-use std::slice::from_raw_parts_mut;
+use crate::{i2f_bits, u2f_01};
 
 /// Creates a new heap-allocated `Philox64` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`philox64_free`].
@@ -26,7 +30,7 @@ const PHILOX64_PAR_CHUNK: usize = 0x20000;
 /// cache line for 8-byte `T`) are batched per generator call so the
 /// non-temporal path can stream whole lines.
 #[inline(always)]
-fn philox64_fill<T, M>(buffer: &mut [T], c0: [u64; 2], k: [u64; 2], map: M)
+fn philox64_fill<T, M>(buffer: &mut [T], c0: [wu64; 2], k: [wu64; 2], map: M)
 where
     T: Copy + Default + Send,
     M: Fn(u64) -> T + Sync,
@@ -43,13 +47,13 @@ where
                     for blk in out.chunks_exact_mut(2) {
                         let mut c = c0;
                         let (new_c0, overflow) = c[0].overflowing_add(block);
-                        c[0] = new_c0;
+                        c[0] = wrap!(new_c0);
                         if overflow {
-                            c[1] = c[1].wrapping_add(1);
+                            c[1] += 1;
                         }
                         let r = Philox64::compute(c, k);
-                        blk[0] = map(r[0]);
-                        blk[1] = map(r[1]);
+                        blk[0] = map(*r[0]);
+                        blk[1] = map(*r[1]);
                         block = block.wrapping_add(1);
                     }
                     out
@@ -63,7 +67,7 @@ where
 #[inline(always)]
 fn philox64_advance(rng: &mut Philox64, count: usize) {
     let num_blocks = (count.div_ceil(8) * 4) as u64;
-    let (new_c0, carry) = rng.c[0].value().overflowing_add(num_blocks);
+    let (new_c0, carry) = rng.c[0].overflowing_add(num_blocks);
     rng.c[0] = new_c0.into();
     if carry {
         rng.c[1] += 1;
@@ -76,12 +80,7 @@ pub extern "C" fn philox64_next_u64s(ptr: *mut Philox64, out: *mut u64, count: u
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        philox64_fill(
-            buffer,
-            rng.c.map(|x| x.value()),
-            rng.k.map(|x| x.value()),
-            |x| x,
-        );
+        philox64_fill(buffer, rng.c, rng.k, |x| x);
         philox64_advance(rng, count);
     }
 }
@@ -89,16 +88,10 @@ pub extern "C" fn philox64_next_u64s(ptr: *mut Philox64, out: *mut u64, count: u
 /// Fills `out[0..count]` with `f64` values in `[0, 1)` using parallel counter-based generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn philox64_next_f64s(ptr: *mut Philox64, out: *mut f64, count: usize) {
-    const SCALE: f64 = 1.0 / (u64::MAX as f64 + 1.0);
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        philox64_fill(
-            buffer,
-            rng.c.map(|x| x.value()),
-            rng.k.map(|x| x.value()),
-            |x| x as f64 * SCALE,
-        );
+        philox64_fill(buffer, rng.c, rng.k, |x| u2f_01!(f64, 64, x));
         philox64_advance(rng, count);
     }
 }
@@ -116,12 +109,9 @@ pub extern "C" fn philox64_rand_i64s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let range = (max as i128 - min as i128 + 1) as u128;
-        philox64_fill(
-            buffer,
-            rng.c.map(|x| x.value()),
-            rng.k.map(|x| x.value()),
-            |x| ((x as u128 * range) >> 64) as i64 + min,
-        );
+        philox64_fill(buffer, rng.c, rng.k, |x| {
+            ((x as u128 * range) >> 64) as i64 + min
+        });
         philox64_advance(rng, count);
     }
 }
@@ -140,12 +130,7 @@ pub extern "C" fn philox64_rand_f64s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let mult = (max - min) * SCALE;
-        philox64_fill(
-            buffer,
-            rng.c.map(|x| x.value()),
-            rng.k.map(|x| x.value()),
-            |x| x as f64 * mult + min,
-        );
+        philox64_fill(buffer, rng.c, rng.k, |x| x as f64 * mult + min);
         philox64_advance(rng, count);
     }
 }

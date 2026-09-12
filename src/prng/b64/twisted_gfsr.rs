@@ -61,7 +61,7 @@ impl Rng for TwistedGFSR {
         if self.index >= N_GFSR {
             self.twist();
         }
-        let mut y = self.seed[self.index.value()];
+        let mut y = self.seed[*self.index];
         y ^= (y << 7) & 0x2b5b_2500;
         y ^= (y << 15) & 0xdb8b_0000;
         y ^= y >> 16;

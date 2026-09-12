@@ -40,7 +40,7 @@ impl Rng for Xorshift64 {
         x ^= x >> 7;
         x ^= x << 17;
         self.a = x;
-        x.value()
+        *x
     }
 }
 

@@ -43,7 +43,7 @@ impl Rng for Jsf32 {
         self.b = self.c + self.d;
         self.c = self.d + e;
         self.d = e + self.a;
-        self.d.value()
+        *self.d
     }
 }
 

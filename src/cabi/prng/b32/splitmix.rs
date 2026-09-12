@@ -1,6 +1,7 @@
+use std::slice::from_raw_parts_mut;
+
 use crate::prng::b32::SplitMix32;
 use crate::rng::Rng;
-use std::slice::from_raw_parts_mut;
 
 /// Creates a new `SplitMix32` instance.
 /// The caller is responsible for freeing the memory using `splitmix32_free`.

@@ -168,7 +168,7 @@ impl Rng for Mt19937 {
         y ^= (y << 7) & 0x9D2C5680;
         y ^= (y << 15) & 0xEFC60000;
         y ^= y >> 18;
-        y.value()
+        *y
     }
 }
 

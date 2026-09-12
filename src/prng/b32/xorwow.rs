@@ -57,7 +57,7 @@ impl Rng for Xorwow {
         t ^= s ^ (s << 4);
         self.x[0] = t;
         self.c += 362437;
-        (t + self.c).value()
+        *(t + self.c)
     }
 }
 

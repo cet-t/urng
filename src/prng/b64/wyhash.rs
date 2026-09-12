@@ -37,7 +37,7 @@ impl Rng for WyHash64 {
         let m1: wu64 = ((tmp >> 64) ^ tmp).cast();
         tmp = m1.cast::<u128>() * 0x1b03738712fad5c9;
         let m2 = (tmp >> 64) ^ tmp;
-        m2.cast::<u64>().value()
+        *m2.cast::<u64>()
     }
 }
 

@@ -6,7 +6,6 @@ use wrapn::{wrap, wu32, wusize};
 #[cfg(feature = "simd")]
 use crate::_internal::{i2f_bits, u2f_01};
 use crate::prng::b32::SplitMix32;
-#[allow(unused_imports)]
 use crate::rng::Rng;
 
 // --- Philox32 ---
@@ -112,7 +111,7 @@ impl Philox32 {
         step!();
         step!(fin);
 
-        x.map(|x| x.value())
+        x.map(|x| *x)
     }
 
     /// Generates the next block of 4 random `u32` values in one call.

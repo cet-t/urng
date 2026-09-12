@@ -182,7 +182,7 @@ impl Rng for Xoroshiro128Ss {
         self.s[0] = self.s[1] ^ self.s[0].rotate_left(24) ^ (self.s[1] << 16);
         self.s[1] = self.s[1].rotate_left(37);
 
-        result.value()
+        *result
     }
 }
 

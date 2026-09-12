@@ -145,9 +145,9 @@ macro_rules! impl_ring_rng32 {
                     self.buf = self.$raw().map(::core::convert::Into::into);
                     self.pos = 0.into();
                 }
-                let v = self.buf[self.pos.value()];
+                let v = self.buf[*self.pos];
                 self.pos += 1;
-                v.value()
+                *v
             }
         }
     };
@@ -169,9 +169,9 @@ macro_rules! impl_ring_rng64 {
                     self.buf = self.$raw().map(::core::convert::Into::into);
                     self.pos = 0.into();
                 }
-                let v = self.buf[self.pos.value()];
+                let v = self.buf[*self.pos];
                 self.pos += 1;
-                v.value()
+                *v
             }
         }
     };

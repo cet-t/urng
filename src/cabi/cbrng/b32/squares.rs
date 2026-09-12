@@ -1,7 +1,10 @@
-use crate::cbrng::b32::Squares32;
+use std::slice::from_raw_parts_mut;
+
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
-use std::slice::from_raw_parts_mut;
+
+use crate::cbrng::b32::Squares32;
+use crate::{i2f_bits, u2f_01};
 
 #[cfg(feature = "simd")]
 mod simd_chunks {
@@ -352,40 +355,39 @@ pub extern "C" fn squares32_next_u32s(ptr: *mut Squares32, out: *mut u32, count:
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c.value();
-        let k = rng.k.value();
+        let c0 = rng.c;
+        let k = rng.k;
         let k4 = k.wrapping_mul(4);
 
         buffer
             .par_chunks_mut(SQUARES32_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let c_start = c0.wrapping_add((chunk_idx * SQUARES32_PAR_CHUNK) as u64);
-                let y_base = c_start.wrapping_mul(k);
+                let c_start = c0 + ((chunk_idx * SQUARES32_PAR_CHUNK) as u64);
+                let y_base = c_start * k;
                 let mut y0 = y_base;
-                let mut y1 = y_base.wrapping_add(k);
-                let mut y2 = y1.wrapping_add(k);
-                let mut y3 = y2.wrapping_add(k);
+                let mut y1 = y_base + k;
+                let mut y2 = y1 + k;
+                let mut y3 = y2 + k;
 
                 let mut chunks4 = chunk.chunks_exact_mut(4);
                 for dst in chunks4.by_ref() {
                     // z_i = y_i + k == y1 = y0+k, z0 = y1, z1 = y2, z2 = y3
-                    let z3 = y3.wrapping_add(k);
-                    dst[0] = Squares32::compute_yz(y0, y1);
-                    dst[1] = Squares32::compute_yz(y1, y2);
-                    dst[2] = Squares32::compute_yz(y2, y3);
-                    dst[3] = Squares32::compute_yz(y3, z3);
-                    y0 = y0.wrapping_add(k4);
-                    y1 = y1.wrapping_add(k4);
-                    y2 = y2.wrapping_add(k4);
-                    y3 = y3.wrapping_add(k4);
+                    let z3 = y3 + k;
+                    dst[0] = *Squares32::compute_yz(y0, y1);
+                    dst[1] = *Squares32::compute_yz(y1, y2);
+                    dst[2] = *Squares32::compute_yz(y2, y3);
+                    dst[3] = *Squares32::compute_yz(y3, z3);
+                    y0 += k4;
+                    y1 += k4;
+                    y2 += k4;
+                    y3 += k4;
                 }
                 let rem = chunks4.into_remainder();
                 let mut yr = y0;
                 for dst in rem.iter_mut() {
-                    let zr = yr.wrapping_add(k);
-                    *dst = Squares32::compute_yz(yr, zr);
-                    yr = yr.wrapping_add(k);
+                    *dst = *Squares32::compute_yz(yr, yr + k);
+                    yr += k;
                 }
             });
 
@@ -400,40 +402,38 @@ pub extern "C" fn squares32_next_f32s(ptr: *mut Squares32, out: *mut f32, count:
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c.value();
-        let k = rng.k.value();
-        let k4 = k.wrapping_mul(4);
-        const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
+        let c0 = rng.c;
+        let k = rng.k;
+        let k4 = k << 2;
 
         buffer
             .par_chunks_mut(SQUARES32_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let c_start = c0.wrapping_add((chunk_idx * SQUARES32_PAR_CHUNK) as u64);
-                let y_base = c_start.wrapping_mul(k);
+                let c_start = c0 + ((chunk_idx * SQUARES32_PAR_CHUNK) as u64);
+                let y_base = c_start * k;
                 let mut y0 = y_base;
-                let mut y1 = y_base.wrapping_add(k);
-                let mut y2 = y1.wrapping_add(k);
-                let mut y3 = y2.wrapping_add(k);
+                let mut y1 = y_base + k;
+                let mut y2 = y1 + k;
+                let mut y3 = y2 + k;
 
                 let mut chunks4 = chunk.chunks_exact_mut(4);
                 for dst in chunks4.by_ref() {
-                    let z3 = y3.wrapping_add(k);
-                    dst[0] = Squares32::compute_yz(y0, y1) as f32 * SCALE;
-                    dst[1] = Squares32::compute_yz(y1, y2) as f32 * SCALE;
-                    dst[2] = Squares32::compute_yz(y2, y3) as f32 * SCALE;
-                    dst[3] = Squares32::compute_yz(y3, z3) as f32 * SCALE;
-                    y0 = y0.wrapping_add(k4);
-                    y1 = y1.wrapping_add(k4);
-                    y2 = y2.wrapping_add(k4);
-                    y3 = y3.wrapping_add(k4);
+                    let z3 = y3 + k;
+                    dst[0] = u2f_01!(f32, 32, *Squares32::compute_yz(y0, y1));
+                    dst[1] = u2f_01!(f32, 32, *Squares32::compute_yz(y1, y2));
+                    dst[2] = u2f_01!(f32, 32, *Squares32::compute_yz(y2, y3));
+                    dst[3] = u2f_01!(f32, 32, *Squares32::compute_yz(y3, z3));
+                    y0 += k4;
+                    y1 += k4;
+                    y2 += k4;
+                    y3 += k4;
                 }
                 let rem = chunks4.into_remainder();
                 let mut yr = y0;
                 for dst in rem.iter_mut() {
-                    let zr = yr.wrapping_add(k);
-                    *dst = Squares32::compute_yz(yr, zr) as f32 * SCALE;
-                    yr = yr.wrapping_add(k);
+                    *dst = u2f_01!(f32, 32, *Squares32::compute_yz(yr, yr + k));
+                    yr += k;
                 }
             });
 
@@ -454,40 +454,39 @@ pub extern "C" fn squares32_rand_i32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c.value();
-        let k = rng.k.value();
-        let k4 = k.wrapping_mul(4);
+        let c0 = rng.c;
+        let k = rng.k;
+        let k4 = k << 2;
         let range = (max as i64 - min as i64 + 1) as u64;
 
         buffer
             .par_chunks_mut(SQUARES32_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let c_start = c0.wrapping_add((chunk_idx * SQUARES32_PAR_CHUNK) as u64);
-                let y_base = c_start.wrapping_mul(k);
+                let c_start = c0 + ((chunk_idx * SQUARES32_PAR_CHUNK) as u64);
+                let y_base = c_start * k;
                 let mut y0 = y_base;
-                let mut y1 = y_base.wrapping_add(k);
-                let mut y2 = y1.wrapping_add(k);
-                let mut y3 = y2.wrapping_add(k);
+                let mut y1 = y_base + k;
+                let mut y2 = y1 + k;
+                let mut y3 = y2 + k;
 
                 let mut chunks4 = chunk.chunks_exact_mut(4);
                 for dst in chunks4.by_ref() {
-                    let z3 = y3.wrapping_add(k);
-                    dst[0] = ((Squares32::compute_yz(y0, y1) as u64 * range) >> 32) as i32 + min;
-                    dst[1] = ((Squares32::compute_yz(y1, y2) as u64 * range) >> 32) as i32 + min;
-                    dst[2] = ((Squares32::compute_yz(y2, y3) as u64 * range) >> 32) as i32 + min;
-                    dst[3] = ((Squares32::compute_yz(y3, z3) as u64 * range) >> 32) as i32 + min;
-                    y0 = y0.wrapping_add(k4);
-                    y1 = y1.wrapping_add(k4);
-                    y2 = y2.wrapping_add(k4);
-                    y3 = y3.wrapping_add(k4);
+                    let z3 = y3 + k;
+                    dst[0] = ((*Squares32::compute_yz(y0, y1) as u64 * range) >> 32) as i32 + min;
+                    dst[1] = ((*Squares32::compute_yz(y1, y2) as u64 * range) >> 32) as i32 + min;
+                    dst[2] = ((*Squares32::compute_yz(y2, y3) as u64 * range) >> 32) as i32 + min;
+                    dst[3] = ((*Squares32::compute_yz(y3, z3) as u64 * range) >> 32) as i32 + min;
+                    y0 += k4;
+                    y1 += k4;
+                    y2 += k4;
+                    y3 += k4;
                 }
                 let rem = chunks4.into_remainder();
                 let mut yr = y0;
                 for dst in rem.iter_mut() {
-                    let zr = yr.wrapping_add(k);
-                    *dst = ((Squares32::compute_yz(yr, zr) as u64 * range) >> 32) as i32 + min;
-                    yr = yr.wrapping_add(k);
+                    *dst = ((*Squares32::compute_yz(yr, yr + k) as u64 * range) >> 32) as i32 + min;
+                    yr += k;
                 }
             });
 
@@ -508,40 +507,39 @@ pub extern "C" fn squares32_rand_f32s(
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let c0 = rng.c.value();
-        let k = rng.k.value();
-        let k4 = k.wrapping_mul(4);
+        let c0 = rng.c;
+        let k = rng.k;
+        let k4 = k << 2;
         let combined_scale = (max - min) * (1.0f32 / (u32::MAX as f32 + 1.0));
 
         buffer
             .par_chunks_mut(SQUARES32_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let c_start = c0.wrapping_add((chunk_idx * SQUARES32_PAR_CHUNK) as u64);
-                let y_base = c_start.wrapping_mul(k);
+                let c_start = c0 + ((chunk_idx * SQUARES32_PAR_CHUNK) as u64);
+                let y_base = c_start * k;
                 let mut y0 = y_base;
-                let mut y1 = y_base.wrapping_add(k);
-                let mut y2 = y1.wrapping_add(k);
-                let mut y3 = y2.wrapping_add(k);
+                let mut y1 = y_base + k;
+                let mut y2 = y1 + k;
+                let mut y3 = y2 + k;
 
                 let mut chunks4 = chunk.chunks_exact_mut(4);
                 for dst in chunks4.by_ref() {
-                    let z3 = y3.wrapping_add(k);
-                    dst[0] = Squares32::compute_yz(y0, y1) as f32 * combined_scale + min;
-                    dst[1] = Squares32::compute_yz(y1, y2) as f32 * combined_scale + min;
-                    dst[2] = Squares32::compute_yz(y2, y3) as f32 * combined_scale + min;
-                    dst[3] = Squares32::compute_yz(y3, z3) as f32 * combined_scale + min;
-                    y0 = y0.wrapping_add(k4);
-                    y1 = y1.wrapping_add(k4);
-                    y2 = y2.wrapping_add(k4);
-                    y3 = y3.wrapping_add(k4);
+                    let z3 = y3 + k;
+                    dst[0] = *Squares32::compute_yz(y0, y1) as f32 * combined_scale + min;
+                    dst[1] = *Squares32::compute_yz(y1, y2) as f32 * combined_scale + min;
+                    dst[2] = *Squares32::compute_yz(y2, y3) as f32 * combined_scale + min;
+                    dst[3] = *Squares32::compute_yz(y3, z3) as f32 * combined_scale + min;
+                    y0 += k4;
+                    y1 += k4;
+                    y2 += k4;
+                    y3 += k4;
                 }
                 let rem = chunks4.into_remainder();
                 let mut yr = y0;
                 for dst in rem.iter_mut() {
-                    let zr = yr.wrapping_add(k);
-                    *dst = Squares32::compute_yz(yr, zr) as f32 * combined_scale + min;
-                    yr = yr.wrapping_add(k);
+                    *dst = *Squares32::compute_yz(yr, yr + k) as f32 * combined_scale + min;
+                    yr += k;
                 }
             });
 

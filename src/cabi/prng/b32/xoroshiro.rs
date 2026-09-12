@@ -1,10 +1,12 @@
+use std::slice::from_raw_parts_mut;
+
+use rayon::prelude::*;
+
 use crate::{
     _internal::{fill_chunk_auto, prefer_nt},
     prng::b32::Xoroshiro64Ss,
     rng::Rng,
 };
-use rayon::prelude::*;
-use std::slice::from_raw_parts_mut;
 
 // --- Xoroshiro64Ss (scalar) ---
 

@@ -1,6 +1,6 @@
 use crate::{Rng, cbrng::b32::*, prng::b32::*};
 
-crate::impl_rand_trait!(
+crate::impl_rand_trait! {
     Mt19937,
     Sfmt607,
     Sfmt1279,
@@ -22,10 +22,10 @@ crate::impl_rand_trait!(
     Xorshift128,
     Xorwow,
     Xoshiro128Pp,
-    Xoshiro128Ss
-);
+    Xoshiro128Ss,
+}
 
-crate::impl_try_rng_trait!(
+crate::impl_try_rng_trait! {
     Mt19937,
     Sfmt607,
     Sfmt1279,
@@ -47,39 +47,7 @@ crate::impl_try_rng_trait!(
     Xorwow,
     Xoshiro128Pp,
     Xoshiro128Ss,
-);
-
-impl rand_core::TryRng for Philox32 {
-    type Error = std::convert::Infallible;
-
-    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
-        Ok(self.nextu())
-    }
-
-    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
-        let out = self.next_raw();
-        Ok((out[0] as u64) << 32 | out[1] as u64)
-    }
-
-    fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> {
-        let mut buf = [0u8; 16];
-        let mut buf_pos = 16;
-        let mut i = 0;
-        while i < dst.len() {
-            if buf_pos >= 16 {
-                let arr = self.next_raw();
-                for j in 0..4 {
-                    buf[j * 4..(j + 1) * 4].copy_from_slice(&arr[j].to_le_bytes());
-                }
-                buf_pos = 0;
-            }
-            let take = (dst.len() - i).min(16 - buf_pos);
-            dst[i..i + take].copy_from_slice(&buf[buf_pos..buf_pos + take]);
-            i += take;
-            buf_pos += take;
-        }
-        Ok(())
-    }
+    Philox32
 }
 
 #[cfg(test)]

@@ -47,12 +47,12 @@ impl Rng for SplitMix32 {
 
     #[inline]
     fn nextu(&mut self) -> Self::Word {
-        self.state += wrap!(0x9E3779B9);
+        self.state += 0x9E3779B9;
 
         let mut z = self.state.cast::<u64>();
         z = (z ^ (z >> 16)) * A;
         z = (z ^ (z >> 16)) * B;
-        (z ^ (z >> 16)).cast::<u32>().value()
+        *(z ^ (z >> 16)).cast::<u32>()
     }
 }
 

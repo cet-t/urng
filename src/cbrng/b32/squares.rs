@@ -1,7 +1,7 @@
 #[cfg(feature = "simd")]
 use std::arch::x86_64::*;
 
-use wrapn::{wrap, wu64};
+use wrapn::{wu32, wu64};
 
 #[cfg(feature = "simd")]
 use crate::_internal::{i2f_bits, u2f_01};
@@ -41,8 +41,8 @@ impl Squares32 {
     /// Takes pre-computed y = ctr*key and z = y + key to avoid
     /// redundant multiplication in batch scenarios.
     #[inline(always)]
-    pub fn compute_yz(y: u64, z: u64) -> u32 {
-        let mut x = wrap!(y) * y + y;
+    pub fn compute_yz(y: wu64, z: wu64) -> wu32 {
+        let mut x = y * y + y;
         x = x.rotate_left(32);
 
         x = x * x + z;
@@ -51,15 +51,15 @@ impl Squares32 {
         x = x * x + y;
         x = x.rotate_left(32);
 
-        ((x * x + z) >> 32).cast::<u32>().value()
+        ((x * x + z) >> 32).cast()
     }
 
     /// Convenience wrapper: compute from counter and key directly.
     #[inline(always)]
-    pub fn compute(ctr: u64, key: u64) -> u32 {
-        let y = wrap!(ctr) * key;
+    pub fn compute(ctr: wu64, key: wu64) -> u32 {
+        let y = ctr * key;
         let z = y + key;
-        Self::compute_yz(y.value(), z.value())
+        *Self::compute_yz(y, z)
     }
 }
 
@@ -68,7 +68,7 @@ impl Rng for Squares32 {
 
     #[inline(always)]
     fn nextu(&mut self) -> Self::Word {
-        let out = Self::compute(self.c.value(), self.k.value());
+        let out = Self::compute(self.c, self.k);
         self.c += 1;
         out
     }

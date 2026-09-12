@@ -33,6 +33,8 @@ impl VWord for __m128i {
     }
 
     fn to_randi(self, min: Self::Int, scale: Self::Int) -> Self::Int {
+        const MERGE_MASK: i32 = 0b10001000;
+
         unsafe {
             let prod_even = _mm_mul_epu32(self, scale);
             let res_even = _mm_srli_epi64(prod_even, 32);
@@ -41,7 +43,7 @@ impl VWord for __m128i {
             let merged = _mm_castps_si128(_mm_shuffle_ps(
                 _mm_castsi128_ps(res_even),
                 _mm_castsi128_ps(prod_odd),
-                0b10_00_10_00,
+                MERGE_MASK,
             ));
             let merged = _mm_shuffle_epi32(merged, 0b11_01_10_00);
             _mm_add_epi32(merged, min)
@@ -66,7 +68,7 @@ impl VWord for __m256i {
     }
 
     fn to_randi(self, min: Self::Int, scale: Self::Int) -> Self::Int {
-        const MERGE_MASK: u8 = 0xAA;
+        const MERGE_MASK: u8 = 0b10101010;
 
         unsafe {
             let prod_even = _mm256_mul_epu32(self, scale);
@@ -98,7 +100,7 @@ impl VWord for __m512i {
     }
 
     fn to_randi(self, min: Self::Int, scale: Self::Int) -> Self::Int {
-        const MERGE_MASK: u16 = 0xAAAA;
+        const MERGE_MASK: u16 = 0b1010101010101010;
 
         unsafe {
             let prod_even = _mm512_mul_epu32(self, scale);

@@ -1,7 +1,9 @@
+use std::slice::from_raw_parts_mut;
+
+use rayon::prelude::*;
+
 use crate::prng::b64::{SplitMix64, Xoshiro256Pp, Xoshiro256Ss};
 use crate::rng::Rng;
-use rayon::prelude::*;
-use std::slice::from_raw_parts_mut;
 
 /// Creates a new heap-allocated `Xoshiro256Pp` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`xoshiro256pp_free`].

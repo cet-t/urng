@@ -40,9 +40,9 @@ impl Rng for Pcg32 {
     fn nextu(&mut self) -> Self::Word {
         let oldstate = self.state;
         self.state = oldstate * 6364136223846793005 + self.inc;
-        let xorshifted = (((oldstate >> 18) ^ oldstate) >> 27).value() as u32;
-        let rot = (oldstate >> 59).value() as u32;
-        xorshifted.rotate_right(rot)
+        let xorshifted = (((oldstate >> 18) ^ oldstate) >> 27).cast::<u32>();
+        let rot = (oldstate >> 59).cast::<u32>();
+        *xorshifted.rotate_right(*rot)
     }
 }
 

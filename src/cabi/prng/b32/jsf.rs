@@ -1,6 +1,7 @@
+use std::slice::from_raw_parts_mut;
+
 use crate::Rng;
 use crate::prng::b32::Jsf32;
-use std::slice::from_raw_parts_mut;
 
 /// Creates a new `Jsf32` instance.
 /// The caller is responsible for freeing the memory using `jsf32_free`.

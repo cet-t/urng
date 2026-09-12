@@ -1,6 +1,7 @@
+use std::slice::from_raw_parts_mut;
+
 use crate::prng::b32::{Xoshiro128Pp, Xoshiro128Ss};
 use crate::rng::Rng;
-use std::slice::from_raw_parts_mut;
 
 // --- Xoshiro128++ ---
 

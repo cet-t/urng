@@ -63,8 +63,8 @@ impl Threefry32x4 {
     /// * `k`  - 5-word key schedule (k\[4\] = parity word).
     /// * `tw` - 3-word tweak schedule (tw\[2\] = tw\[0\] ^ tw\[1\]).
     #[inline(always)]
-    pub(crate) fn compute(c: [u32; 4], k: &[u32; 5], tw: &[u32; 3]) -> [u32; 4] {
-        let mut v = c.map(|x| wrap!(x));
+    pub(crate) fn compute(c: [wu32; 4], k: &[wu32; 5], tw: &[wu32; 3]) -> [wu32; 4] {
+        let mut v = c;
 
         macro_rules! round {
             ($r_sh_0:expr, $r_sh_1:expr) => {
@@ -84,9 +84,9 @@ impl Threefry32x4 {
         macro_rules! inject_key {
             ($s:expr) => {
                 v[0] += k[$s % 5];
-                v[1] += wrap!(k[($s + 1) % 5]) + tw[$s % 3];
-                v[2] += wrap!(k[($s + 2) % 5]) + tw[($s + 1) % 3];
-                v[3] += wrap!(k[($s + 3) % 5]) + $s as u32;
+                v[1] += (k[($s + 1) % 5]) + tw[$s % 3];
+                v[2] += (k[($s + 2) % 5]) + tw[($s + 1) % 3];
+                v[3] += (k[($s + 3) % 5]) + $s as u32;
             };
         }
 
@@ -121,9 +121,9 @@ impl Threefry32x4 {
         round!(23, 5);
 
         let ksi5_0 = k[0];
-        let ksi5_1 = k[1].wrapping_add(tw[2]);
-        let ksi5_2 = k[2].wrapping_add(tw[0]);
-        let ksi5_3 = k[3].wrapping_add(5);
+        let ksi5_1 = k[1] + tw[2];
+        let ksi5_2 = k[2] + tw[0];
+        let ksi5_3 = k[3] + 5;
 
         [
             (v[0] + ksi5_0) ^ c[0],
@@ -131,7 +131,6 @@ impl Threefry32x4 {
             (v[2] + ksi5_2) ^ c[2],
             (v[3] + ksi5_3) ^ c[3],
         ]
-        .map(|x| x.value())
     }
 
     /// Generates the next block of 4 random `u32` values in one call.
@@ -141,11 +140,7 @@ impl Threefry32x4 {
     /// throughput-sensitive callers that want the whole block at once).
     #[inline(always)]
     pub fn next_raw(&mut self) -> [u32; 4] {
-        let dst = Self::compute(
-            self.c.map(|x| x.value()),
-            &self.k.map(|x| x.value()),
-            &self.tw.map(|x| x.value()),
-        );
+        let dst = Self::compute(self.c, &self.k, &self.tw);
 
         self.c[0] += 1;
         if self.c[0] == 0 {
@@ -158,7 +153,7 @@ impl Threefry32x4 {
             }
         }
 
-        dst
+        dst.map(|x| *x)
     }
 }
 
@@ -212,8 +207,8 @@ impl Threefry32x2 {
     /// * `c` - 2-word counter (the plaintext block).
     /// * `k` - 3-word key schedule (k[2] = k[0] ^ k[1] ^ C240).
     #[inline(always)]
-    pub(crate) fn compute(c: [u32; 2], k: &[u32; 3]) -> [u32; 2] {
-        let mut v = c.map(|x| wrap!(x));
+    pub(crate) fn compute(c: [wu32; 2], k: &[wu32; 3]) -> [wu32; 2] {
+        let mut v = c;
 
         macro_rules! round {
             ($r_sh:expr) => {
@@ -261,9 +256,9 @@ impl Threefry32x2 {
         round!(6);
 
         let ksi5_0 = k[2];
-        let ksi5_1 = k[0].wrapping_add(5);
+        let ksi5_1 = k[0] + 5;
 
-        [v[0] + ksi5_0, v[1] + ksi5_1].map(|x| x.value())
+        [v[0] + ksi5_0, v[1] + ksi5_1]
     }
 
     /// Generates the next block of 2 random `u32` values in one call.
@@ -273,18 +268,18 @@ impl Threefry32x2 {
     /// throughput-sensitive callers that want the whole block at once).
     #[inline(always)]
     pub fn next_raw(&mut self) -> [u32; 2] {
-        let k = self.k.map(|x| x.value());
-        let dst = Self::compute(self.c.map(|x| x.value()), &k);
+        let k = self.k;
+        let dst = Self::compute(self.c, &k);
         self.k
             .iter_mut()
             .enumerate()
             .for_each(|(i, x)| *x = k[i].into());
-        let (n_c0, overflow) = self.c[0].value().overflowing_add(1);
+        let (n_c0, overflow) = self.c[0].overflowing_add(1);
         self.c[0] = n_c0.into();
         if overflow {
             self.c[1] += 1;
         }
-        dst
+        dst.map(|x| *x)
     }
 }
 

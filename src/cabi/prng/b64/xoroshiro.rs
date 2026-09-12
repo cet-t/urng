@@ -1,11 +1,13 @@
+use std::slice::from_raw_parts_mut;
+
+use rayon::prelude::*;
+
 use crate::_internal::{fill_chunk_auto, prefer_nt};
 use crate::prng::b64::{
     SplitMix64,
     xoroshiro::{Xoroshiro128Pp, Xoroshiro128Ss},
 };
 use crate::rng::Rng;
-use rayon::prelude::*;
-use std::slice::from_raw_parts_mut;
 
 const XOROSHIRO128_PAR_CHUNK: usize = 0x20000;
 

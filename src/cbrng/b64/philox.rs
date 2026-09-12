@@ -1,8 +1,7 @@
 use wrapn::{wrap, wu64, wusize};
 
 use crate::_internal::impl_ring_rng64;
-#[allow(unused_imports)]
-use crate::{_internal::FSCALE64, prng::b64::SplitMix64, rng::Rng};
+use crate::{prng::b64::SplitMix64, rng::Rng};
 
 // --- Philox64 ---
 
@@ -42,8 +41,7 @@ impl Philox64 {
 
     /// Computes Philox output from counter and key values (pure function).
     #[inline]
-    pub(crate) fn compute(c: [u64; 2], k: [u64; 2]) -> [u64; 2] {
-        let mut v = wrap![c[0], c[1]];
+    pub(crate) fn compute(mut c: [wu64; 2], k: [wu64; 2]) -> [wu64; 2] {
         let mut key = k[0];
 
         const M0: u128 = 0xD2B74407B1CE6E93;
@@ -52,15 +50,15 @@ impl Philox64 {
         macro_rules! step {
             () => {
                 step!(fin);
-                key = key.wrapping_add(W0);
+                key += W0;
             };
             (fin) => {
-                let prod = v[0].cast::<u128>() * M0;
+                let prod = c[0].cast::<u128>() * M0;
                 let hi = (prod >> 64).cast::<u64>();
                 let lo = prod.cast::<u64>();
 
-                v[0] = hi ^ v[1] ^ key;
-                v[1] = lo;
+                c[0] = hi ^ c[1] ^ key;
+                c[1] = lo;
             };
         }
 
@@ -75,7 +73,7 @@ impl Philox64 {
         step!();
         step!(fin);
 
-        v.map(|x| x.value())
+        c
     }
 
     /// Generates the next block of 2 random `u64` values in one call.
@@ -85,12 +83,12 @@ impl Philox64 {
     /// throughput-sensitive callers that want the whole block at once).
     #[inline]
     pub fn next_raw(&mut self) -> [u64; 2] {
-        let out = Self::compute(self.c.map(|x| x.value()), self.k.map(|x| x.value()));
+        let out = Self::compute(self.c, self.k);
         self.c[0] += 1;
         if self.c[0] == 0 {
             self.c[1] += 1;
         }
-        out
+        out.map(|x| *x)
     }
 }
 

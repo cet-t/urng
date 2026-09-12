@@ -56,7 +56,7 @@ impl<const ROUNDS: usize> Salsa<ROUNDS> {
             [x[15], x[12], x[13], x[14]] = Self::qr(x[15], x[12], x[13], x[14]);
         }
         self.x = x;
-        x.map(|x| x.value())
+        x.map(|x| *x)
     }
 }
 

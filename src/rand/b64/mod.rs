@@ -1,6 +1,6 @@
 use crate::{cbrng::b64::*, prng::b64::*};
 
-crate::impl_rand_trait!(
+crate::impl_rand_trait! {
     Biski64,
     Cet64,
     Cet256,
@@ -17,4 +17,4 @@ crate::impl_rand_trait!(
     Xoshiro256Pp,
     Xoshiro256Ss,
     WyHash64
-);
+}

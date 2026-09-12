@@ -75,7 +75,7 @@ macro_rules! impl_seed_word {
                     value ^= value >> $offsets[0];
                     value *= $mult;
                     value ^= value >> $offsets[1];
-                    value.value()
+                    *value
                 }
             }
         }

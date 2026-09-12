@@ -41,7 +41,7 @@ impl Rng for Xorshift32 {
         self.a = x ^ (x << 13);
         self.a ^= self.a >> 17;
         self.a ^= self.a << 5;
-        self.a.value()
+        *self.a
     }
 }
 
@@ -93,7 +93,7 @@ impl Rng for Xorshift128 {
         let s = self.x[0];
         (self.x[1], self.x[2], self.x[3]) = (s, self.x[1], self.x[2]);
         self.x[0] = t ^ s ^ (s >> 19);
-        self.x[0].value()
+        *self.x[0]
     }
 }
 

@@ -1,6 +1,3 @@
-#[cfg(feature = "simd")]
-use std::arch::x86_64::*;
-
 use wrapn::{wrap, wu32};
 
 use crate::{prng::b32::SplitMix32, rng::Rng};
@@ -57,7 +54,7 @@ impl Rng for Xoshiro128Pp {
         self.s[2] ^= t;
         self.s[3] = self.s[3].rotate_left(11);
 
-        res.value()
+        *res
     }
 }
 
@@ -111,362 +108,374 @@ impl Rng for Xoshiro128Ss {
         self.s[2] ^= t;
         self.s[3] = self.s[3].rotate_left(11);
 
-        res.value()
+        *res
     }
 }
 
-// --- Xoshiro128++ x16 ---
+#[cfg(feature = "simd")]
+pub use simd::*;
 
-/// 16-way SIMD implementation of xoshiro128++ 32-bit RNG.
-/// This implementation uses AVX-512F instructions to generate 16 random numbers in parallel.
-///
-/// # Example
-/// ```no_run
-/// use urng::Xoshiro128Ppx16;
-///
-/// unsafe {
-///     let mut rng = Xoshiro128Ppx16::new(1);
-///     let _ = rng.nextu();
-/// }
-/// ```
-#[cfg(all(feature = "simd", target_arch = "x86_64"))]
-#[repr(C, align(64))]
-pub struct Xoshiro128Ppx16 {
-    s0: __m512i,
-    s1: __m512i,
-    s2: __m512i,
-    s3: __m512i,
-}
+#[cfg(feature = "simd")]
+pub mod simd {
+    use std::arch::x86_64::*;
 
-#[cfg(all(feature = "simd", target_arch = "x86_64"))]
-impl Xoshiro128Ppx16 {
-    /// Creates a new `Xoshiro128Ppx16` instance seeded with the given value.
+    use crate::SplitMix32;
+
+    // --- Xoshiro128++ x16 ---
+
+    /// 16-way SIMD implementation of xoshiro128++ 32-bit RNG.
+    /// This implementation uses AVX-512F instructions to generate 16 random numbers in parallel.
     ///
-    /// # Safety
+    /// # Example
+    /// ```no_run
+    /// use urng::Xoshiro128Ppx16;
     ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn new(seed: u32) -> Self {
-        let mut seedgen = SplitMix32::new(seed);
-        let mut sv = [[0u32; 16]; 4];
-        for vals in sv.iter_mut() {
-            for v in vals {
-                *v = seedgen.nextu();
+    /// unsafe {
+    ///     let mut rng = Xoshiro128Ppx16::new(1);
+    ///     let _ = rng.nextu();
+    /// }
+    /// ```
+    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+    #[repr(C, align(64))]
+    pub struct Xoshiro128Ppx16 {
+        s0: __m512i,
+        s1: __m512i,
+        s2: __m512i,
+        s3: __m512i,
+    }
+
+    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+    impl Xoshiro128Ppx16 {
+        /// Creates a new `Xoshiro128Ppx16` instance seeded with the given value.
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn new(seed: u32) -> Self {
+            use crate::SplitMix32;
+
+            let mut seedgen = SplitMix32::new(seed);
+            let mut sv = [[0u32; 16]; 4];
+            for vals in sv.iter_mut() {
+                for v in vals {
+                    *v = seedgen.nextu_const();
+                }
+            }
+            unsafe {
+                Self {
+                    s0: _mm512_loadu_si512(sv[0].as_ptr() as *const _),
+                    s1: _mm512_loadu_si512(sv[1].as_ptr() as *const _),
+                    s2: _mm512_loadu_si512(sv[2].as_ptr() as *const _),
+                    s3: _mm512_loadu_si512(sv[3].as_ptr() as *const _),
+                }
             }
         }
-        unsafe {
-            Self {
-                s0: _mm512_loadu_si512(sv[0].as_ptr() as *const _),
-                s1: _mm512_loadu_si512(sv[1].as_ptr() as *const _),
-                s2: _mm512_loadu_si512(sv[2].as_ptr() as *const _),
-                s3: _mm512_loadu_si512(sv[3].as_ptr() as *const _),
-            }
+
+        /// Generates the next 16 random `u32` values as a vector register.
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn nextu_vec(&mut self) -> __m512i {
+            let s0 = self.s0;
+            let s1 = self.s1;
+            let s2 = self.s2;
+            let s3 = self.s3;
+
+            let sum = _mm512_add_epi32(s0, s3);
+            let rot = _mm512_or_si512(_mm512_slli_epi32(sum, 7), _mm512_srli_epi32(sum, 25));
+            let res = _mm512_add_epi32(rot, s0);
+
+            let t = _mm512_slli_epi32(s1, 9);
+
+            let mut s2_next = _mm512_xor_epi32(s2, s0);
+            let mut s3_next = _mm512_xor_epi32(s3, s1);
+            let s1_next = _mm512_xor_epi32(s1, s2_next);
+            let s0_next = _mm512_xor_epi32(s0, s3_next);
+            s2_next = _mm512_xor_epi32(s2_next, t);
+            s3_next = _mm512_or_si512(
+                _mm512_slli_epi32(s3_next, 11),
+                _mm512_srli_epi32(s3_next, 21),
+            );
+
+            self.s0 = s0_next;
+            self.s1 = s1_next;
+            self.s2 = s2_next;
+            self.s3 = s3_next;
+
+            res
         }
-    }
 
-    /// Generates the next 16 random `u32` values as a vector register.
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextu_vec(&mut self) -> __m512i {
-        let s0 = self.s0;
-        let s1 = self.s1;
-        let s2 = self.s2;
-        let s3 = self.s3;
-
-        let sum = _mm512_add_epi32(s0, s3);
-        let rot = _mm512_or_si512(_mm512_slli_epi32(sum, 7), _mm512_srli_epi32(sum, 25));
-        let res = _mm512_add_epi32(rot, s0);
-
-        let t = _mm512_slli_epi32(s1, 9);
-
-        let mut s2_next = _mm512_xor_epi32(s2, s0);
-        let mut s3_next = _mm512_xor_epi32(s3, s1);
-        let s1_next = _mm512_xor_epi32(s1, s2_next);
-        let s0_next = _mm512_xor_epi32(s0, s3_next);
-        s2_next = _mm512_xor_epi32(s2_next, t);
-        s3_next = _mm512_or_si512(
-            _mm512_slli_epi32(s3_next, 11),
-            _mm512_srli_epi32(s3_next, 21),
-        );
-
-        self.s0 = s0_next;
-        self.s1 = s1_next;
-        self.s2 = s2_next;
-        self.s3 = s3_next;
-
-        res
-    }
-
-    /// Generates the next 16 random `f32` values in the range [0, 1) as a vector register.
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextfv(&mut self) -> __m512 {
-        unsafe { crate::_internal::simd_f01::u32x16(self.nextu_vec()) }
-    }
-
-    /// Generates the next 16 random `i32` values in the range [min, max] as a vector register.
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn randi_vec(&mut self, v_range: __m512i, v_min: __m512i) -> __m512i {
-        const MERGE_MASK: u16 = 0xAAAA;
-
-        let v_u32 = unsafe { self.nextu_vec() };
-        let prod_even = _mm512_mul_epu32(v_u32, v_range);
-        let res_even = _mm512_srli_epi64(prod_even, 32);
-
-        let v_u32_shifted = _mm512_srli_epi64(v_u32, 32);
-        let prod_odd = _mm512_mul_epu32(v_u32_shifted, v_range);
-
-        let merged = _mm512_mask_blend_epi32(MERGE_MASK, res_even, prod_odd);
-        _mm512_add_epi32(merged, v_min)
-    }
-
-    /// Generates the next 16 random `f32` values in the range [min, max) as a vector register.
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn randf_vec(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
-        let base = unsafe { crate::_internal::simd_f01::u32x16(self.nextu_vec()) };
-        _mm512_add_ps(_mm512_mul_ps(base, v_mult), v_min)
-    }
-
-    /// Generates the next 16 random `u32` values.
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextu(&mut self) -> [u32; 16] {
-        unsafe { std::mem::transmute(self.nextu_vec()) }
-    }
-
-    /// Generates 16 random `f32` values in the range [0, 1).
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextf(&mut self) -> [f32; 16] {
-        unsafe { std::mem::transmute(self.nextfv()) }
-    }
-
-    /// Generates 16 random `i32` values in the range [min, max].
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn randi(&mut self, min: i32, max: i32) -> [i32; 16] {
-        let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1);
-        let v_min = _mm512_set1_epi32(min);
-        unsafe { std::mem::transmute(self.randi_vec(v_range, v_min)) }
-    }
-
-    /// Generates 16 random `f32` values in the range [min, max).
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn randf(&mut self, min: f32, max: f32) -> [f32; 16] {
-        let v_mult = _mm512_set1_ps(max - min);
-        let v_min = _mm512_set1_ps(min);
-        unsafe { std::mem::transmute(self.randf_vec(v_mult, v_min)) }
-    }
-}
-
-// --- Xoshiro128** x16 ---
-
-/// 16-way SIMD implementation of xoshiro128** 32-bit RNG.
-/// This implementation uses AVX-512F instructions to generate 16 random numbers in parallel.
-///
-/// # Example
-/// ```no_run
-/// use urng::Xoshiro128Ssx16;
-///
-/// unsafe {
-///     let mut rng = Xoshiro128Ssx16::new(1);
-///     let _ = rng.nextu();
-/// }
-/// ```
-#[cfg(all(feature = "simd", target_arch = "x86_64"))]
-#[repr(C, align(64))]
-pub struct Xoshiro128Ssx16 {
-    s0: __m512i,
-    s1: __m512i,
-    s2: __m512i,
-    s3: __m512i,
-}
-
-#[cfg(all(feature = "simd", target_arch = "x86_64"))]
-impl Xoshiro128Ssx16 {
-    /// Creates a new `Xoshiro128Ssx16` instance seeded with the given value.
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn new(seed: u32) -> Self {
-        let mut seedgen = SplitMix32::new(seed);
-        let mut sv = [[0u32; 16]; 4];
-        for vals in sv.iter_mut() {
-            for v in vals.iter_mut() {
-                *v = seedgen.nextu();
-            }
+        /// Generates the next 16 random `f32` values in the range [0, 1) as a vector register.
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn nextfv(&mut self) -> __m512 {
+            unsafe { crate::_internal::simd_f01::u32x16(self.nextu_vec()) }
         }
-        unsafe {
-            Self {
-                s0: _mm512_loadu_si512(sv[0].as_ptr() as *const _),
-                s1: _mm512_loadu_si512(sv[1].as_ptr() as *const _),
-                s2: _mm512_loadu_si512(sv[2].as_ptr() as *const _),
-                s3: _mm512_loadu_si512(sv[3].as_ptr() as *const _),
-            }
+
+        /// Generates the next 16 random `i32` values in the range [min, max] as a vector register.
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn randi_vec(&mut self, v_range: __m512i, v_min: __m512i) -> __m512i {
+            const MERGE_MASK: u16 = 0xAAAA;
+
+            let v_u32 = unsafe { self.nextu_vec() };
+            let prod_even = _mm512_mul_epu32(v_u32, v_range);
+            let res_even = _mm512_srli_epi64(prod_even, 32);
+
+            let v_u32_shifted = _mm512_srli_epi64(v_u32, 32);
+            let prod_odd = _mm512_mul_epu32(v_u32_shifted, v_range);
+
+            let merged = _mm512_mask_blend_epi32(MERGE_MASK, res_even, prod_odd);
+            _mm512_add_epi32(merged, v_min)
+        }
+
+        /// Generates the next 16 random `f32` values in the range [min, max) as a vector register.
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn randf_vec(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
+            let base = unsafe { crate::_internal::simd_f01::u32x16(self.nextu_vec()) };
+            _mm512_add_ps(_mm512_mul_ps(base, v_mult), v_min)
+        }
+
+        /// Generates the next 16 random `u32` values.
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn nextu(&mut self) -> [u32; 16] {
+            unsafe { std::mem::transmute(self.nextu_vec()) }
+        }
+
+        /// Generates 16 random `f32` values in the range [0, 1).
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn nextf(&mut self) -> [f32; 16] {
+            unsafe { std::mem::transmute(self.nextfv()) }
+        }
+
+        /// Generates 16 random `i32` values in the range [min, max].
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn randi(&mut self, min: i32, max: i32) -> [i32; 16] {
+            let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1);
+            let v_min = _mm512_set1_epi32(min);
+            unsafe { std::mem::transmute(self.randi_vec(v_range, v_min)) }
+        }
+
+        /// Generates 16 random `f32` values in the range [min, max).
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn randf(&mut self, min: f32, max: f32) -> [f32; 16] {
+            let v_mult = _mm512_set1_ps(max - min);
+            let v_min = _mm512_set1_ps(min);
+            unsafe { std::mem::transmute(self.randf_vec(v_mult, v_min)) }
         }
     }
 
-    /// Generates the next 16 random `u32` values.
+    // --- Xoshiro128** x16 ---
+
+    /// 16-way SIMD implementation of xoshiro128** 32-bit RNG.
+    /// This implementation uses AVX-512F instructions to generate 16 random numbers in parallel.
     ///
-    /// # Safety
+    /// # Example
+    /// ```no_run
+    /// use urng::Xoshiro128Ssx16;
     ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextu_vec(&mut self) -> __m512i {
-        let s0 = self.s0;
-        let s1 = self.s1;
-        let s2 = self.s2;
-        let s3 = self.s3;
-
-        // res = rotl(s1 * 5, 7) * 9, with shift-add instead of mul by constants.
-        let x5 = _mm512_add_epi32(s1, _mm512_slli_epi32(s1, 2));
-        let rot = _mm512_or_si512(_mm512_slli_epi32(x5, 7), _mm512_srli_epi32(x5, 25));
-        let res = _mm512_add_epi32(rot, _mm512_slli_epi32(rot, 3));
-
-        let t = _mm512_slli_epi32(s1, 9);
-
-        let mut s2_next = _mm512_xor_epi32(s2, s0);
-        let mut s3_next = _mm512_xor_epi32(s3, s1);
-        let s1_next = _mm512_xor_epi32(s1, s2_next);
-        let s0_next = _mm512_xor_epi32(s0, s3_next);
-        s2_next = _mm512_xor_epi32(s2_next, t);
-        s3_next = _mm512_or_si512(
-            _mm512_slli_epi32(s3_next, 11),
-            _mm512_srli_epi32(s3_next, 21),
-        );
-
-        self.s0 = s0_next;
-        self.s1 = s1_next;
-        self.s2 = s2_next;
-        self.s3 = s3_next;
-
-        res
+    /// unsafe {
+    ///     let mut rng = Xoshiro128Ssx16::new(1);
+    ///     let _ = rng.nextu();
+    /// }
+    /// ```
+    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+    #[repr(C, align(64))]
+    pub struct Xoshiro128Ssx16 {
+        s0: __m512i,
+        s1: __m512i,
+        s2: __m512i,
+        s3: __m512i,
     }
 
-    /// Generates the next 16 random `f32` values in the range [0, 1) as a vector register.
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextfv(&mut self) -> __m512 {
-        unsafe { crate::_internal::simd_f01::u32x16(self.nextu_vec()) }
-    }
+    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+    impl Xoshiro128Ssx16 {
+        /// Creates a new `Xoshiro128Ssx16` instance seeded with the given value.
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn new(seed: u32) -> Self {
+            let mut seedgen = SplitMix32::new(seed);
+            let mut sv = [[0u32; 16]; 4];
+            for vals in sv.iter_mut() {
+                for v in vals.iter_mut() {
+                    *v = seedgen.nextu_const();
+                }
+            }
+            unsafe {
+                Self {
+                    s0: _mm512_loadu_si512(sv[0].as_ptr() as *const _),
+                    s1: _mm512_loadu_si512(sv[1].as_ptr() as *const _),
+                    s2: _mm512_loadu_si512(sv[2].as_ptr() as *const _),
+                    s3: _mm512_loadu_si512(sv[3].as_ptr() as *const _),
+                }
+            }
+        }
 
-    /// Generates the next 16 random `i32` values in the range [min, max] as a vector register.
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn randi_vec(&mut self, v_range: __m512i, v_min: __m512i) -> __m512i {
-        const MERGE_MASK: u16 = 0xAAAA;
+        /// Generates the next 16 random `u32` values.
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn nextu_vec(&mut self) -> __m512i {
+            let s0 = self.s0;
+            let s1 = self.s1;
+            let s2 = self.s2;
+            let s3 = self.s3;
 
-        let v_u32 = unsafe { self.nextu_vec() };
-        let prod_even = _mm512_mul_epu32(v_u32, v_range);
-        let res_even = _mm512_srli_epi64(prod_even, 32);
+            // res = rotl(s1 * 5, 7) * 9, with shift-add instead of mul by constants.
+            let x5 = _mm512_add_epi32(s1, _mm512_slli_epi32(s1, 2));
+            let rot = _mm512_or_si512(_mm512_slli_epi32(x5, 7), _mm512_srli_epi32(x5, 25));
+            let res = _mm512_add_epi32(rot, _mm512_slli_epi32(rot, 3));
 
-        let v_u32_shifted = _mm512_srli_epi64(v_u32, 32);
-        let prod_odd = _mm512_mul_epu32(v_u32_shifted, v_range);
+            let t = _mm512_slli_epi32(s1, 9);
 
-        let merged = _mm512_mask_blend_epi32(MERGE_MASK, res_even, prod_odd);
-        _mm512_add_epi32(merged, v_min)
-    }
+            let mut s2_next = _mm512_xor_epi32(s2, s0);
+            let mut s3_next = _mm512_xor_epi32(s3, s1);
+            let s1_next = _mm512_xor_epi32(s1, s2_next);
+            let s0_next = _mm512_xor_epi32(s0, s3_next);
+            s2_next = _mm512_xor_epi32(s2_next, t);
+            s3_next = _mm512_or_si512(
+                _mm512_slli_epi32(s3_next, 11),
+                _mm512_srli_epi32(s3_next, 21),
+            );
 
-    /// Generates the next 16 random `f32` values in the range [min, max) as a vector register.
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn randf_vec(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
-        let base = unsafe { crate::_internal::simd_f01::u32x16(self.nextu_vec()) };
-        _mm512_add_ps(_mm512_mul_ps(base, v_mult), v_min)
-    }
+            self.s0 = s0_next;
+            self.s1 = s1_next;
+            self.s2 = s2_next;
+            self.s3 = s3_next;
 
-    /// Generates the next 16 random `u32` values.
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextu(&mut self) -> [u32; 16] {
-        unsafe { std::mem::transmute(self.nextu_vec()) }
-    }
+            res
+        }
 
-    /// Generates 16 random `f32` values in the range [0, 1).
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn nextf(&mut self) -> [f32; 16] {
-        unsafe { std::mem::transmute(self.nextfv()) }
-    }
+        /// Generates the next 16 random `f32` values in the range [0, 1) as a vector register.
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn nextfv(&mut self) -> __m512 {
+            unsafe { crate::_internal::simd_f01::u32x16(self.nextu_vec()) }
+        }
 
-    /// Generates 16 random `i32` values in the range [min, max].
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn randi(&mut self, min: i32, max: i32) -> [i32; 16] {
-        let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1);
-        let v_min = _mm512_set1_epi32(min);
-        unsafe { std::mem::transmute(self.randi_vec(v_range, v_min)) }
-    }
+        /// Generates the next 16 random `i32` values in the range [min, max] as a vector register.
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn randi_vec(&mut self, v_range: __m512i, v_min: __m512i) -> __m512i {
+            const MERGE_MASK: u16 = 0xAAAA;
 
-    /// Generates 16 random `f32` values in the range [min, max).
-    ///
-    /// # Safety
-    ///
-    /// Must only be called on a CPU that supports AVX-512F.
-    #[target_feature(enable = "avx512f")]
-    pub unsafe fn randf(&mut self, min: f32, max: f32) -> [f32; 16] {
-        let v_mult = _mm512_set1_ps(max - min);
-        let v_min = _mm512_set1_ps(min);
-        let mut out = [0f32; 16];
-        unsafe { _mm512_storeu_ps(out.as_mut_ptr(), self.randf_vec(v_mult, v_min)) };
-        out
+            let v_u32 = unsafe { self.nextu_vec() };
+            let prod_even = _mm512_mul_epu32(v_u32, v_range);
+            let res_even = _mm512_srli_epi64(prod_even, 32);
+
+            let v_u32_shifted = _mm512_srli_epi64(v_u32, 32);
+            let prod_odd = _mm512_mul_epu32(v_u32_shifted, v_range);
+
+            let merged = _mm512_mask_blend_epi32(MERGE_MASK, res_even, prod_odd);
+            _mm512_add_epi32(merged, v_min)
+        }
+
+        /// Generates the next 16 random `f32` values in the range [min, max) as a vector register.
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn randf_vec(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
+            let base = unsafe { crate::_internal::simd_f01::u32x16(self.nextu_vec()) };
+            _mm512_add_ps(_mm512_mul_ps(base, v_mult), v_min)
+        }
+
+        /// Generates the next 16 random `u32` values.
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn nextu(&mut self) -> [u32; 16] {
+            unsafe { std::mem::transmute(self.nextu_vec()) }
+        }
+
+        /// Generates 16 random `f32` values in the range [0, 1).
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn nextf(&mut self) -> [f32; 16] {
+            unsafe { std::mem::transmute(self.nextfv()) }
+        }
+
+        /// Generates 16 random `i32` values in the range [min, max].
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn randi(&mut self, min: i32, max: i32) -> [i32; 16] {
+            let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1);
+            let v_min = _mm512_set1_epi32(min);
+            unsafe { std::mem::transmute(self.randi_vec(v_range, v_min)) }
+        }
+
+        /// Generates 16 random `f32` values in the range [min, max).
+        ///
+        /// # Safety
+        ///
+        /// Must only be called on a CPU that supports AVX-512F.
+        #[target_feature(enable = "avx512f")]
+        pub unsafe fn randf(&mut self, min: f32, max: f32) -> [f32; 16] {
+            let v_mult = _mm512_set1_ps(max - min);
+            let v_min = _mm512_set1_ps(min);
+            let mut out = [0f32; 16];
+            unsafe { _mm512_storeu_ps(out.as_mut_ptr(), self.randf_vec(v_mult, v_min)) };
+            out
+        }
     }
 }
 

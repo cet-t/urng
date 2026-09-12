@@ -166,7 +166,7 @@ impl Threefish256 {
         }
         let val = self.buffer;
         self.index += 4;
-        val.map(|x| x.value())
+        val.map(|x| *x)
     }
 
     /// Generates the next random `f64` values in the range [0, 1).

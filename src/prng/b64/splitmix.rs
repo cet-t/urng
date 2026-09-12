@@ -44,7 +44,7 @@ impl Rng for SplitMix64 {
     #[inline]
     fn nextu(&mut self) -> Self::Word {
         self.s += 0x9E3779B97F4A7C15;
-        Self::compute(self.s.value())
+        Self::compute(self.s.0.0)
     }
 }
 

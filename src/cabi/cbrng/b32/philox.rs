@@ -1,7 +1,9 @@
-use crate::cbrng::b32::Philox32;
+use std::slice::from_raw_parts_mut;
+
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
-use std::slice::from_raw_parts_mut;
+
+use crate::cbrng::b32::Philox32;
 
 /// Creates a new `Philox32` instance.
 /// The caller is responsible for freeing the memory using `philox32_free`.
@@ -45,9 +47,8 @@ pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: u
 
                 for dst in chunks_exact.by_ref() {
                     let mut c = c0;
-                    let (new_c0, overflow) = c[0]
-                        .value()
-                        .overflowing_add((chunk_base_block as u32) + b_offset);
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u32) + b_offset);
                     c[0] = new_c0.into();
                     if overflow {
                         c[1] += 1;
@@ -64,9 +65,8 @@ pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: u
                 let rem = chunks_exact.into_remainder();
                 if !rem.is_empty() {
                     let mut c = c0;
-                    let (new_c0, overflow) = c[0]
-                        .value()
-                        .overflowing_add((chunk_base_block as u32) + b_offset);
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u32) + b_offset);
                     c[0] = new_c0.into();
                     if overflow {
                         c[1] += 1;
@@ -78,10 +78,10 @@ pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: u
             });
 
         let num_blocks = count.div_ceil(4);
-        let (n_c0, overflow) = rng.c[0].value().overflowing_add(num_blocks as u32);
+        let (n_c0, overflow) = rng.c[0].overflowing_add(num_blocks as u32);
         rng.c[0] = n_c0.into();
         if overflow {
-            let (n_c1, ovf2) = rng.c[1].value().overflowing_add(1);
+            let (n_c1, ovf2) = rng.c[1].overflowing_add(1);
             rng.c[1] = n_c1.into();
             if ovf2 {
                 rng.c[2] += 1;
@@ -113,9 +113,8 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
 
                 for dst in chunks_exact.by_ref() {
                     let mut c = c0;
-                    let (new_c0, overflow) = c[0]
-                        .value()
-                        .overflowing_add((chunk_base_block as u32) + b_offset);
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u32) + b_offset);
                     c[0] = new_c0.into();
                     if overflow {
                         c[1] += 1;
@@ -132,9 +131,8 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
                 let rem = chunks_exact.into_remainder();
                 if !rem.is_empty() {
                     let mut c = c0;
-                    let (new_c0, overflow) = c[0]
-                        .value()
-                        .overflowing_add((chunk_base_block as u32) + b_offset);
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u32) + b_offset);
                     c[0] = new_c0.into();
                     if overflow {
                         c[1] += 1;
@@ -148,10 +146,10 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
             });
 
         let num_blocks = count.div_ceil(4);
-        let (n_c0, overflow) = rng.c[0].value().overflowing_add(num_blocks as u32);
+        let (n_c0, overflow) = rng.c[0].overflowing_add(num_blocks as u32);
         rng.c[0] = n_c0.into();
         if overflow {
-            let (n_c1, ovf2) = rng.c[1].value().overflowing_add(1);
+            let (n_c1, ovf2) = rng.c[1].overflowing_add(1);
             rng.c[1] = n_c1.into();
             if ovf2 {
                 rng.c[2] += 1;
@@ -189,9 +187,8 @@ pub extern "C" fn philox32_rand_i32s(
 
                 for dst in chunks_exact.by_ref() {
                     let mut c = c0;
-                    let (new_c0, overflow) = c[0]
-                        .value()
-                        .overflowing_add((chunk_base_block as u32) + b_offset);
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u32) + b_offset);
                     c[0] = new_c0.into();
                     if overflow {
                         c[1] += 1;
@@ -208,9 +205,8 @@ pub extern "C" fn philox32_rand_i32s(
                 let rem = chunks_exact.into_remainder();
                 if !rem.is_empty() {
                     let mut c = c0;
-                    let (new_c0, overflow) = c[0]
-                        .value()
-                        .overflowing_add((chunk_base_block as u32) + b_offset);
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u32) + b_offset);
                     c[0] = new_c0.into();
                     if overflow {
                         c[1] += 1;
@@ -224,10 +220,10 @@ pub extern "C" fn philox32_rand_i32s(
             });
 
         let num_blocks = count.div_ceil(4);
-        let (n_c0, overflow) = rng.c[0].value().overflowing_add(num_blocks as u32);
+        let (n_c0, overflow) = rng.c[0].overflowing_add(num_blocks as u32);
         rng.c[0] = n_c0.into();
         if overflow {
-            let (n_c1, ovf2) = rng.c[1].value().overflowing_add(1);
+            let (n_c1, ovf2) = rng.c[1].overflowing_add(1);
             rng.c[1] = n_c1.into();
             if ovf2 {
                 rng.c[2] += 1;
@@ -266,9 +262,8 @@ pub extern "C" fn philox32_rand_f32s(
 
                 for dst in chunks_exact.by_ref() {
                     let mut c = c0;
-                    let (new_c0, overflow) = c[0]
-                        .value()
-                        .overflowing_add((chunk_base_block as u32) + b_offset);
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u32) + b_offset);
                     c[0] = new_c0.into();
                     if overflow {
                         c[1] += 1;
@@ -285,9 +280,8 @@ pub extern "C" fn philox32_rand_f32s(
                 let rem = chunks_exact.into_remainder();
                 if !rem.is_empty() {
                     let mut c = c0;
-                    let (new_c0, overflow) = c[0]
-                        .value()
-                        .overflowing_add((chunk_base_block as u32) + b_offset);
+                    let (new_c0, overflow) =
+                        c[0].overflowing_add((chunk_base_block as u32) + b_offset);
                     c[0] = new_c0.into();
                     if overflow {
                         c[1] += 1;
@@ -301,10 +295,10 @@ pub extern "C" fn philox32_rand_f32s(
             });
 
         let num_blocks = count.div_ceil(4);
-        let (n_c0, overflow) = rng.c[0].value().overflowing_add(num_blocks as u32);
+        let (n_c0, overflow) = rng.c[0].overflowing_add(num_blocks as u32);
         rng.c[0] = n_c0.into();
         if overflow {
-            let (n_c1, ovf2) = rng.c[1].value().overflowing_add(1);
+            let (n_c1, ovf2) = rng.c[1].overflowing_add(1);
             rng.c[1] = n_c1.into();
             if ovf2 {
                 rng.c[2] += 1;

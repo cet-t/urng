@@ -32,7 +32,7 @@ pub use xoroshiro::*;
 pub use xorshift::*;
 pub use xoshiro::*;
 
-crate::impl_default_from_seed32!(
+crate::impl_default_from_seed32! {
     Jsf32x4,
     Jsf32x8,
     Jsf32x16,
@@ -66,13 +66,13 @@ crate::impl_default_from_seed32!(
     Xoshiro128Ssx4,
     Xoshiro128Ssx8,
     Xoshiro128Ssx16,
-);
+}
 
-crate::impl_default_from_seed64!(
+crate::impl_default_from_seed64! {
     Pcg32x4,
     Pcg32x8,
     Pcg32x16,
     Squares32x4,
     Squares32x8,
     Squares32x16,
-);
+}

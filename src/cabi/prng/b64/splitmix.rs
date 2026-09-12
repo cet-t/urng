@@ -1,7 +1,10 @@
+use std::slice::from_raw_parts_mut;
+
+use rayon::prelude::*;
+use wrapn::{wrap, wu64};
+
 use crate::_internal::{fill_chunk_auto, prefer_nt};
 use crate::prng::b64::SplitMix64;
-use rayon::prelude::*;
-use std::slice::from_raw_parts_mut;
 
 /// Creates a new heap-allocated `SplitMix64` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`splitmix64_free`].
@@ -26,7 +29,7 @@ const SPLITMIX64_GAMMA: u64 = 0x9E3779B97F4A7C15;
 /// outputs (64 bytes for 8-byte `T`) are batched per generator call so
 /// the non-temporal path can stream whole cache lines.
 #[inline(always)]
-fn sm64_fill<T, M>(buffer: &mut [T], s0: u64, map: M)
+fn sm64_fill<T, M>(buffer: &mut [T], s0: wu64, map: M)
 where
     T: Copy + Default + Send,
     M: Fn(u64) -> T + Sync,
@@ -42,8 +45,8 @@ where
                     let mut out = [T::default(); 8];
                     for v in &mut out {
                         idx += 1;
-                        let state = s0.wrapping_add(idx.wrapping_mul(SPLITMIX64_GAMMA));
-                        *v = map(SplitMix64::compute(state));
+                        let state = s0 + idx.wrapping_mul(SPLITMIX64_GAMMA);
+                        *v = map(SplitMix64::compute(*state));
                     }
                     out
                 });
@@ -57,7 +60,7 @@ pub extern "C" fn splitmix64_next_u64s(ptr: *mut SplitMix64, out: *mut u64, coun
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        sm64_fill(buffer, rng.s.value(), |x| x);
+        sm64_fill(buffer, rng.s, |x| x);
         rng.s += (count as u64).wrapping_mul(SPLITMIX64_GAMMA);
     }
 }
@@ -68,7 +71,7 @@ pub extern "C" fn splitmix64_next_f64s(ptr: *mut SplitMix64, out: *mut f64, coun
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        sm64_fill(buffer, rng.s.value(), |x| x as f64 * SCALE);
+        sm64_fill(buffer, rng.s, |x| x as f64 * SCALE);
         rng.s += (count as u64).wrapping_mul(SPLITMIX64_GAMMA);
     }
 }
@@ -85,10 +88,8 @@ pub extern "C" fn splitmix64_rand_i64s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let range = (max as i128 - min as i128 + 1) as u128;
-        sm64_fill(buffer, rng.s.value(), |x| {
-            ((x as u128 * range) >> 64) as i64 + min
-        });
-        rng.s += (count as u64).wrapping_mul(SPLITMIX64_GAMMA);
+        sm64_fill(buffer, rng.s, |x| ((x as u128 * range) >> 64) as i64 + min);
+        rng.s += wrap!(count as u64) * SPLITMIX64_GAMMA;
     }
 }
 /// Fills `out[0..count]` with `f64` values in `[min, max)` using parallel chunk generation.
@@ -105,7 +106,7 @@ pub extern "C" fn splitmix64_rand_f64s(
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
         let mult = (max - min) * SCALE;
-        sm64_fill(buffer, rng.s.value(), |x| x as f64 * mult + min);
+        sm64_fill(buffer, rng.s, |x| x as f64 * mult + min);
         rng.s += (count as u64).wrapping_mul(SPLITMIX64_GAMMA);
     }
 }

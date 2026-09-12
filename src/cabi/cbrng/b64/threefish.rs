@@ -1,5 +1,6 @@
-use crate::cbrng::b64::Threefish256;
 use std::slice::from_raw_parts_mut;
+
+use crate::cbrng::b64::Threefish256;
 
 /// Creates a new heap-allocated `Threefish256` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`threefish256_free`].

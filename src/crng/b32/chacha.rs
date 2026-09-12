@@ -67,7 +67,7 @@ impl<const ROUNDS: usize> ChaCha<ROUNDS> {
         }
 
         self.x = x;
-        x.map(|x| x.value())
+        x.map(|x| *x)
     }
 }
 
