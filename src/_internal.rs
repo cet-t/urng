@@ -116,6 +116,14 @@ macro_rules! u2f_01 {
 
 pub(crate) use u2f_01;
 
+macro_rules! u2f_01w {
+    ($ft:ty, $bits:tt, $x:expr) => {
+        ::wrapn::wrap!(<$ft>::from_bits(($x.0.0 >> i2f_bits!($bits bias)) | i2f_bits!($bits bits)) - 1.0)
+    };
+}
+
+pub(crate) use u2f_01w;
+
 macro_rules! sm64_from_seed32 {
     ($seed:expr) => {{
         let mut s = $crate::SplitMix32::new($seed);
@@ -142,8 +150,8 @@ macro_rules! impl_ring_rng32 {
             #[inline]
             fn nextu(&mut self) -> Self::Word {
                 if self.pos >= $n {
-                    self.buf = self.$raw().map(::core::convert::Into::into);
-                    self.pos = 0.into();
+                    self.buf = self.$raw();
+                    self.pos = ::wrapn::wrap!(0);
                 }
                 let v = self.buf[*self.pos];
                 self.pos += 1;
@@ -166,8 +174,9 @@ macro_rules! impl_ring_rng64 {
             #[inline]
             fn nextu(&mut self) -> Self::Word {
                 if self.pos >= $n {
-                    self.buf = self.$raw().map(::core::convert::Into::into);
-                    self.pos = 0.into();
+                    // self.buf = self.$raw().map(::core::convert::Into::into);
+                    self.buf = self.$raw();
+                    self.pos = ::wrapn::wrap!(0);
                 }
                 let v = self.buf[*self.pos];
                 self.pos += 1;

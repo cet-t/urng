@@ -1,9 +1,5 @@
-#[cfg(all(feature = "simd", target_arch = "x86_64"))]
-use std::arch::x86_64::*;
-
 use wrapn::{wrap, wu32};
 
-use crate::_internal::{i2f_bits, u2f_01};
 use crate::prng::b32::SplitMix32;
 use crate::rng::Rng;
 
@@ -53,210 +49,218 @@ impl Rng for Xoroshiro64Ss {
 }
 
 #[cfg(feature = "simd")]
-pub(crate) const XOROSHIRO64SSX8: usize = 8;
-
-/// 8-way SIMD implementation of xoroshiro64** 32-bit RNG.
-/// This implementation uses AVX2 instructions to generate 8 random numbers in parallel.
-///
-/// # Example
-/// ```ignore
-/// use urng::Xoroshiro64Ssx8;
-///
-/// let mut rng = unsafe { Xoroshiro64Ssx8::new(12345) };
-/// let _ = rng.nextu();
-/// ```
-#[cfg(all(feature = "simd", target_arch = "x86_64"))]
-#[repr(C, align(64))]
-pub struct Xoroshiro64Ssx8 {
-    s0: __m256i,
-    s1: __m256i,
-}
+pub use simd::*;
 
 #[cfg(feature = "simd")]
-#[allow(dead_code)]
-impl Xoroshiro64Ssx8 {
-    /// # Safety
-    /// This function requires AVX2 support. Ensure that the CPU supports it and that the code is compiled with the appropriate target features.
-    #[target_feature(enable = "avx2")]
-    pub fn new(seed: u32) -> Self {
-        let mut seedgen = SplitMix32::new(seed);
+pub mod simd {
+    use std::arch::x86_64::*;
 
-        let mut s0 = [0u32; XOROSHIRO64SSX8];
-        let mut s1 = [0u32; XOROSHIRO64SSX8];
+    use crate::_internal::{i2f_bits, u2f_01};
+    use crate::prng::b32::SplitMix32;
 
-        for i in 0..XOROSHIRO64SSX8 {
-            s0[i] = seedgen.nextu();
-            s1[i] = seedgen.nextu();
-        }
+    pub(crate) const XOROSHIRO64SSX8: usize = 8;
 
-        unsafe {
-            Self {
-                s0: _mm256_loadu_si256(s0.as_ptr() as *const __m256i),
-                s1: _mm256_loadu_si256(s1.as_ptr() as *const __m256i),
+    /// 8-way SIMD implementation of xoroshiro64** 32-bit RNG.
+    /// This implementation uses AVX2 instructions to generate 8 random numbers in parallel.
+    ///
+    /// # Example
+    /// ```ignore
+    /// use urng::Xoroshiro64Ssx8;
+    ///
+    /// let mut rng = unsafe { Xoroshiro64Ssx8::new(12345) };
+    /// let _ = rng.nextu();
+    /// ```
+    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+    #[repr(C, align(64))]
+    pub struct Xoroshiro64Ssx8 {
+        s0: __m256i,
+        s1: __m256i,
+    }
+
+    #[cfg(feature = "simd")]
+    #[allow(dead_code)]
+    impl Xoroshiro64Ssx8 {
+        /// # Safety
+        /// This function requires AVX2 support. Ensure that the CPU supports it and that the code is compiled with the appropriate target features.
+        #[target_feature(enable = "avx2")]
+        pub fn new(seed: u32) -> Self {
+            let mut seedgen = SplitMix32::new(seed);
+
+            let mut s0 = [0u32; XOROSHIRO64SSX8];
+            let mut s1 = [0u32; XOROSHIRO64SSX8];
+
+            for i in 0..XOROSHIRO64SSX8 {
+                s0[i] = seedgen.nextu_const();
+                s1[i] = seedgen.nextu_const();
+            }
+
+            unsafe {
+                Self {
+                    s0: _mm256_loadu_si256(s0.as_ptr() as *const __m256i),
+                    s1: _mm256_loadu_si256(s1.as_ptr() as *const __m256i),
+                }
             }
         }
-    }
 
-    /// Generates the next 8 random numbers in parallel.
-    ///
-    /// # Safety
-    /// This function requires AVX2 support. Ensure that the CPU supports it and that the code is compiled with the appropriate target features.
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    pub(crate) fn nextuv(&mut self) -> __m256i {
-        let s0 = self.s0;
-        let mut s1 = self.s1;
+        /// Generates the next 8 random numbers in parallel.
+        ///
+        /// # Safety
+        /// This function requires AVX2 support. Ensure that the CPU supports it and that the code is compiled with the appropriate target features.
+        #[inline]
+        #[target_feature(enable = "avx2")]
+        pub(crate) fn nextuv(&mut self) -> __m256i {
+            let s0 = self.s0;
+            let mut s1 = self.s1;
 
-        let mult = _mm256_set1_epi32(0x9E3779BBu32 as i32);
-        let result = _mm256_mullo_epi32(s0, mult);
+            let mult = _mm256_set1_epi32(0x9E3779BBu32 as i32);
+            let result = _mm256_mullo_epi32(s0, mult);
 
-        s1 = _mm256_xor_si256(s1, s0);
-        self.s0 = _mm256_xor_si256(
-            _mm256_xor_si256(unsafe { _mm256_rol_epi32(s0, 26) }, s1),
-            _mm256_slli_epi32(s1, 9),
-        );
-        self.s1 = unsafe { _mm256_rol_epi32(s1, 13) };
+            s1 = _mm256_xor_si256(s1, s0);
+            self.s0 = _mm256_xor_si256(
+                _mm256_xor_si256(unsafe { _mm256_rol_epi32(s0, 26) }, s1),
+                _mm256_slli_epi32(s1, 9),
+            );
+            self.s1 = unsafe { _mm256_rol_epi32(s1, 13) };
 
-        result
-    }
-
-    #[inline(always)]
-    pub fn nextu(&mut self) -> [u32; XOROSHIRO64SSX8] {
-        unsafe { std::mem::transmute(self.nextuv()) }
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    pub(crate) fn nextfv(&mut self) -> __m256 {
-        unsafe { crate::_internal::simd_f01::u32x8(self.nextuv()) }
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    pub(crate) fn randiv(&mut self, v_range: __m256i, v_min: __m256i) -> __m256i {
-        let v = self.nextuv();
-        let res_even = _mm256_srli_epi64(_mm256_mul_epu32(v, v_range), 32);
-        let v_hi = _mm256_srli_epi64(v, 32);
-        let prod_odd =
-            _mm256_slli_epi64(_mm256_srli_epi64(_mm256_mul_epu32(v_hi, v_range), 32), 32);
-        _mm256_add_epi32(_mm256_or_si256(res_even, prod_odd), v_min)
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    pub(crate) fn randfv(&mut self, v_mult: __m256, v_min: __m256) -> __m256 {
-        let base = unsafe { crate::_internal::simd_f01::u32x8(self.nextuv()) };
-        _mm256_add_ps(_mm256_mul_ps(base, v_mult), v_min)
-    }
-}
-
-#[cfg(feature = "simd")]
-pub(crate) const XOROSHIRO64SSX16: usize = 16;
-
-/// 16-way SIMD implementation of xoroshiro64** 32-bit RNG.
-/// This implementation uses AVX-512F instructions to generate 16 random numbers in parallel.
-///
-/// # Example
-/// ```no_run
-/// use urng::Xoroshiro64Ssx16;
-///
-/// let mut rng = unsafe { Xoroshiro64Ssx16::new(12345) };
-/// let _ = rng.nextu();
-/// ```
-#[cfg(all(feature = "simd", target_arch = "x86_64"))]
-#[repr(C, align(64))]
-pub struct Xoroshiro64Ssx16 {
-    s0: __m512i,
-    s1: __m512i,
-}
-
-#[cfg(feature = "simd")]
-#[allow(dead_code)]
-impl Xoroshiro64Ssx16 {
-    /// # Safety
-    /// This function requires AVX-512F support. Ensure that the CPU supports it and that the code is compiled with the appropriate target features.
-    #[target_feature(enable = "avx512f")]
-    pub fn new(seed: u32) -> Self {
-        let mut seedgen = SplitMix32::new(seed);
-
-        let mut s0 = [0u32; XOROSHIRO64SSX16];
-        let mut s1 = [0u32; XOROSHIRO64SSX16];
-
-        for i in 0..XOROSHIRO64SSX16 {
-            s0[i] = seedgen.nextu();
-            s1[i] = seedgen.nextu();
+            result
         }
 
-        unsafe {
-            Self {
-                s0: _mm512_loadu_si512(s0.as_ptr() as *const __m512i),
-                s1: _mm512_loadu_si512(s1.as_ptr() as *const __m512i),
+        #[inline(always)]
+        pub fn nextu(&mut self) -> [u32; XOROSHIRO64SSX8] {
+            unsafe { std::mem::transmute(self.nextuv()) }
+        }
+
+        #[inline]
+        #[target_feature(enable = "avx2")]
+        pub(crate) fn nextfv(&mut self) -> __m256 {
+            unsafe { crate::_internal::simd_f01::u32x8(self.nextuv()) }
+        }
+
+        #[inline]
+        #[target_feature(enable = "avx2")]
+        pub(crate) fn randiv(&mut self, v_range: __m256i, v_min: __m256i) -> __m256i {
+            let v = self.nextuv();
+            let res_even = _mm256_srli_epi64(_mm256_mul_epu32(v, v_range), 32);
+            let v_hi = _mm256_srli_epi64(v, 32);
+            let prod_odd =
+                _mm256_slli_epi64(_mm256_srli_epi64(_mm256_mul_epu32(v_hi, v_range), 32), 32);
+            _mm256_add_epi32(_mm256_or_si256(res_even, prod_odd), v_min)
+        }
+
+        #[inline]
+        #[target_feature(enable = "avx2")]
+        pub(crate) fn randfv(&mut self, v_mult: __m256, v_min: __m256) -> __m256 {
+            let base = unsafe { crate::_internal::simd_f01::u32x8(self.nextuv()) };
+            _mm256_add_ps(_mm256_mul_ps(base, v_mult), v_min)
+        }
+    }
+
+    #[cfg(feature = "simd")]
+    pub(crate) const XOROSHIRO64SSX16: usize = 16;
+
+    /// 16-way SIMD implementation of xoroshiro64** 32-bit RNG.
+    /// This implementation uses AVX-512F instructions to generate 16 random numbers in parallel.
+    ///
+    /// # Example
+    /// ```no_run
+    /// use urng::Xoroshiro64Ssx16;
+    ///
+    /// let mut rng = unsafe { Xoroshiro64Ssx16::new(12345) };
+    /// let _ = rng.nextu();
+    /// ```
+    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+    #[repr(C, align(64))]
+    pub struct Xoroshiro64Ssx16 {
+        s0: __m512i,
+        s1: __m512i,
+    }
+
+    #[cfg(feature = "simd")]
+    #[allow(dead_code)]
+    impl Xoroshiro64Ssx16 {
+        /// # Safety
+        /// This function requires AVX-512F support. Ensure that the CPU supports it and that the code is compiled with the appropriate target features.
+        #[target_feature(enable = "avx512f")]
+        pub fn new(seed: u32) -> Self {
+            let mut seedgen = SplitMix32::new(seed);
+
+            let mut s0 = [0u32; XOROSHIRO64SSX16];
+            let mut s1 = [0u32; XOROSHIRO64SSX16];
+
+            for i in 0..XOROSHIRO64SSX16 {
+                s0[i] = seedgen.nextu_const();
+                s1[i] = seedgen.nextu_const();
+            }
+
+            unsafe {
+                Self {
+                    s0: _mm512_loadu_si512(s0.as_ptr() as *const __m512i),
+                    s1: _mm512_loadu_si512(s1.as_ptr() as *const __m512i),
+                }
             }
         }
-    }
 
-    /// Generates the next 16 random numbers in parallel.
-    ///
-    /// # Safety
-    /// This function requires AVX-512F support. Ensure that the CPU supports it and that the code is compiled with the appropriate target features.
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub(crate) fn nextuv(&mut self) -> __m512i {
-        let s0 = self.s0;
-        let mut s1 = self.s1;
+        /// Generates the next 16 random numbers in parallel.
+        ///
+        /// # Safety
+        /// This function requires AVX-512F support. Ensure that the CPU supports it and that the code is compiled with the appropriate target features.
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub(crate) fn nextuv(&mut self) -> __m512i {
+            let s0 = self.s0;
+            let mut s1 = self.s1;
 
-        let mult = _mm512_set1_epi32(0x9E3779BBu32 as i32);
-        let result = _mm512_mullo_epi32(s0, mult);
+            let mult = _mm512_set1_epi32(0x9E3779BBu32 as i32);
+            let result = _mm512_mullo_epi32(s0, mult);
 
-        s1 = _mm512_xor_si512(s1, s0);
-        self.s0 = _mm512_xor_si512(
-            _mm512_xor_si512(_mm512_rol_epi32(s0, 26), s1),
-            _mm512_slli_epi32(s1, 9),
-        );
-        self.s1 = _mm512_rol_epi32(s1, 13);
+            s1 = _mm512_xor_si512(s1, s0);
+            self.s0 = _mm512_xor_si512(
+                _mm512_xor_si512(_mm512_rol_epi32(s0, 26), s1),
+                _mm512_slli_epi32(s1, 9),
+            );
+            self.s1 = _mm512_rol_epi32(s1, 13);
 
-        result
-    }
+            result
+        }
 
-    #[inline(always)]
-    pub fn nextu(&mut self) -> [u32; XOROSHIRO64SSX16] {
-        unsafe { std::mem::transmute(self.nextuv()) }
-    }
+        #[inline(always)]
+        pub fn nextu(&mut self) -> [u32; XOROSHIRO64SSX16] {
+            unsafe { std::mem::transmute(self.nextuv()) }
+        }
 
-    pub fn nextf(&mut self) -> [f32; XOROSHIRO64SSX16] {
-        self.nextu().map(|x| u2f_01!(f32, 32, x))
-    }
+        pub fn nextf(&mut self) -> [f32; XOROSHIRO64SSX16] {
+            self.nextu().map(|x| u2f_01!(f32, 32, x))
+        }
 
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub(crate) fn nextfv(&mut self) -> __m512 {
-        unsafe { crate::_internal::simd_f01::u32x16(self.nextuv()) }
-    }
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub(crate) fn nextfv(&mut self) -> __m512 {
+            unsafe { crate::_internal::simd_f01::u32x16(self.nextuv()) }
+        }
 
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub(crate) fn randiv(&mut self, v_range: __m512i, v_min: __m512i) -> __m512i {
-        const MERGE_MASK: u16 = 0xAAAA;
-        let v = self.nextuv();
-        let res_even = _mm512_srli_epi64(_mm512_mul_epu32(v, v_range), 32);
-        let prod_odd = _mm512_mul_epu32(_mm512_srli_epi64(v, 32), v_range);
-        let merged = _mm512_mask_blend_epi32(MERGE_MASK, res_even, prod_odd);
-        _mm512_add_epi32(merged, v_min)
-    }
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub(crate) fn randiv(&mut self, v_range: __m512i, v_min: __m512i) -> __m512i {
+            const MERGE_MASK: u16 = 0xAAAA;
+            let v = self.nextuv();
+            let res_even = _mm512_srli_epi64(_mm512_mul_epu32(v, v_range), 32);
+            let prod_odd = _mm512_mul_epu32(_mm512_srli_epi64(v, 32), v_range);
+            let merged = _mm512_mask_blend_epi32(MERGE_MASK, res_even, prod_odd);
+            _mm512_add_epi32(merged, v_min)
+        }
 
-    #[inline]
-    #[target_feature(enable = "avx512f")]
-    pub(crate) fn randfv(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
-        let base = unsafe { crate::_internal::simd_f01::u32x16(self.nextuv()) };
-        _mm512_add_ps(_mm512_mul_ps(base, v_mult), v_min)
+        #[inline]
+        #[target_feature(enable = "avx512f")]
+        pub(crate) fn randfv(&mut self, v_mult: __m512, v_min: __m512) -> __m512 {
+            let base = unsafe { crate::_internal::simd_f01::u32x16(self.nextuv()) };
+            _mm512_add_ps(_mm512_mul_ps(base, v_mult), v_min)
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 
     crate::safe_test! { Xoroshiro64Ss }
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]

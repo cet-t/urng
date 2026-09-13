@@ -50,7 +50,7 @@ impl Threefry32x4 {
             c: wrap![0; 4],
             k,
             tw,
-            pos: 4.into(),
+            pos: wrap!(4),
             buf: wrap![0; 4],
         }
     }
@@ -139,7 +139,7 @@ impl Threefry32x4 {
     /// scalar [`Rng::nextu`] buffer, and available directly for
     /// throughput-sensitive callers that want the whole block at once).
     #[inline(always)]
-    pub fn next_raw(&mut self) -> [u32; 4] {
+    pub fn next_raw(&mut self) -> [wu32; 4] {
         let dst = Self::compute(self.c, &self.k, &self.tw);
 
         self.c[0] += 1;
@@ -153,7 +153,7 @@ impl Threefry32x4 {
             }
         }
 
-        dst.map(|x| *x)
+        dst
     }
 }
 
@@ -187,16 +187,16 @@ impl Threefry32x2 {
     /// Creates a new `Threefry32x2` instance seeded with the given value.
     ///
     #[inline]
-    pub fn new(seed: u32) -> Self {
+    pub const fn new(seed: u32) -> Self {
         let mut sm = SplitMix32::new(seed);
-        let k0 = sm.nextu();
-        let k1 = sm.nextu();
+        let k0 = sm.nextu_const();
+        let k1 = sm.nextu_const();
 
         Self {
             c: wrap![0, 0],
             k: wrap![k0, k1, k0 ^ k1 ^ THREEFRY32_C240],
             buf: wrap![0; 2],
-            pos: 2.into(),
+            pos: wrap!(2),
         }
     }
 
@@ -267,19 +267,16 @@ impl Threefry32x2 {
     /// scalar [`Rng::nextu`] buffer, and available directly for
     /// throughput-sensitive callers that want the whole block at once).
     #[inline(always)]
-    pub fn next_raw(&mut self) -> [u32; 2] {
+    pub fn next_raw(&mut self) -> [wu32; 2] {
         let k = self.k;
         let dst = Self::compute(self.c, &k);
-        self.k
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, x)| *x = k[i].into());
+        self.k.iter_mut().enumerate().for_each(|(i, x)| *x = k[i]);
         let (n_c0, overflow) = self.c[0].overflowing_add(1);
         self.c[0] = n_c0.into();
         if overflow {
             self.c[1] += 1;
         }
-        dst.map(|x| *x)
+        dst
     }
 }
 

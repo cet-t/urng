@@ -52,7 +52,7 @@ impl Philox32 {
 
     /// Computes Philox output from counter and key values (pure function).
     #[inline(always)]
-    pub(crate) fn compute(c: [wu32; 4], k: [wu32; 2]) -> [u32; 4] {
+    pub(crate) fn compute(c: [wu32; 4], k: [wu32; 2]) -> [wu32; 4] {
         let mut x = c;
         let mut key = k;
 
@@ -111,7 +111,7 @@ impl Philox32 {
         step!();
         step!(fin);
 
-        x.map(|x| *x)
+        x
     }
 
     /// Generates the next block of 4 random `u32` values in one call.
@@ -120,7 +120,7 @@ impl Philox32 {
     /// scalar [`Rng::nextu`] buffer, and available directly for
     /// throughput-sensitive callers that want the whole block at once).
     #[inline(always)]
-    pub fn next_raw(&mut self) -> [u32; 4] {
+    pub fn next_raw(&mut self) -> [wu32; 4] {
         let out = Self::compute(self.c, self.k);
         self.c[0] += 1;
         if self.c[0] == 0 {

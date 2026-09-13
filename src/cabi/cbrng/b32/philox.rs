@@ -4,6 +4,7 @@ use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 
 use crate::cbrng::b32::Philox32;
+use crate::{i2f_bits, u2f_01w};
 
 /// Creates a new `Philox32` instance.
 /// The caller is responsible for freeing the memory using `philox32_free`.
@@ -54,7 +55,7 @@ pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: u
                         c[1] += 1;
                     }
 
-                    let result = Philox32::compute(c, k);
+                    let result = Philox32::compute(c, k).map(|x| *x);
                     dst[0] = result[0];
                     dst[1] = result[1];
                     dst[2] = result[2];
@@ -72,7 +73,7 @@ pub extern "C" fn philox32_next_u32s(ptr: *mut Philox32, out: *mut u32, count: u
                         c[1] += 1;
                     }
 
-                    let result = Philox32::compute(c, k);
+                    let result = Philox32::compute(c, k).map(|x| *x);
                     rem.copy_from_slice(&result[..rem.len()]);
                 }
             });
@@ -107,7 +108,7 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
             .par_chunks_mut(PHILOX32_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let chunk_base_block = (chunk_idx * PHILOX32_PAR_CHUNK) / 4;
+                let chunk_base_block = (chunk_idx * PHILOX32_PAR_CHUNK) >> 2;
                 let mut chunks_exact = chunk.chunks_exact_mut(4);
                 let mut b_offset = 0u32;
 
@@ -121,10 +122,10 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
                     }
 
                     let result = Philox32::compute(c, k);
-                    dst[0] = result[0] as f32 * scale;
-                    dst[1] = result[1] as f32 * scale;
-                    dst[2] = result[2] as f32 * scale;
-                    dst[3] = result[3] as f32 * scale;
+                    dst[0] = *(result[0].cast::<f32>() * scale);
+                    dst[1] = *(result[1].cast::<f32>() * scale);
+                    dst[2] = *(result[2].cast::<f32>() * scale);
+                    dst[3] = *(result[3].cast::<f32>() * scale);
                     b_offset += 1;
                 }
 
@@ -138,9 +139,9 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
                         c[1] += 1;
                     }
 
-                    let result = Philox32::compute(c, k);
+                    let result = Philox32::compute(c, k).map(|x| x.cast::<f32>());
                     for j in 0..rem.len() {
-                        rem[j] = result[j] as f32 * scale;
+                        rem[j] = *(result[j] * scale);
                     }
                 }
             });
@@ -181,7 +182,7 @@ pub extern "C" fn philox32_rand_i32s(
             .par_chunks_mut(PHILOX32_PAR_CHUNK)
             .enumerate()
             .for_each(|(chunk_idx, chunk)| {
-                let chunk_base_block = (chunk_idx * PHILOX32_PAR_CHUNK) / 4;
+                let chunk_base_block = (chunk_idx * PHILOX32_PAR_CHUNK) >> 2;
                 let mut chunks_exact = chunk.chunks_exact_mut(4);
                 let mut b_offset = 0u32;
 
@@ -194,11 +195,12 @@ pub extern "C" fn philox32_rand_i32s(
                         c[1] += 1;
                     }
 
-                    let result = Philox32::compute(c, k);
-                    dst[0] = ((result[0] as u64 * range) >> 32) as i32 + min;
-                    dst[1] = ((result[1] as u64 * range) >> 32) as i32 + min;
-                    dst[2] = ((result[2] as u64 * range) >> 32) as i32 + min;
-                    dst[3] = ((result[3] as u64 * range) >> 32) as i32 + min;
+                    let result = Philox32::compute(c, k)
+                        .map(|x| ((x.cast::<u64>() * range) >> 32).cast::<i32>() + min);
+                    dst[0] = *result[0];
+                    dst[1] = *result[1];
+                    dst[2] = *result[2];
+                    dst[3] = *result[3];
                     b_offset += 1;
                 }
 
@@ -212,9 +214,10 @@ pub extern "C" fn philox32_rand_i32s(
                         c[1] += 1;
                     }
 
-                    let result = Philox32::compute(c, k);
+                    let result = Philox32::compute(c, k)
+                        .map(|x| ((x.cast::<u64>() * range) >> 32).cast::<i32>() + min);
                     for j in 0..rem.len() {
-                        rem[j] = ((result[j] as u64 * range) >> 32) as i32 + min;
+                        rem[j] = *result[j];
                     }
                 }
             });
@@ -249,7 +252,6 @@ pub extern "C" fn philox32_rand_f32s(
         let buffer = from_raw_parts_mut(out, count);
         let c0 = rng.c;
         let k = rng.k;
-        let scale_val = 1.0f32 / (u32::MAX as f32 + 1.0);
         let range_val = max - min;
 
         buffer
@@ -269,11 +271,12 @@ pub extern "C" fn philox32_rand_f32s(
                         c[1] += 1;
                     }
 
-                    let result = Philox32::compute(c, k);
-                    dst[0] = (result[0] as f32 * scale_val) * range_val + min;
-                    dst[1] = (result[1] as f32 * scale_val) * range_val + min;
-                    dst[2] = (result[2] as f32 * scale_val) * range_val + min;
-                    dst[3] = (result[3] as f32 * scale_val) * range_val + min;
+                    let result =
+                        Philox32::compute(c, k).map(|x| u2f_01w!(f32, 32, x) * range_val + min);
+                    dst[0] = *result[0];
+                    dst[1] = *result[1];
+                    dst[2] = *result[2];
+                    dst[3] = *result[3];
                     b_offset += 1;
                 }
 
@@ -289,7 +292,7 @@ pub extern "C" fn philox32_rand_f32s(
 
                     let result = Philox32::compute(c, k);
                     for j in 0..rem.len() {
-                        rem[j] = (result[j] as f32 * scale_val) * range_val + min;
+                        rem[j] = *u2f_01w!(f32, 32, result[j]) * range_val + min;
                     }
                 }
             });

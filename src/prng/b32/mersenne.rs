@@ -98,9 +98,8 @@ impl Mt19937 {
     }
 
     /// Kept for sequential single-threaded block fills (cabi now fills in parallel).
-    #[allow(dead_code)]
     #[inline]
-    pub(crate) fn fill_next_u32s(&mut self, out: &mut [u32]) {
+    pub(crate) fn _fill_next_u32s(&mut self, out: &mut [u32]) {
         let mut written = 0;
         while written < out.len() {
             if self.mti >= MT32_N {
@@ -109,8 +108,8 @@ impl Mt19937 {
 
             let idx = self.mti;
             let available = wrap!(MT32_N) - idx;
-            let take = available.min((out.len() - written).into());
-            let src = &self.mt[*idx.raw()..*(idx + take).raw()];
+            let take = available.min(wrap!(out.len()) - written);
+            let src = &self.mt[*idx..*(idx + take)];
             let dst = &mut out[written..written + take.raw()];
 
             for (d, s) in dst.iter_mut().zip(src.iter()) {
@@ -119,7 +118,7 @@ impl Mt19937 {
                 y ^= (y << 7) & 0x9D2C5680;
                 y ^= (y << 15) & 0xEFC60000;
                 y ^= y >> 18;
-                *d = y.0.0;
+                *d = *y;
             }
 
             self.mti += take;
@@ -162,7 +161,7 @@ impl Rng for Mt19937 {
         if self.mti >= MT32_N {
             self.twist();
         }
-        let mut y = self.mt[*self.mti.raw()];
+        let mut y = self.mt[*self.mti];
         self.mti += 1;
         y ^= y >> 11;
         y ^= (y << 7) & 0x9D2C5680;
@@ -209,10 +208,10 @@ impl Sfmt19937 {
         let mut seedgen = sm64_from_seed32!(seed);
 
         // Initialize state using u32 array for simplicity
-        let mut raw_state = [0u32; SFMT_N * 4];
-        for i in 0..SFMT_N * 2 {
+        let mut raw_state = [0u32; SFMT_N << 2];
+        for i in 0..(SFMT_N << 1) {
             // Fill with 64-bit values from SplitMix64
-            let s = seedgen.nextu();
+            let s = seedgen.nextu_const();
             raw_state[2 * i] = s as u32;
             raw_state[2 * i + 1] = (s >> 32) as u32;
         }
@@ -229,7 +228,7 @@ impl Sfmt19937 {
 
         let mut rng = Self {
             state,
-            idx: wrap!(SFMT_N * 4), // Force generate on first call. 156 * 4 = 624 u32s
+            idx: wrap!(SFMT_N << 2), // Force generate on first call. 156 * 4 = 624 u32s
         };
         rng.period_certification();
         rng
@@ -270,11 +269,11 @@ impl Sfmt19937 {
     fn period_certification(&mut self) {
         let mut inner = 0;
         let psfmt32 =
-            unsafe { std::slice::from_raw_parts(self.state.as_ptr() as *const u32, SFMT_N * 4) };
-        let parity = [SFMT_PARITY1, SFMT_PARITY2, SFMT_PARITY3, SFMT_PARITY4];
+            unsafe { std::slice::from_raw_parts(self.state.as_ptr() as *const u32, SFMT_N << 2) };
+        const PARITY: [u32; 4] = [SFMT_PARITY1, SFMT_PARITY2, SFMT_PARITY3, SFMT_PARITY4];
 
         for i in 0..4 {
-            inner ^= psfmt32[i] & parity[i];
+            inner ^= psfmt32[i] & PARITY[i];
         }
         let mut i = 16;
         while i > 0 {
@@ -290,13 +289,13 @@ impl Sfmt19937 {
 
         // Modification for period certification
         let psfmt32_mut = unsafe {
-            std::slice::from_raw_parts_mut(self.state.as_mut_ptr() as *mut u32, SFMT_N * 4)
+            std::slice::from_raw_parts_mut(self.state.as_mut_ptr() as *mut u32, SFMT_N << 2)
         };
 
         for i in 0..4 {
             let mut work = 1;
             for _ in 0..32 {
-                if (work & parity[i]) != 0 {
+                if (work & PARITY[i]) != 0 {
                     psfmt32_mut[i] ^= work;
                     return;
                 }
@@ -311,17 +310,17 @@ impl Sfmt19937 {
     pub(crate) fn fill_next_u32s(&mut self, out: &mut [u32]) {
         let mut written = 0;
         while written < out.len() {
-            if self.idx >= SFMT_N * 4 {
+            if self.idx >= SFMT_N << 2 {
                 self.gen_rand_all();
-                self.idx = 0.into();
+                self.idx = wrap!(0);
             }
 
-            let available = SFMT_N * 4 - self.idx.raw();
+            let available = (SFMT_N << 2) - *self.idx;
             let take = available.min(out.len() - written);
 
             unsafe {
                 ptr::copy_nonoverlapping(
-                    (self.state.as_ptr() as *const u32).add(*self.idx.raw()),
+                    (self.state.as_ptr() as *const u32).add(*self.idx),
                     out.as_mut_ptr().add(written),
                     take,
                 );
@@ -340,11 +339,11 @@ impl Rng for Sfmt19937 {
     fn nextu(&mut self) -> Self::Word {
         if self.idx >= SFMT_N * 4 {
             self.gen_rand_all();
-            self.idx = 0.into();
+            self.idx = wrap!(0);
         }
 
         let s: &[u32] = cast_slice(&self.state);
-        let val = s[*self.idx.raw()];
+        let val = s[*self.idx];
         self.idx += 1;
         val
     }
@@ -395,7 +394,7 @@ macro_rules! define_sfmt_variant {
                 #[doc = concat!("Creates a new `", stringify!([<Sfmt $mexp>]), "` instance with the given seed.")]
                 pub fn new(seed: u32) -> Self {
                     let mut seedgen = sm64_from_seed32!(seed);
-                    let mut raw_state = [0u32; $n * 4];
+                    let mut raw_state = [0u32; $n << 2];
                     for i in 0..($n * 2) {
                         let s = seedgen.nextu();
                         raw_state[2 * i]     = s as u32;
@@ -410,7 +409,7 @@ macro_rules! define_sfmt_variant {
                             raw_state[4 * i + 3],
                         ];
                     }
-                    let mut rng = Self { state, idx: ($n * 4).into() };
+                    let mut rng = Self { state, idx: ($n << 2).into() };
                     rng.period_certification();
                     rng
                 }
@@ -467,7 +466,7 @@ macro_rules! define_sfmt_variant {
                 fn period_certification(&mut self) {
                     let mut inner = 0u32;
                     let psfmt32 = unsafe {
-                        std::slice::from_raw_parts(self.state.as_ptr() as *const u32, $n * 4)
+                        std::slice::from_raw_parts(self.state.as_ptr() as *const u32, $n << 2)
                     };
                     let parity = [$parity1, $parity2, $parity3, $parity4];
                     for i in 0..4 {
@@ -483,7 +482,7 @@ macro_rules! define_sfmt_variant {
                         return;
                     }
                     let psfmt32_mut = unsafe {
-                        std::slice::from_raw_parts_mut(self.state.as_mut_ptr() as *mut u32, $n * 4)
+                        std::slice::from_raw_parts_mut(self.state.as_mut_ptr() as *mut u32, $n << 2)
                     };
                     for i in 0..4 {
                         let mut work = 1u32;
@@ -503,15 +502,15 @@ macro_rules! define_sfmt_variant {
                 pub(crate) fn fill_next_u32s(&mut self, out: &mut [u32]) {
                     let mut written = 0;
                     while written < out.len() {
-                        if self.idx >= $n * 4 {
+                        if self.idx >= $n << 2 {
                             self.gen_rand_all();
-                            self.idx = 0.into();
+                            self.idx = wrap!(0);
                         }
-                        let available = $n * 4 - self.idx.raw();
+                        let available = ($n << 2) - *self.idx;
                         let take = available.min(out.len() - written);
                         unsafe {
                             ptr::copy_nonoverlapping(
-                                (self.state.as_ptr() as *const u32).add(*self.idx.raw()),
+                                (self.state.as_ptr() as *const u32).add(*self.idx),
                                 out.as_mut_ptr().add(written),
                                 take,
                             );
@@ -524,16 +523,16 @@ macro_rules! define_sfmt_variant {
 
 
             impl Rng for [<Sfmt $mexp>] {
-    type Word = u32;
+                type Word = u32;
 
                 #[inline]
                 fn nextu(&mut self) -> Self::Word {
-                    if self.idx >= $n * 4 {
+                    if self.idx >= $n << 2 {
                         self.gen_rand_all();
-                        self.idx = 0.into();
+                        self.idx = wrap!(0);
                     }
                     let s: &[u32] = cast_slice(&self.state);
-                    let val = s[*self.idx.raw()];
+                    let val = s[*self.idx];
                     self.idx += 1;
                     val
                 }

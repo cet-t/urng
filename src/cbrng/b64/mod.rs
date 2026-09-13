@@ -3,7 +3,11 @@
 pub(crate) mod philox;
 pub(crate) mod threefish;
 
-pub use philox::Philox64;
+pub use philox::{Philox4x64, Philox64};
 pub use threefish::Threefish256;
 
-crate::impl_default_from_seed64!(Philox64, Threefish256,);
+crate::impl_default_from_seed64! {
+    Philox64,
+    Philox4x64,
+    Threefish256,
+}

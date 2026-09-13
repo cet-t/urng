@@ -1,10 +1,6 @@
 use wrapn::{wrap, wu64, wusize};
 
-use crate::{
-    _internal::{i2f_bits, u2f_01},
-    prng::b64::SplitMix64,
-    rng::Rng,
-};
+use crate::{impl_ring_rng64, prng::b64::SplitMix64};
 
 // --- Threefish256 ---
 
@@ -12,7 +8,6 @@ const THREEFISH_C240: u64 = 0x1BD11BDAA9FC1A22;
 const THREE_FISH_N_ROUNDS: usize = 72;
 const THREEFISH_PI: [usize; 4] = [0, 3, 2, 1];
 
-// key_schedule は s=0..=18 で呼ばれる。% 5 / % 3 をコンパイル時テーブルで排除。
 const KS_N: usize = THREE_FISH_N_ROUNDS / 4 + 1; // 19
 const KS_K_IDX: [[usize; 4]; KS_N] = {
     let mut t = [[0usize; 4]; KS_N];
@@ -49,7 +44,7 @@ const THREEFISH_R_256: [[u32; 2]; 8] = [
 /// # Examples
 ///
 /// ```
-/// use urng::Threefish256;
+/// use urng::{Rng, Threefish256};
 ///
 /// let mut rng = Threefish256::new(1);
 /// let _ = rng.nextu();
@@ -61,7 +56,8 @@ pub struct Threefish256 {
     k: [wu64; 5],
     tw: [wu64; 3],
     index: wusize,
-    buffer: [wu64; 4],
+    buf: [wu64; 4],
+    pos: wusize,
 }
 
 impl Threefish256 {
@@ -69,21 +65,22 @@ impl Threefish256 {
     pub fn new(seed: u64) -> Self {
         let mut seedgen = SplitMix64::new(seed);
         let mut k = wrap![0u64; 5];
-        k[0] = seedgen.nextu().into();
-        k[1] = seedgen.nextu().into();
-        k[2] = seedgen.nextu().into();
-        k[3] = seedgen.nextu().into();
+        k[0] = wrap!(seedgen.nextu_const());
+        k[1] = wrap!(seedgen.nextu_const());
+        k[2] = wrap!(seedgen.nextu_const());
+        k[3] = wrap!(seedgen.nextu_const());
         k[4] = k[0] ^ k[1] ^ k[2] ^ k[3] ^ THREEFISH_C240;
 
-        let tw0 = seedgen.nextu().into();
-        let tw1 = seedgen.nextu().into();
+        let tw0 = wrap!(seedgen.nextu_const());
+        let tw1 = wrap!(seedgen.nextu_const());
 
         Self {
             c: wrap![0; 4],
             k,
             tw: [tw0, tw1, tw0 ^ tw1],
-            index: 4.into(),
-            buffer: wrap![0; 4],
+            index: wrap!(4),
+            buf: wrap![0; 4],
+            pos: wrap!(0),
         }
     }
 
@@ -159,40 +156,23 @@ impl Threefish256 {
 
     /// Generates the next random `u64` values.
     #[inline]
-    pub fn nextu(&mut self) -> [u64; 4] {
+    pub fn next_raw(&mut self) -> [wu64; 4] {
         if self.index >= 4 {
-            self.buffer = self.next_block();
+            self.buf = self.next_block();
             self.index = 0.into();
         }
-        let val = self.buffer;
+        let val = self.buf;
         self.index += 4;
-        val.map(|x| *x)
-    }
-
-    /// Generates the next random `f64` values in the range [0, 1).
-    #[inline]
-    pub fn nextf(&mut self) -> [f64; 4] {
-        self.nextu().map(|x| u2f_01!(f64, 64, x))
-    }
-
-    /// Generates random `i64` values in the range [min, max].
-    #[inline]
-    pub fn randi(&mut self, min: i64, max: i64) -> [i64; 4] {
-        let range = (max as i128 - min as i128 + 1) as u128;
-        self.nextu()
-            .map(|x| ((x as u128 * range) >> 64) as i64 + min)
-    }
-
-    /// Generates random `f64` values in the range [min, max).
-    #[inline]
-    pub fn randf(&mut self, min: f64, max: f64) -> [f64; 4] {
-        let range = max - min;
-        self.nextu().map(|x| u2f_01!(f64, 64, x) * range + min)
+        val
     }
 }
 
+impl_ring_rng64! { Threefish256, 4, next_raw }
+
 #[cfg(test)]
 mod tests {
+    use crate::Rng;
+
     use super::*;
 
     crate::safe_test! { Threefish256 }

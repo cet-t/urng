@@ -52,7 +52,7 @@ impl<const ROUNDS: usize> ChaCha<ROUNDS> {
         [a, b, c, d]
     }
 
-    fn next_raw(&mut self) -> [u32; 16] {
+    fn next_raw(&mut self) -> [wu32; 16] {
         let mut x = self.x;
         for _ in 0..ROUNDS {
             [x[0], x[4], x[8], x[12]] = Self::qr(x[0], x[4], x[8], x[12]);
@@ -67,7 +67,7 @@ impl<const ROUNDS: usize> ChaCha<ROUNDS> {
         }
 
         self.x = x;
-        x.map(|x| *x)
+        x
     }
 }
 
