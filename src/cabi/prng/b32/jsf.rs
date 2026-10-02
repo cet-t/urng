@@ -171,7 +171,6 @@ mod simd {
         rng: &mut Jsf32x16,
         chunk: &mut [f32],
         nt: bool,
-        scale: __m512,
     ) {
         let mut out_ptr = chunk.as_mut_ptr();
         let mut remaining = chunk.len();
@@ -180,10 +179,10 @@ mod simd {
 
         if aligned {
             while remaining >= UNROLL {
-                let v0 = rng.nextfv(scale);
-                let v1 = rng.nextfv(scale);
-                let v2 = rng.nextfv(scale);
-                let v3 = rng.nextfv(scale);
+                let v0 = rng.nextfv();
+                let v1 = rng.nextfv();
+                let v2 = rng.nextfv();
+                let v3 = rng.nextfv();
                 _mm512_stream_ps(out_ptr, v0);
                 _mm512_stream_ps(out_ptr.add(JSF32X16), v1);
                 _mm512_stream_ps(out_ptr.add(JSF32X16 * 2), v2);
@@ -192,17 +191,17 @@ mod simd {
                 remaining -= UNROLL;
             }
             while remaining >= JSF32X16 {
-                let v = rng.nextfv(scale);
+                let v = rng.nextfv();
                 _mm512_stream_ps(out_ptr, v);
                 out_ptr = out_ptr.add(JSF32X16);
                 remaining -= JSF32X16;
             }
         } else {
             while remaining >= UNROLL {
-                let v0 = rng.nextfv(scale);
-                let v1 = rng.nextfv(scale);
-                let v2 = rng.nextfv(scale);
-                let v3 = rng.nextfv(scale);
+                let v0 = rng.nextfv();
+                let v1 = rng.nextfv();
+                let v2 = rng.nextfv();
+                let v3 = rng.nextfv();
                 _mm512_storeu_ps(out_ptr, v0);
                 _mm512_storeu_ps(out_ptr.add(JSF32X16), v1);
                 _mm512_storeu_ps(out_ptr.add(JSF32X16 * 2), v2);
@@ -211,7 +210,7 @@ mod simd {
                 remaining -= UNROLL;
             }
             while remaining >= JSF32X16 {
-                let v = rng.nextfv(scale);
+                let v = rng.nextfv();
                 _mm512_storeu_ps(out_ptr, v);
                 out_ptr = out_ptr.add(JSF32X16);
                 remaining -= JSF32X16;
@@ -220,7 +219,7 @@ mod simd {
 
         if remaining > 0 {
             let mut tmp = [0f32; JSF32X16];
-            let v = rng.nextfv(scale);
+            let v = rng.nextfv();
             _mm512_storeu_ps(tmp.as_mut_ptr(), v);
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }
@@ -414,12 +413,10 @@ mod simd {
                 .enumerate()
                 .for_each(|(chunk_idx, chunk)| {
                     let mut local_rng = Jsf32x16::new(chunk_seed32(base_seed, chunk_idx));
-                    let scale = _mm512_set1_ps(1.0 / (u32::MAX as f32 + 1.0));
                     jsf32x16_next_f32s_chunk(
                         &mut local_rng,
                         chunk,
                         crate::_internal::prefer_nt_for(count, chunk),
-                        scale,
                     );
                 });
         }
@@ -488,7 +485,7 @@ mod simd {
                 .enumerate()
                 .for_each(|(chunk_idx, chunk)| {
                     let mut local_rng = Jsf32x16::new(chunk_seed32(base_seed, chunk_idx));
-                    let v_mult = _mm512_set1_ps((max - min) * (1.0 / (u32::MAX as f32 + 1.0)));
+                    let v_mult = _mm512_set1_ps(max - min);
                     let v_min = _mm512_set1_ps(min);
                     jsf32x16_rand_f32s_chunk(
                         &mut local_rng,

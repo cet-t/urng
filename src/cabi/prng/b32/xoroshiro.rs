@@ -125,6 +125,7 @@ mod simd {
     use crate::prng::b32::xoroshiro::{XOROSHIRO64SSX8, XOROSHIRO64SSX16};
     use crate::{
         _internal::chunk_seed32,
+        RngV,
         prng::b32::xoroshiro::{Xoroshiro64Ssx8, Xoroshiro64Ssx16},
     };
     use rayon::prelude::*;
@@ -376,7 +377,9 @@ mod simd {
         }
         unsafe {
             let rng = &mut *ptr;
-            let base_seed: u32 = rng.nextu()[0];
+            let mut tmp = [0u32; XOROSHIRO64SSX8];
+            _mm256_storeu_si256(tmp.as_mut_ptr() as *mut _, rng.nextuv());
+            let base_seed = tmp[0];
             let buffer = from_raw_parts_mut(out, count);
             buffer
                 .par_chunks_mut(XOROSHIRO64SSX8_PAR_CHUNK)
@@ -403,7 +406,9 @@ mod simd {
         }
         unsafe {
             let rng = &mut *ptr;
-            let base_seed: u32 = rng.nextu()[0];
+            let mut tmp = [0u32; XOROSHIRO64SSX8];
+            _mm256_storeu_si256(tmp.as_mut_ptr() as _, rng.nextuv());
+            let base_seed = tmp[0];
             let buffer = from_raw_parts_mut(out, count);
             buffer
                 .par_chunks_mut(XOROSHIRO64SSX8_PAR_CHUNK)
@@ -432,7 +437,9 @@ mod simd {
         }
         unsafe {
             let rng = &mut *ptr;
-            let base_seed: u32 = rng.nextu()[0];
+            let mut tmp = [0u32; XOROSHIRO64SSX8];
+            _mm256_storeu_si256(tmp.as_mut_ptr() as *mut _, rng.nextuv());
+            let base_seed = tmp[0];
             let v_range = _mm256_set1_epi64x(max as i64 - min as i64 + 1);
             let v_min = _mm256_set1_epi32(min);
             let buffer = from_raw_parts_mut(out, count);
@@ -465,7 +472,9 @@ mod simd {
         }
         unsafe {
             let rng = &mut *ptr;
-            let base_seed: u32 = rng.nextu()[0];
+            let mut tmp = [0u32; XOROSHIRO64SSX8];
+            _mm256_storeu_si256(tmp.as_mut_ptr() as *mut _, rng.nextuv());
+            let base_seed = tmp[0];
             let v_mult = _mm256_set1_ps(max - min);
             let v_min = _mm256_set1_ps(min);
             let buffer = from_raw_parts_mut(out, count);
@@ -729,7 +738,9 @@ mod simd {
         }
         unsafe {
             let rng = &mut *ptr;
-            let base_seed: u32 = rng.nextu()[0];
+            let mut tmp = [0u32; XOROSHIRO64SSX16];
+            _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, rng.nextuv());
+            let base_seed = tmp[0];
             let buffer = from_raw_parts_mut(out, count);
             buffer
                 .par_chunks_mut(XOROSHIRO64SSX16_PAR_CHUNK)
@@ -756,7 +767,9 @@ mod simd {
         }
         unsafe {
             let rng = &mut *ptr;
-            let base_seed: u32 = rng.nextu()[0];
+            let mut tmp = [0u32; XOROSHIRO64SSX16];
+            _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, rng.nextuv());
+            let base_seed = tmp[0];
             let buffer = from_raw_parts_mut(out, count);
             buffer
                 .par_chunks_mut(XOROSHIRO64SSX16_PAR_CHUNK)
@@ -785,7 +798,9 @@ mod simd {
         }
         unsafe {
             let rng = &mut *ptr;
-            let base_seed: u32 = rng.nextu()[0];
+            let mut tmp = [0u32; XOROSHIRO64SSX16];
+            _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, rng.nextuv());
+            let base_seed = tmp[0];
             let v_range = _mm512_set1_epi64(max as i64 - min as i64 + 1);
             let v_min = _mm512_set1_epi32(min);
             let buffer = from_raw_parts_mut(out, count);
@@ -818,7 +833,9 @@ mod simd {
         }
         unsafe {
             let rng = &mut *ptr;
-            let base_seed: u32 = rng.nextu()[0];
+            let mut tmp = [0u32; XOROSHIRO64SSX16];
+            _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, rng.nextuv());
+            let base_seed = tmp[0];
             let v_mult = _mm512_set1_ps(max - min);
             let v_min = _mm512_set1_ps(min);
             let buffer = from_raw_parts_mut(out, count);

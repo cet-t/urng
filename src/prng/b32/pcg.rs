@@ -15,7 +15,7 @@ use crate::{_internal::sm64_from_seed32, Rng};
 /// let mut rng = Pcg32::new(1);
 /// let _ = rng.nextu();
 /// ```
-#[repr(C)]
+#[repr(C, align(64))]
 #[derive(Debug, Clone, Copy)]
 pub struct Pcg32 {
     state: wu64,
@@ -56,7 +56,7 @@ pub mod simd {
     #[cfg(target_arch = "x86_64")]
     use std::arch::x86_64::*;
 
-    use crate::Rng;
+    use crate::RngV;
 
     pub const PCG32X8_LANE: usize = 8;
     pub const PCG32X8_PAR_CHUNK: usize = 131_072;
@@ -95,15 +95,15 @@ pub mod simd {
             let mut seedgen = crate::sm64_from_seed32!(seed);
 
             let mut state = [0u64; PCG32X8_LANE];
-            state.iter_mut().for_each(|v| *v = seedgen.nextu());
+            state.iter_mut().for_each(|v| *v = seedgen.nextu_const());
 
             let mut inc = [0u64; PCG32X8_LANE];
-            inc.iter_mut().for_each(|v| *v = seedgen.nextu());
+            inc.iter_mut().for_each(|v| *v = seedgen.nextu_const());
 
             unsafe {
                 Pcg32x8 {
-                    state: _mm512_loadu_si512(state.as_ptr() as *const _),
-                    inc: _mm512_loadu_si512(inc.as_ptr() as *const _),
+                    state: _mm512_loadu_si512(state.as_ptr() as _),
+                    inc: _mm512_loadu_si512(inc.as_ptr() as _),
                 }
             }
         }
@@ -150,6 +150,20 @@ pub mod simd {
             let rot = _mm512_srli_epi64(oldstate, 59);
             let rotated = _mm512_rorv_epi32(_mm512_and_si512(xs, mask32), rot);
             _mm512_cvtepi64_epi32(rotated)
+        }
+    }
+
+    impl RngV for Pcg32x8 {
+        type Word = __m256i;
+
+        #[inline]
+        fn nextuv(&mut self) -> Self::Word {
+            unsafe {
+                let mult_lo = _mm512_set1_epi64(0x4C957F2D_i64);
+                let mult_hi = _mm512_set1_epi64(0x5851F42D_i64);
+                let mask32 = _mm512_set1_epi64(0xFFFFFFFF_i64);
+                Self::step_u32(&mut self.state, self.inc, mult_lo, mult_hi, mask32)
+            }
         }
     }
 }

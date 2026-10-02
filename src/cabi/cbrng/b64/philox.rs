@@ -125,12 +125,11 @@ pub extern "C" fn philox64_rand_f64s(
     min: f64,
     max: f64,
 ) {
-    const SCALE: f64 = 1.0 / (u64::MAX as f64 + 1.0);
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let mult = (max - min) * SCALE;
-        philox64_fill(buffer, rng.c, rng.k, |x| x as f64 * mult + min);
+        let mult = max - min;
+        philox64_fill(buffer, rng.c, rng.k, |x| u2f_01!(f64, 64, x) * mult + min);
         philox64_advance(rng, count);
     }
 }

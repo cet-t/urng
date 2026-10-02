@@ -9,6 +9,7 @@ use crate::{i2f_bits, u2f_01};
 #[cfg(feature = "simd")]
 mod simd_chunks {
     use crate::cbrng::b32::{SQUARES32x8, Squares32x8};
+    use crate::{i2f_bits, u2f_01};
     use std::arch::x86_64::*;
 
     #[allow(non_upper_case_globals)]
@@ -106,8 +107,6 @@ mod simd_chunks {
         k_step4: __m512i,
     ) {
         unsafe {
-            const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
-            let vscale = _mm512_set1_ps(SCALE);
             let c_start = c0.wrapping_add((chunk_idx * SQUARES32x8_PAR_CHUNK) as u64);
             let mut c_vec = _mm512_add_epi64(_mm512_set1_epi64(c_start as i64), lane_offsets);
 
@@ -121,12 +120,12 @@ mod simd_chunks {
                 let v3 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step3), k);
 
                 let res01 =
-                    _mm512_cvtepu32_ps(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(v0), v1));
+                    crate::_internal::simd_f01::u32x16(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(v0), v1));
                 let res23 =
-                    _mm512_cvtepu32_ps(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(v2), v3));
+                    crate::_internal::simd_f01::u32x16(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(v2), v3));
 
-                let f01 = _mm512_mul_ps(res01, vscale);
-                let f23 = _mm512_mul_ps(res23, vscale);
+                let f01 = res01;
+                let f23 = res23;
 
                 if is_aligned {
                     _mm512_stream_ps(dst.as_mut_ptr(), f01);
@@ -146,7 +145,7 @@ mod simd_chunks {
                 let mut result = [0u32; SQUARES32x8];
                 _mm256_storeu_si256(result.as_mut_ptr() as *mut _, v);
                 for j in 0..SQUARES32x8 {
-                    dst[j] = result[j] as f32 * SCALE;
+                    dst[j] = u2f_01!(f32, 32, result[j]);
                 }
                 c_vec = _mm512_add_epi64(c_vec, k_step);
             }
@@ -156,7 +155,7 @@ mod simd_chunks {
                 let mut tmp = [0u32; SQUARES32x8];
                 _mm256_storeu_si256(tmp.as_mut_ptr() as *mut _, v);
                 for j in 0..final_rem.len() {
-                    final_rem[j] = tmp[j] as f32 * SCALE;
+                    final_rem[j] = u2f_01!(f32, 32, tmp[j]);
                 }
             }
         }
@@ -285,9 +284,9 @@ mod simd_chunks {
                 let v3 = Squares32x8::compute(_mm512_add_epi64(c_vec, k_step3), k);
 
                 let res01 =
-                    _mm512_cvtepu32_ps(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(v0), v1));
+                    crate::_internal::simd_f01::u32x16(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(v0), v1));
                 let res23 =
-                    _mm512_cvtepu32_ps(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(v2), v3));
+                    crate::_internal::simd_f01::u32x16(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(v2), v3));
 
                 let f01 = _mm512_add_ps(_mm512_mul_ps(res01, vscale), vmin);
                 let f23 = _mm512_add_ps(_mm512_mul_ps(res23, vscale), vmin);
@@ -310,7 +309,7 @@ mod simd_chunks {
                 let mut result = [0u32; SQUARES32x8];
                 _mm256_storeu_si256(result.as_mut_ptr() as *mut _, v);
                 for j in 0..SQUARES32x8 {
-                    dst[j] = result[j] as f32 * combined_scale + min;
+                    dst[j] = u2f_01!(f32, 32, result[j]) * combined_scale + min;
                 }
                 c_vec = _mm512_add_epi64(c_vec, k_step);
             }
@@ -320,7 +319,7 @@ mod simd_chunks {
                 let mut tmp = [0u32; SQUARES32x8];
                 _mm256_storeu_si256(tmp.as_mut_ptr() as *mut _, v);
                 for j in 0..final_rem.len() {
-                    final_rem[j] = tmp[j] as f32 * combined_scale + min;
+                    final_rem[j] = u2f_01!(f32, 32, tmp[j]) * combined_scale + min;
                 }
             }
         }
@@ -510,7 +509,7 @@ pub extern "C" fn squares32_rand_f32s(
         let c0 = rng.c;
         let k = rng.k;
         let k4 = k << 2;
-        let combined_scale = (max - min) * (1.0f32 / (u32::MAX as f32 + 1.0));
+        let combined_scale = max - min;
 
         buffer
             .par_chunks_mut(SQUARES32_PAR_CHUNK)
@@ -526,10 +525,10 @@ pub extern "C" fn squares32_rand_f32s(
                 let mut chunks4 = chunk.chunks_exact_mut(4);
                 for dst in chunks4.by_ref() {
                     let z3 = y3 + k;
-                    dst[0] = *Squares32::compute_yz(y0, y1) as f32 * combined_scale + min;
-                    dst[1] = *Squares32::compute_yz(y1, y2) as f32 * combined_scale + min;
-                    dst[2] = *Squares32::compute_yz(y2, y3) as f32 * combined_scale + min;
-                    dst[3] = *Squares32::compute_yz(y3, z3) as f32 * combined_scale + min;
+                    dst[0] = u2f_01!(f32, 32, *Squares32::compute_yz(y0, y1)) * combined_scale + min;
+                    dst[1] = u2f_01!(f32, 32, *Squares32::compute_yz(y1, y2)) * combined_scale + min;
+                    dst[2] = u2f_01!(f32, 32, *Squares32::compute_yz(y2, y3)) * combined_scale + min;
+                    dst[3] = u2f_01!(f32, 32, *Squares32::compute_yz(y3, z3)) * combined_scale + min;
                     y0 += k4;
                     y1 += k4;
                     y2 += k4;
@@ -538,7 +537,7 @@ pub extern "C" fn squares32_rand_f32s(
                 let rem = chunks4.into_remainder();
                 let mut yr = y0;
                 for dst in rem.iter_mut() {
-                    *dst = *Squares32::compute_yz(yr, yr + k) as f32 * combined_scale + min;
+                    *dst = u2f_01!(f32, 32, *Squares32::compute_yz(yr, yr + k)) * combined_scale + min;
                     yr += k;
                 }
             });
@@ -724,7 +723,7 @@ mod simd {
             _mm512_storeu_si512(c_arr.as_mut_ptr() as *mut _, rng.c);
             let c0 = c_arr[0];
             let k = rng.k;
-            let combined_scale = (max - min) * (1.0f32 / (u32::MAX as f32 + 1.0));
+            let combined_scale = max - min;
             let lane_offsets = _mm512_setr_epi64(0, 1, 2, 3, 4, 5, 6, 7);
             let k_step = _mm512_set1_epi64(SQUARES32x8 as i64);
             let k_step2 = _mm512_set1_epi64((SQUARES32x8 * 2) as i64);

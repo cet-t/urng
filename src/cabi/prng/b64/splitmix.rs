@@ -5,6 +5,7 @@ use wrapn::{wrap, wu64};
 
 use crate::_internal::{fill_chunk_auto, prefer_nt};
 use crate::prng::b64::SplitMix64;
+use crate::{i2f_bits, u2f_01};
 
 /// Creates a new heap-allocated `SplitMix64` and returns a raw pointer to it.
 /// The caller is responsible for freeing it with [`splitmix64_free`].
@@ -67,11 +68,10 @@ pub extern "C" fn splitmix64_next_u64s(ptr: *mut SplitMix64, out: *mut u64, coun
 /// Fills `out[0..count]` with `f64` values in `[0, 1)` using parallel chunk generation.
 #[unsafe(no_mangle)]
 pub extern "C" fn splitmix64_next_f64s(ptr: *mut SplitMix64, out: *mut f64, count: usize) {
-    const SCALE: f64 = 1.0 / (u64::MAX as f64 + 1.0);
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        sm64_fill(buffer, rng.s, |x| x as f64 * SCALE);
+        sm64_fill(buffer, rng.s, |x| u2f_01!(f64, 64, x));
         rng.s += (count as u64).wrapping_mul(SPLITMIX64_GAMMA);
     }
 }
@@ -101,12 +101,11 @@ pub extern "C" fn splitmix64_rand_f64s(
     min: f64,
     max: f64,
 ) {
-    const SCALE: f64 = 1.0 / (u64::MAX as f64 + 1.0);
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let mult = (max - min) * SCALE;
-        sm64_fill(buffer, rng.s, |x| x as f64 * mult + min);
+        let mult = max - min;
+        sm64_fill(buffer, rng.s, |x| u2f_01!(f64, 64, x) * mult + min);
         rng.s += (count as u64).wrapping_mul(SPLITMIX64_GAMMA);
     }
 }

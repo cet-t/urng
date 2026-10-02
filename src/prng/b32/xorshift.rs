@@ -16,7 +16,7 @@ use crate::rng::Rng;
 /// let mut rng = Xorshift32::new(1);
 /// let _ = rng.nextu();
 /// ```
-#[repr(C)]
+#[repr(C, align(64))]
 #[derive(Debug, Clone, Copy)]
 pub struct Xorshift32 {
     a: wu32,
@@ -59,7 +59,7 @@ impl Rng for Xorshift32 {
 /// let mut rng = Xorshift128::new(1);
 /// let _ = rng.nextu();
 /// ```
-#[repr(C)]
+#[repr(C, align(64))]
 #[derive(Debug, Clone, Copy)]
 pub struct Xorshift128 {
     x: [wu32; 4],
@@ -94,6 +94,56 @@ impl Rng for Xorshift128 {
         (self.x[1], self.x[2], self.x[3]) = (s, self.x[1], self.x[2]);
         self.x[0] = t ^ s ^ (s >> 19);
         *self.x[0]
+    }
+}
+
+#[cfg(feature = "simd")]
+pub use simd::*;
+
+#[cfg(feature = "simd")]
+pub mod simd {
+    use std::arch::x86_64::*;
+
+    use crate::{RngV, SplitMix32};
+
+    const XORSHIFT32X8: usize = 8;
+
+    #[repr(C, align(64))]
+    pub struct Xorshift32x8 {
+        a: __m256i,
+    }
+
+    impl Xorshift32x8 {
+        pub fn new(seed: u32) -> Self {
+            let mut sm = SplitMix32::new(seed);
+
+            let mut a = [0u32; XORSHIFT32X8];
+            for i in 0..XORSHIFT32X8 {
+                a[i] = sm.nextu_const();
+            }
+
+            unsafe {
+                Self {
+                    a: _mm256_loadu_epi32(a.as_ptr() as _),
+                }
+            }
+        }
+    }
+
+    impl RngV for Xorshift32x8 {
+        type Word = __m256i;
+
+        #[inline]
+        fn nextuv(&mut self) -> Self::Word {
+            unsafe {
+                let x = self.a;
+
+                self.a = _mm256_xor_si256(x, _mm256_slli_epi32::<13>(x));
+                self.a = _mm256_xor_si256(self.a, _mm256_srli_epi32::<17>(self.a));
+                self.a = _mm256_xor_si256(self.a, _mm256_slli_epi32::<5>(self.a));
+            }
+            self.a
+        }
     }
 }
 

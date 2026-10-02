@@ -55,7 +55,7 @@ pub mod simd {
     #[cfg(target_arch = "x86_64")]
     use std::arch::x86_64::*;
 
-    use crate::{Rng, RngV, SplitMix32};
+    use crate::{RngV, SplitMix32};
 
     /// 8-way SIMD implementation of JSF (Jenkins Small Fast) 32-bit RNG.
     /// This implementation uses AVX2 instructions to generate 8 random numbers in parallel.
@@ -85,7 +85,7 @@ pub mod simd {
             let mut sv = [[0u32; JSF32X8]; 3];
             for vals in sv.iter_mut() {
                 for v in vals.iter_mut() {
-                    *v = seedgen.nextu();
+                    *v = seedgen.nextu_const();
                 }
             }
             unsafe {
@@ -145,16 +145,16 @@ pub mod simd {
             let mut sv = [[0u32; JSF32X16]; 3];
             for vals in sv.iter_mut() {
                 for v in vals.iter_mut() {
-                    *v = seedgen.nextu();
+                    *v = seedgen.nextu_const();
                 }
             }
             const A: [u32; JSF32X16] = [0xf1ea5eedu32; JSF32X16];
             unsafe {
                 Self {
-                    a: _mm512_loadu_si512(A.as_ptr() as *const __m512i),
-                    b: _mm512_loadu_si512(sv[0].as_ptr() as *const __m512i),
-                    c: _mm512_loadu_si512(sv[1].as_ptr() as *const __m512i),
-                    d: _mm512_loadu_si512(sv[2].as_ptr() as *const __m512i),
+                    a: _mm512_loadu_si512(A.as_ptr() as _),
+                    b: _mm512_loadu_si512(sv[0].as_ptr() as _),
+                    c: _mm512_loadu_si512(sv[1].as_ptr() as _),
+                    d: _mm512_loadu_si512(sv[2].as_ptr() as _),
                 }
             }
         }

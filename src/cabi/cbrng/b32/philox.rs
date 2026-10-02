@@ -102,7 +102,6 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
         let buffer = from_raw_parts_mut(out, count);
         let c0 = rng.c;
         let k = rng.k;
-        let scale = 1.0f32 / (u32::MAX as f32 + 1.0);
 
         buffer
             .par_chunks_mut(PHILOX32_PAR_CHUNK)
@@ -122,10 +121,10 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
                     }
 
                     let result = Philox32::compute(c, k);
-                    dst[0] = *(result[0].cast::<f32>() * scale);
-                    dst[1] = *(result[1].cast::<f32>() * scale);
-                    dst[2] = *(result[2].cast::<f32>() * scale);
-                    dst[3] = *(result[3].cast::<f32>() * scale);
+                    dst[0] = *u2f_01w!(f32, 32, result[0]);
+                    dst[1] = *u2f_01w!(f32, 32, result[1]);
+                    dst[2] = *u2f_01w!(f32, 32, result[2]);
+                    dst[3] = *u2f_01w!(f32, 32, result[3]);
                     b_offset += 1;
                 }
 
@@ -139,9 +138,9 @@ pub extern "C" fn philox32_next_f32s(ptr: *mut Philox32, out: *mut f32, count: u
                         c[1] += 1;
                     }
 
-                    let result = Philox32::compute(c, k).map(|x| x.cast::<f32>());
+                    let result = Philox32::compute(c, k);
                     for j in 0..rem.len() {
-                        rem[j] = *(result[j] * scale);
+                        rem[j] = *u2f_01w!(f32, 32, result[j]);
                     }
                 }
             });
@@ -709,7 +708,6 @@ mod simd {
         c0: __m512i,
         k: __m512i,
         one: __m512i,
-        scale: __m512,
     ) {
         let m = _mm512_set1_epi64(0xCD9E8D57_D2511F53u64 as i64);
         let w = _mm512_set1_epi64(0xBB67AE85_9E3779B9u64 as i64);
@@ -728,8 +726,7 @@ mod simd {
         if is_aligned {
             for dst in chunks_exact.by_ref() {
                 let v_u32 = philox32x4x4_compute_vec(c, k, m, w);
-                let v_f32 = _mm512_cvtepu32_ps(v_u32);
-                let v_res = _mm512_mul_ps(v_f32, scale);
+                let v_res = unsafe { crate::_internal::simd_f01::u32x16(v_u32) };
                 unsafe { _mm512_stream_ps(dst.as_mut_ptr(), v_res) };
 
                 let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
@@ -740,8 +737,7 @@ mod simd {
         } else {
             for dst in chunks_exact.by_ref() {
                 let v_u32 = philox32x4x4_compute_vec(c, k, m, w);
-                let v_f32 = _mm512_cvtepu32_ps(v_u32);
-                let v_res = _mm512_mul_ps(v_f32, scale);
+                let v_res = unsafe { crate::_internal::simd_f01::u32x16(v_u32) };
                 unsafe { _mm512_storeu_ps(dst.as_mut_ptr(), v_res) };
 
                 let next_c = _mm512_mask_add_epi64(c, 0x55, c, one);
@@ -754,8 +750,7 @@ mod simd {
         let rem = chunks_exact.into_remainder();
         if !rem.is_empty() {
             let v_u32 = philox32x4x4_compute_vec(c, k, m, w);
-            let v_f32 = _mm512_cvtepu32_ps(v_u32);
-            let v_res = _mm512_mul_ps(v_f32, scale);
+            let v_res = unsafe { crate::_internal::simd_f01::u32x16(v_u32) };
             let mut tmp_f32 = [0f32; 16];
             unsafe { _mm512_storeu_ps(tmp_f32.as_mut_ptr() as *mut _, v_res) };
             rem.copy_from_slice(&tmp_f32[..rem.len()]);
@@ -877,7 +872,7 @@ mod simd {
         if is_aligned {
             for dst in chunks_exact.by_ref() {
                 let v_u32 = philox32x4x4_compute_vec(c, k, m, w);
-                let v_f32 = _mm512_cvtepu32_ps(v_u32);
+                let v_f32 = unsafe { crate::_internal::simd_f01::u32x16(v_u32) };
                 let v_res = _mm512_fmadd_ps(v_f32, v_mult, v_min);
                 unsafe { _mm512_stream_ps(dst.as_mut_ptr(), v_res) };
 
@@ -889,7 +884,7 @@ mod simd {
         } else {
             for dst in chunks_exact.by_ref() {
                 let v_u32 = philox32x4x4_compute_vec(c, k, m, w);
-                let v_f32 = _mm512_cvtepu32_ps(v_u32);
+                let v_f32 = unsafe { crate::_internal::simd_f01::u32x16(v_u32) };
                 let v_res = _mm512_fmadd_ps(v_f32, v_mult, v_min);
                 unsafe { _mm512_storeu_ps(dst.as_mut_ptr(), v_res) };
 
@@ -903,7 +898,7 @@ mod simd {
         let rem = chunks_exact.into_remainder();
         if !rem.is_empty() {
             let v_u32 = philox32x4x4_compute_vec(c, k, m, w);
-            let v_f32 = _mm512_cvtepu32_ps(v_u32);
+            let v_f32 = unsafe { crate::_internal::simd_f01::u32x16(v_u32) };
             let v_res = _mm512_fmadd_ps(v_f32, v_mult, v_min);
             let mut tmp_f32 = [0f32; 16];
             unsafe { _mm512_storeu_ps(tmp_f32.as_mut_ptr() as *mut _, v_res) };
@@ -989,7 +984,6 @@ mod simd {
             let c0 = rng.c;
             let k = rng.k;
             let one = _mm512_set1_epi64(1);
-            let scale = _mm512_set1_ps(1.0f32 / (u32::MAX as f32 + 1.0));
 
             let buffer = from_raw_parts_mut(out, count);
 
@@ -997,7 +991,7 @@ mod simd {
                 .par_chunks_mut(PHILOX32x4x4_PAR_CHUNK)
                 .enumerate()
                 .for_each(|(chunk_idx, chunk)| {
-                    philox32x4x4_next_f32s_chunk(chunk_idx, chunk, c0, k, one, scale);
+                    philox32x4x4_next_f32s_chunk(chunk_idx, chunk, c0, k, one);
                 });
 
             let num_blocks = ((count + PHILOX32x16 - 1) >> PHILOX32x16_SHIFT) as u128;
@@ -1071,11 +1065,7 @@ mod simd {
             let k = rng.k;
             let one = _mm512_set1_epi64(1);
 
-            let scale_val = 1.0f32 / (u32::MAX as f32 + 1.0);
-            let range_val = max - min;
-            let scale_mul_range = scale_val * range_val;
-
-            let v_mult = _mm512_set1_ps(scale_mul_range);
+            let v_mult = _mm512_set1_ps(max - min);
             let v_min = _mm512_set1_ps(min);
 
             let buffer = from_raw_parts_mut(out, count);

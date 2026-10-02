@@ -158,7 +158,7 @@ Enable the `urng` feature on `cribler` for pre-built typed convenience that work
 
 ```toml
 [dependencies]
-urng = "0.14.0-rc.1"
+urng = "1.0.0"
 cribler = { version = "0.3", features = ["urng"] }
 ```
 

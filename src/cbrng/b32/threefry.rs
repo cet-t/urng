@@ -1,7 +1,7 @@
 use wrapn::{wrap, wu32, wusize};
 
 #[allow(unused_imports)]
-use crate::{_internal::FSCALE32, prng::b32::SplitMix32, rng::Rng};
+use crate::{prng::b32::SplitMix32, rng::Rng};
 
 // --- Threefry32x4 ---
 

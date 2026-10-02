@@ -183,6 +183,7 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use crate::_internal::chunk_seed32;
+    use crate::RngV;
     use crate::prng::b32::{Xoshiro128Ppx16, Xoshiro128Ssx16};
     use rayon::iter::{IndexedParallelIterator, ParallelIterator};
     use rayon::slice::ParallelSliceMut;
@@ -200,7 +201,7 @@ mod simd {
     #[target_feature(enable = "avx512f")]
     unsafe fn xoshiro128ppx16_base_seed(rng: &mut Xoshiro128Ppx16) -> u32 {
         let mut tmp = [0u32; XOSHIRO128X16_LANES];
-        let v = unsafe { rng.nextu_vec() };
+        let v = rng.nextuv();
         unsafe { _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v) };
         tmp[0]
     }
@@ -210,7 +211,7 @@ mod simd {
     #[target_feature(enable = "avx512f")]
     unsafe fn xoshiro128ssx16_base_seed(rng: &mut Xoshiro128Ssx16) -> u32 {
         let mut tmp = [0u32; XOSHIRO128X16_LANES];
-        let v = unsafe { rng.nextu_vec() };
+        let v = rng.nextuv();
         unsafe { _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v) };
         tmp[0]
     }
@@ -249,10 +250,10 @@ mod simd {
 
         if aligned {
             while remaining >= UNROLL {
-                let v0 = rng.nextu_vec();
-                let v1 = rng.nextu_vec();
-                let v2 = rng.nextu_vec();
-                let v3 = rng.nextu_vec();
+                let v0 = rng.nextuv();
+                let v1 = rng.nextuv();
+                let v2 = rng.nextuv();
+                let v3 = rng.nextuv();
                 _mm512_stream_si512(out_ptr as *mut _, v0);
                 _mm512_stream_si512(out_ptr.add(XOSHIRO128X16_LANES) as *mut _, v1);
                 _mm512_stream_si512(out_ptr.add(XOSHIRO128X16_LANES * 2) as *mut _, v2);
@@ -261,17 +262,17 @@ mod simd {
                 remaining -= UNROLL;
             }
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.nextu_vec();
+                let v = rng.nextuv();
                 _mm512_stream_si512(out_ptr as *mut _, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
             }
         } else {
             while remaining >= UNROLL {
-                let v0 = rng.nextu_vec();
-                let v1 = rng.nextu_vec();
-                let v2 = rng.nextu_vec();
-                let v3 = rng.nextu_vec();
+                let v0 = rng.nextuv();
+                let v1 = rng.nextuv();
+                let v2 = rng.nextuv();
+                let v3 = rng.nextuv();
                 _mm512_storeu_si512(out_ptr as *mut _, v0);
                 _mm512_storeu_si512(out_ptr.add(XOSHIRO128X16_LANES) as *mut _, v1);
                 _mm512_storeu_si512(out_ptr.add(XOSHIRO128X16_LANES * 2) as *mut _, v2);
@@ -280,7 +281,7 @@ mod simd {
                 remaining -= UNROLL;
             }
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.nextu_vec();
+                let v = rng.nextuv();
                 _mm512_storeu_si512(out_ptr as *mut _, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
@@ -289,7 +290,7 @@ mod simd {
 
         if remaining > 0 {
             let mut tmp = [0u32; XOSHIRO128X16_LANES];
-            let v = rng.nextu_vec();
+            let v = rng.nextuv();
             _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }
@@ -347,14 +348,14 @@ mod simd {
 
         if aligned {
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.randi_vec(v_range, v_min);
+                let v = rng.randiv(v_range, v_min);
                 _mm512_stream_si512(out_ptr as *mut _, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
             }
         } else {
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.randi_vec(v_range, v_min);
+                let v = rng.randiv(v_range, v_min);
                 _mm512_storeu_si512(out_ptr as *mut _, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
@@ -363,7 +364,7 @@ mod simd {
 
         if remaining > 0 {
             let mut tmp = [0i32; XOSHIRO128X16_LANES];
-            let v = rng.randi_vec(v_range, v_min);
+            let v = rng.randiv(v_range, v_min);
             _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }
@@ -385,14 +386,14 @@ mod simd {
 
         if aligned {
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.randf_vec(v_mult, v_min);
+                let v = rng.randfv(v_mult, v_min);
                 _mm512_stream_ps(out_ptr, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
             }
         } else {
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.randf_vec(v_mult, v_min);
+                let v = rng.randfv(v_mult, v_min);
                 _mm512_storeu_ps(out_ptr, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
@@ -401,7 +402,7 @@ mod simd {
 
         if remaining > 0 {
             let mut tmp = [0f32; XOSHIRO128X16_LANES];
-            let v = rng.randf_vec(v_mult, v_min);
+            let v = rng.randfv(v_mult, v_min);
             _mm512_storeu_ps(tmp.as_mut_ptr(), v);
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }
@@ -569,10 +570,10 @@ mod simd {
 
         if aligned {
             while remaining >= UNROLL {
-                let v0 = rng.nextu_vec();
-                let v1 = rng.nextu_vec();
-                let v2 = rng.nextu_vec();
-                let v3 = rng.nextu_vec();
+                let v0 = rng.nextuv();
+                let v1 = rng.nextuv();
+                let v2 = rng.nextuv();
+                let v3 = rng.nextuv();
                 _mm512_stream_si512(out_ptr as *mut _, v0);
                 _mm512_stream_si512(out_ptr.add(XOSHIRO128X16_LANES) as *mut _, v1);
                 _mm512_stream_si512(out_ptr.add(XOSHIRO128X16_LANES * 2) as *mut _, v2);
@@ -581,17 +582,17 @@ mod simd {
                 remaining -= UNROLL;
             }
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.nextu_vec();
+                let v = rng.nextuv();
                 _mm512_stream_si512(out_ptr as *mut _, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
             }
         } else {
             while remaining >= UNROLL {
-                let v0 = rng.nextu_vec();
-                let v1 = rng.nextu_vec();
-                let v2 = rng.nextu_vec();
-                let v3 = rng.nextu_vec();
+                let v0 = rng.nextuv();
+                let v1 = rng.nextuv();
+                let v2 = rng.nextuv();
+                let v3 = rng.nextuv();
                 _mm512_storeu_si512(out_ptr as *mut _, v0);
                 _mm512_storeu_si512(out_ptr.add(XOSHIRO128X16_LANES) as *mut _, v1);
                 _mm512_storeu_si512(out_ptr.add(XOSHIRO128X16_LANES * 2) as *mut _, v2);
@@ -600,7 +601,7 @@ mod simd {
                 remaining -= UNROLL;
             }
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.nextu_vec();
+                let v = rng.nextuv();
                 _mm512_storeu_si512(out_ptr as *mut _, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
@@ -609,7 +610,7 @@ mod simd {
 
         if remaining > 0 {
             let mut tmp = [0u32; XOSHIRO128X16_LANES];
-            let v = rng.nextu_vec();
+            let v = rng.nextuv();
             _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }
@@ -667,14 +668,14 @@ mod simd {
 
         if aligned {
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.randi_vec(v_range, v_min);
+                let v = rng.randiv(v_range, v_min);
                 _mm512_stream_si512(out_ptr as *mut _, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
             }
         } else {
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.randi_vec(v_range, v_min);
+                let v = rng.randiv(v_range, v_min);
                 _mm512_storeu_si512(out_ptr as *mut _, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
@@ -683,7 +684,7 @@ mod simd {
 
         if remaining > 0 {
             let mut tmp = [0i32; XOSHIRO128X16_LANES];
-            let v = rng.randi_vec(v_range, v_min);
+            let v = rng.randiv(v_range, v_min);
             _mm512_storeu_si512(tmp.as_mut_ptr() as *mut _, v);
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }
@@ -705,14 +706,14 @@ mod simd {
 
         if aligned {
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.randf_vec(v_mult, v_min);
+                let v = rng.randfv(v_mult, v_min);
                 _mm512_stream_ps(out_ptr, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
             }
         } else {
             while remaining >= XOSHIRO128X16_LANES {
-                let v = rng.randf_vec(v_mult, v_min);
+                let v = rng.randfv(v_mult, v_min);
                 _mm512_storeu_ps(out_ptr, v);
                 out_ptr = out_ptr.add(XOSHIRO128X16_LANES);
                 remaining -= XOSHIRO128X16_LANES;
@@ -721,7 +722,7 @@ mod simd {
 
         if remaining > 0 {
             let mut tmp = [0f32; XOSHIRO128X16_LANES];
-            let v = rng.randf_vec(v_mult, v_min);
+            let v = rng.randfv(v_mult, v_min);
             _mm512_storeu_ps(tmp.as_mut_ptr(), v);
             ptr::copy_nonoverlapping(tmp.as_ptr(), out_ptr, remaining);
         }

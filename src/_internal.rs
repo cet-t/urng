@@ -3,8 +3,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub const FSCALE64: f64 = 1.0 / (u64::MAX as f64 + 1.0);
-pub const FSCALE32: f32 = 1.0 / (u32::MAX as f32 + 1.0);
 
 /// SIMD bit-trick converters mapping an integer lane vector uniformly onto
 /// `[0, 1)`, matching the scalar [`u2f_01`] exactly lane-by-lane (top mantissa
@@ -547,11 +545,23 @@ macro_rules! unsafe_test {
         $(pastey::paste! {
             #[test]
             fn [<test_ $name:snake>]() {
+                unsafe fn as_bytes<T>(v: &T) -> &[u8] {
+                    unsafe {
+                        std::slice::from_raw_parts(v as *const T as *const u8, std::mem::size_of::<T>())
+                    }
+                }
+
                 unsafe {
                     let mut rng1 = $name::new(0);
                     let mut rng2 = $name::new(0);
-                    assert_eq!(rng1.nextu(), rng2.nextu());
-                    assert_eq!(rng1.nextf(), rng2.nextf());
+
+                    let u1 = rng1.nextuv();
+                    let u2 = rng2.nextuv();
+                    assert_eq!(as_bytes(&u1), as_bytes(&u2));
+
+                    let f1 = rng1.nextfv();
+                    let f2 = rng2.nextfv();
+                    assert_eq!(as_bytes(&f1), as_bytes(&f2));
                 }
             }
         })+

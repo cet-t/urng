@@ -78,6 +78,7 @@ pub use simd::*;
 #[cfg(feature = "simd")]
 mod simd {
     use super::*;
+    use crate::{i2f_bits, u2f_01};
 
     use crate::prng::b32::{
         PCG32_MULT, PCG32X8_LANE, PCG32X8_PAR_CHUNK, PCG32X8_PAR_CHUNK_BLOCKS, Pcg32x8,
@@ -199,7 +200,6 @@ mod simd {
         mult_lo: __m512i,
         mult_hi: __m512i,
         mask32: __m512i,
-        scale: f32,
     ) {
         let mut state = _mm512_loadu_si512(start_state.as_ptr() as *const _);
         let inc = _mm512_loadu_si512(inc0.as_ptr() as *const _);
@@ -210,7 +210,7 @@ mod simd {
             let mut tmp = [0u32; PCG32X8_LANE];
             _mm256_storeu_si256(tmp.as_mut_ptr() as *mut __m256i, out256);
             for i in 0..PCG32X8_LANE {
-                dst[i] = tmp[i] as f32 * scale;
+                dst[i] = u2f_01!(f32, 32, tmp[i]);
             }
         }
 
@@ -220,7 +220,7 @@ mod simd {
             let mut tmp = [0u32; PCG32X8_LANE];
             _mm256_storeu_si256(tmp.as_mut_ptr() as *mut __m256i, out256);
             for j in 0..rem.len() {
-                rem[j] = tmp[j] as f32 * scale;
+                rem[j] = u2f_01!(f32, 32, tmp[j]);
             }
         }
     }
@@ -286,7 +286,7 @@ mod simd {
             let mut tmp = [0u32; PCG32X8_LANE];
             _mm256_storeu_si256(tmp.as_mut_ptr() as *mut __m256i, out256);
             for i in 0..PCG32X8_LANE {
-                dst[i] = tmp[i] as f32 * scale + min;
+                dst[i] = u2f_01!(f32, 32, tmp[i]) * scale + min;
             }
         }
 
@@ -296,7 +296,7 @@ mod simd {
             let mut tmp = [0u32; PCG32X8_LANE];
             _mm256_storeu_si256(tmp.as_mut_ptr() as *mut __m256i, out256);
             for j in 0..rem.len() {
-                rem[j] = tmp[j] as f32 * scale + min;
+                rem[j] = u2f_01!(f32, 32, tmp[j]) * scale + min;
             }
         }
     }
@@ -414,7 +414,6 @@ mod simd {
             let mult_lo = _mm512_set1_epi64(0x4C957F2D_i64);
             let mult_hi = _mm512_set1_epi64(0x5851F42D_i64);
             let mask32 = _mm512_set1_epi64(0xFFFFFFFF_i64);
-            let scale = 1.0f32 / (u32::MAX as f32 + 1.0);
             let chunk_starts = pcg32x8_chunk_starts(count, state0, inc0);
 
             let buffer = from_raw_parts_mut(out, count);
@@ -430,7 +429,6 @@ mod simd {
                         mult_lo,
                         mult_hi,
                         mask32,
-                        scale,
                     )
                 });
 
@@ -513,7 +511,7 @@ mod simd {
             let mult_lo = _mm512_set1_epi64(0x4C957F2D_i64);
             let mult_hi = _mm512_set1_epi64(0x5851F42D_i64);
             let mask32 = _mm512_set1_epi64(0xFFFFFFFF_i64);
-            let scale = (max - min) * (1.0f32 / (u32::MAX as f32 + 1.0));
+            let scale = max - min;
             let chunk_starts = pcg32x8_chunk_starts(count, state0, inc0);
 
             let buffer = from_raw_parts_mut(out, count);

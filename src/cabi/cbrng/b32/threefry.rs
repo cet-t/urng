@@ -138,13 +138,12 @@ pub extern "C" fn threefry32x4_rand_f32s(
     min: f32,
     max: f32,
 ) {
-    const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        let mult = (max - min) * SCALE;
+        let mult = max - min;
         fry4_fill(buffer, rng.c, rng.k, rng.tw, |x| {
-            *(x.cast::<f32>() * mult + min)
+            u2f_01!(f32, 32, *x) * mult + min
         });
         fry4_advance(rng, count);
     }
@@ -232,11 +231,10 @@ pub extern "C" fn threefry32x2_next_u32s(ptr: *mut Threefry32x2, out: *mut u32, 
 /// This function uses parallel processing for large counts.
 #[unsafe(no_mangle)]
 pub extern "C" fn threefry32x2_next_f32s(ptr: *mut Threefry32x2, out: *mut f32, count: usize) {
-    const SCALE: f32 = 1.0 / (u32::MAX as f32 + 1.0);
     unsafe {
         let rng = &mut *ptr;
         let buffer = from_raw_parts_mut(out, count);
-        fry2_fill(buffer, rng.c, rng.k, |x| *(x.cast::<f32>() * SCALE));
+        fry2_fill(buffer, rng.c, rng.k, |x| u2f_01!(f32, 32, *x));
         fry2_advance(rng, count);
     }
 }

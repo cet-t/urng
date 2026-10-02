@@ -14,7 +14,7 @@ use crate::rng::Rng;
 /// let mut rng = SplitMix32::new(1);
 /// let _ = rng.nextu();
 /// ```
-#[repr(C)]
+#[repr(C, align(64))]
 #[derive(Debug, Clone, Copy)]
 pub struct SplitMix32 {
     state: wu32,
@@ -65,7 +65,7 @@ pub mod simd {
     use std::arch::x86_64::*;
 
     #[cfg(target_arch = "x86_64")]
-    use crate::RngV;
+    use crate::{RngV, SplitMix32};
 
     pub const SPLITMIX32X16: usize = 16;
     pub const SPLITMIX32X16_PAR_CHUNK: usize = 8192;
@@ -97,13 +97,17 @@ pub mod simd {
         /// The caller must ensure the CPU supports the `avx512f` target feature.
         #[target_feature(enable = "avx512f")]
         pub unsafe fn new(seed: u32) -> Self {
-            let base = seed | 1;
-            let mut init = [0u32; SPLITMIX32X16];
-            for (i, v) in init.iter_mut().enumerate() {
-                *v = base.wrapping_add(SPLITMIX32_GAMMA.wrapping_mul((i as u32).wrapping_add(1)));
+            let mut sm = SplitMix32::new(seed);
+
+            let mut s = [0u32; SPLITMIX32X16];
+            for i in 0..SPLITMIX32X16 {
+                s[i] = sm.nextu_const();
             }
-            Self {
-                state: unsafe { _mm512_loadu_si512(init.as_ptr() as *const _) },
+
+            unsafe {
+                Self {
+                    state: _mm512_loadu_si512(s.as_ptr() as _),
+                }
             }
         }
 
@@ -126,11 +130,11 @@ pub mod simd {
         }
     }
 
-    #[cfg(all(feature = "simd", target_arch = "x86_64"))]
+    #[cfg(target_arch = "x86_64")]
     impl RngV for SplitMix32x16 {
         type Word = __m512i;
 
-        fn nextuv(&mut self) -> __m512i {
+        fn nextuv(&mut self) -> Self::Word {
             unsafe {
                 let v = Self::compute(self.state);
                 self.state = _mm512_add_epi32(

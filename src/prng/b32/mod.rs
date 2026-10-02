@@ -32,7 +32,9 @@ pub use splitmix::SplitMix32;
 pub use splitmix::SplitMix32x16;
 pub use xoroshiro::Xoroshiro64Ss;
 #[cfg(feature = "simd")]
-pub use xoroshiro::Xoroshiro64Ssx16;
+pub use xoroshiro::{Xoroshiro64Ssx8, Xoroshiro64Ssx16};
+#[cfg(feature = "simd")]
+pub use xorshift::Xorshift32x8;
 pub use xorshift::{Xorshift32, Xorshift128};
 pub use xorwow::Xorwow;
 pub use xoshiro::{Xoshiro128Pp, Xoshiro128Ss};
